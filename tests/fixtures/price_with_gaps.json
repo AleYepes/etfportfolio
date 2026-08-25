@@ -1,0 +1,146 @@
+{
+  "plot": {
+    "legends": [
+      {
+        "represent": "ASDATE",
+        "display": "BOTTOM",
+        "labels": [],
+        "min": 1784851200000,
+        "max": 1787616000,
+        "title": "Calendar",
+        "axis": "HORIZONTAL"
+      },
+      {
+        "represent": "ASNUMBER",
+        "display": "RIGHT",
+        "labels": [
+          {
+            "hilight": true,
+            "text": "4.95",
+            "value": 4.9518
+          },
+          {
+            "hilight": true,
+            "text": "5.18",
+            "value": 5.18244
+          },
+          {
+            "hilight": true,
+            "text": "5.41",
+            "value": 5.41308
+          },
+          {
+            "hilight": true,
+            "text": "5.64",
+            "value": 5.64372
+          },
+          {
+            "hilight": true,
+            "text": "5.87",
+            "value": 5.87436
+          },
+          {
+            "hilight": true,
+            "text": "6.11",
+            "value": 6.105
+          }
+        ],
+        "min": 5.502,
+        "max": 5.55,
+        "title": "Price",
+        "axis": "VERTICAL"
+      }
+    ],
+    "series": [
+      {
+        "title": "Price",
+        "name": "price",
+        "plotData": [
+          {
+            "x": 1785135600000,
+            "y": 5.502,
+            "open": 5.502,
+            "close": 5.502,
+            "high": 5.502,
+            "low": 5.502,
+            "debugY": 20260727
+          },
+          {
+            "x": 1785222000000,
+            "y": 5.52,
+            "open": 5.52,
+            "close": 5.52,
+            "high": 5.52,
+            "low": 5.52,
+            "debugY": 20260728
+          },
+          {
+            "x": 1785740400000,
+            "y": 5.519,
+            "open": 5.519,
+            "close": 5.519,
+            "high": 5.519,
+            "low": 5.519,
+            "debugY": 20260803
+          },
+          {
+            "x": 1785826800000,
+            "y": 5.518,
+            "open": 5.518,
+            "close": 5.518,
+            "high": 5.518,
+            "low": 5.518,
+            "debugY": 20260804
+          },
+          {
+            "x": 1786690800000,
+            "y": 5.545,
+            "open": 5.545,
+            "close": 5.545,
+            "high": 5.545,
+            "low": 5.545,
+            "debugY": 20260814
+          },
+          {
+            "x": 1786950000000,
+            "y": 5.53,
+            "open": 5.53,
+            "close": 5.53,
+            "high": 5.53,
+            "low": 5.53,
+            "debugY": 20260817
+          },
+          {
+            "x": 1787036400000,
+            "y": 5.516,
+            "open": 5.531,
+            "close": 5.516,
+            "high": 5.535,
+            "low": 5.516,
+            "debugY": 20260818
+          },
+          {
+            "x": 1787209200000,
+            "y": 5.55,
+            "open": 5.55,
+            "close": 5.55,
+            "high": 5.55,
+            "low": 5.55,
+            "debugY": 20260820
+          },
+          {
+            "x": 1787295600000,
+            "y": 5.535,
+            "open": 5.543,
+            "close": 5.535,
+            "high": 5.543,
+            "low": 5.535,
+            "debugY": 20260821
+          }
+        ],
+        "xlegend": "Calendar",
+        "ylegend": "Price"
+      }
+    ]
+  }
+}

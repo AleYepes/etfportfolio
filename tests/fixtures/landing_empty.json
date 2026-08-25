@@ -1,0 +1,29 @@
+{
+  "objective": {
+    "meta": {
+      "name": "Fund Objective",
+      "name_tag": "fund_objective"
+    }
+  },
+  "key_profile": {
+    "meta": {
+      "name": "Key Profile",
+      "name_tag": "key_profile"
+    },
+    "data": {
+      "market_geo_focus": "Eurozone"
+    }
+  },
+  "overall_ratings": {
+    "meta": {
+      "name": "Overall Ratings",
+      "name_tag": "overall_ratings"
+    }
+  },
+  "top10": {
+    "meta": {
+      "name": "Holdings",
+      "name_tag": "holdings"
+    }
+  }
+}

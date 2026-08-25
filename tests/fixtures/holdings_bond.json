@@ -1,0 +1,368 @@
+{
+  "as_of_date": 1782792000000,
+  "allocation_self": [
+    {
+      "name": "Fixed Income",
+      "formatted_weight": "98.94%",
+      "weight": 98.9356,
+      "rank": 1,
+      "vs": 97.0878892561983
+    },
+    {
+      "name": "Other",
+      "formatted_weight": "0.66%",
+      "weight": 0.6644,
+      "rank": 2,
+      "vs": 1.92735950413223
+    },
+    {
+      "name": "Cash",
+      "formatted_weight": "0.4%",
+      "weight": 0.4001,
+      "rank": 3,
+      "vs": 0.970393388429751
+    }
+  ],
+  "top_10": [
+    {
+      "name": "United States of America (Government) 4.125% 30-JUN-2031",
+      "rank": 1,
+      "assets_pct": "1.19%",
+      "conids": []
+    },
+    {
+      "name": "United States of America (Government) 3.5% 31-JAN-2028",
+      "rank": 2,
+      "assets_pct": "1.12%",
+      "conids": []
+    },
+    {
+      "name": "United States of America (Government) 4.125% 30-JUN-2028",
+      "rank": 3,
+      "assets_pct": "0.95%",
+      "conids": []
+    },
+    {
+      "name": "United States of America (Government) 3.375% 31-DEC-2027",
+      "rank": 4,
+      "assets_pct": "0.89%",
+      "conids": []
+    },
+    {
+      "name": "United States of America (Government) 4% 28-FEB-2030",
+      "rank": 5,
+      "assets_pct": "0.88%",
+      "conids": []
+    },
+    {
+      "name": "United States of America (Government) 3.875% 31-MAR-2028",
+      "rank": 6,
+      "assets_pct": "0.81%",
+      "conids": []
+    },
+    {
+      "name": "United States of America (Government) .875% 15-NOV-2030",
+      "rank": 7,
+      "assets_pct": "0.79%",
+      "conids": []
+    },
+    {
+      "name": "United States of America (Government) 4.125% 31-MAY-2031",
+      "rank": 8,
+      "assets_pct": "0.78%",
+      "conids": []
+    },
+    {
+      "name": "United States of America (Government) 4.375% 31-DEC-2029",
+      "rank": 9,
+      "assets_pct": "0.77%",
+      "conids": []
+    },
+    {
+      "name": "United States of America (Government) 1.125% 15-FEB-2031",
+      "rank": 10,
+      "assets_pct": "0.76%",
+      "conids": []
+    }
+  ],
+  "top_10_weight": "8.94%",
+  "currency": [
+    {
+      "name": "US Dollar",
+      "formatted_weight": "99.33%",
+      "weight": 99.3333,
+      "rank": 1,
+      "vs": 97.3965785123967,
+      "code": "USD"
+    },
+    {
+      "name": "\u003CNo Currency\u003E",
+      "formatted_weight": "0.67%",
+      "weight": 0.6667,
+      "rank": 2,
+      "vs": 0.685755371900827
+    }
+  ],
+  "debt_type": [
+    {
+      "name": "Sovereign Bond",
+      "formatted_weight": "58.87%",
+      "weight": 58.8732,
+      "rank": 1,
+      "vs": 14.7441049586777
+    },
+    {
+      "name": "CORP",
+      "formatted_weight": "15.09%",
+      "weight": 15.0911,
+      "rank": 2,
+      "vs": 27.2209140495868
+    },
+    {
+      "name": "Unsecured Note",
+      "formatted_weight": "10.54%",
+      "weight": 10.5439,
+      "rank": 3,
+      "vs": 0.968503305785124
+    },
+    {
+      "name": "Senior Note",
+      "formatted_weight": "7.44%",
+      "weight": 7.4394,
+      "rank": 4,
+      "vs": 6.56546280991736
+    },
+    {
+      "name": "Corporate Medium Term Notes",
+      "formatted_weight": "3.77%",
+      "weight": 3.7675,
+      "rank": 5,
+      "vs": 7.74084380165289
+    },
+    {
+      "name": "Agencies",
+      "formatted_weight": "1.28%",
+      "weight": 1.2785,
+      "rank": 6,
+      "vs": 1.05796115702479
+    },
+    {
+      "name": "Bond",
+      "formatted_weight": "0.57%",
+      "weight": 0.569,
+      "rank": 7,
+      "vs": 0.368214876033058
+    },
+    {
+      "name": "MUNI",
+      "formatted_weight": "0.49%",
+      "weight": 0.4851,
+      "rank": 8,
+      "vs": 0.433906611570248
+    },
+    {
+      "name": "Senior Subordinated Note",
+      "formatted_weight": "0.17%",
+      "weight": 0.1666,
+      "rank": 9,
+      "vs": 0.291648760330579
+    },
+    {
+      "name": "Note",
+      "formatted_weight": "0.16%",
+      "weight": 0.1621,
+      "rank": 10,
+      "vs": 0.498123966942149
+    }
+  ],
+  "maturity": [
+    {
+      "name": "% Maturity 1 to 3 Years",
+      "formatted_weight": "54.7%",
+      "weight": 54.7027,
+      "rank": 1,
+      "vs": 31.3612305785124
+    },
+    {
+      "name": "% Maturity 3 to 5 Years",
+      "formatted_weight": "41.21%",
+      "weight": 41.2077,
+      "rank": 2,
+      "vs": 18.9239900826446
+    },
+    {
+      "name": "% Maturity 5 to 10 Years",
+      "formatted_weight": "2.81%",
+      "weight": 2.81,
+      "rank": 3,
+      "vs": 12.1944371900826
+    },
+    {
+      "name": "% Maturity 20 to 30 Years",
+      "formatted_weight": "0.18%",
+      "weight": 0.1827,
+      "rank": 4,
+      "vs": 9.44914628099173
+    },
+    {
+      "name": "% Maturity Greater than 30 Years",
+      "formatted_weight": "0.03%",
+      "weight": 0.0276,
+      "rank": 5,
+      "vs": 5.31869090909091
+    },
+    {
+      "name": "% Maturity 10 to 20 Years",
+      "formatted_weight": "0%",
+      "weight": 0.004,
+      "rank": 6,
+      "vs": 8.70790909090909
+    },
+    {
+      "name": "% Maturity Less than 1 Year",
+      "formatted_weight": "0%",
+      "weight": 0.0009,
+      "rank": 7,
+      "vs": 10.4917123966942
+    }
+  ],
+  "debtor": [
+    {
+      "name": "% Quality/AA",
+      "formatted_weight": "71.76%",
+      "weight": 71.7645,
+      "rank": 1,
+      "vs": 23.0515066115703
+    },
+    {
+      "name": "% Quality/BBB",
+      "formatted_weight": "12.54%",
+      "weight": 12.5351,
+      "rank": 2,
+      "vs": 23.9123842975207
+    },
+    {
+      "name": "% Quality/A",
+      "formatted_weight": "11.21%",
+      "weight": 11.2076,
+      "rank": 3,
+      "vs": 18.0064157024793
+    },
+    {
+      "name": "% Quality/AAA",
+      "formatted_weight": "3.27%",
+      "weight": 3.272,
+      "rank": 4,
+      "vs": 13.9042636363636
+    },
+    {
+      "name": "% Quality/BB",
+      "formatted_weight": "0.14%",
+      "weight": 0.1426,
+      "rank": 5,
+      "vs": 3.4548347107438
+    },
+    {
+      "name": "% Quality Not Available",
+      "formatted_weight": "0.01%",
+      "weight": 0.0138,
+      "rank": 6,
+      "vs": 12.308479338843
+    }
+  ],
+  "investor_country": [
+    {
+      "name": "United States",
+      "formatted_weight": "91.75%",
+      "weight": 91.7451,
+      "rank": 1,
+      "vs": 72.1696099173554,
+      "country_code": "US"
+    },
+    {
+      "name": "Canada",
+      "formatted_weight": "1.52%",
+      "weight": 1.5228,
+      "rank": 2,
+      "vs": 2.4103132231405,
+      "country_code": "CA"
+    },
+    {
+      "name": "United Kingdom",
+      "formatted_weight": "1.16%",
+      "weight": 1.1564,
+      "rank": 3,
+      "vs": 2.24294214876033,
+      "country_code": "GB"
+    },
+    {
+      "name": "Japan",
+      "formatted_weight": "0.86%",
+      "weight": 0.8635,
+      "rank": 4,
+      "vs": 0.869519834710744,
+      "country_code": "JP"
+    },
+    {
+      "name": "Unidentified",
+      "formatted_weight": "0.66%",
+      "weight": 0.6644,
+      "rank": 5,
+      "vs": 13.557220661157
+    },
+    {
+      "name": "Luxembourg",
+      "formatted_weight": "0.61%",
+      "weight": 0.6123,
+      "rank": 6,
+      "vs": 0.315787603305785,
+      "country_code": "LU"
+    },
+    {
+      "name": "Philippines",
+      "formatted_weight": "0.53%",
+      "weight": 0.5253,
+      "rank": 7,
+      "vs": 0.0770099173553719,
+      "country_code": "PH"
+    },
+    {
+      "name": "Germany",
+      "formatted_weight": "0.52%",
+      "weight": 0.5162,
+      "rank": 8,
+      "vs": 0.170561983471074,
+      "country_code": "DE"
+    },
+    {
+      "name": "Spain",
+      "formatted_weight": "0.21%",
+      "weight": 0.2133,
+      "rank": 9,
+      "vs": 0.345167768595041,
+      "country_code": "ES"
+    },
+    {
+      "name": "Ireland",
+      "formatted_weight": "0.21%",
+      "weight": 0.2064,
+      "rank": 10,
+      "vs": 0.751302479338843,
+      "country_code": "IE"
+    }
+  ],
+  "geographic": {
+    "mena": "0.09%",
+    "nafr": "0.09%",
+    "em_asia": "1.02%",
+    "em_eu": "0.06%",
+    "eu": "2.17%",
+    "jpn": "0.86%",
+    "latam": "0.34%",
+    "uk": "1.16%",
+    "us": "91.75%",
+    "na": "1.55%",
+    "asia": "0.25%",
+    "others": "0.66%"
+  }
+}

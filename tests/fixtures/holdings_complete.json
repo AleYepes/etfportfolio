@@ -1,0 +1,566 @@
+{
+    "as_of_date": 1785470400000,
+    "allocation_self": [
+        {
+            "name": "Fixed Income",
+            "formatted_weight": "76.63%",
+            "weight": 76.628,
+            "rank": 1,
+            "vs": 29.21781666666666
+        },
+        {
+            "name": "Equity",
+            "formatted_weight": "42.4%",
+            "weight": 42.395,
+            "rank": 2,
+            "vs": 59.4676298611111
+        },
+        {
+            "name": "Other",
+            "formatted_weight": "-4.81%",
+            "weight": -4.8098,
+            "rank": 3,
+            "vs": 4.788084027777777
+        },
+        {
+            "name": "Cash",
+            "formatted_weight": "-14.21%",
+            "weight": -14.2133,
+            "rank": 4,
+            "vs": 6.526432638888892
+        }
+    ],
+    "top_10": [
+        {
+            "name": "GUGGENHEIM STRATEGIC OPPORTUNITIES FUND",
+            "rank": 1,
+            "assets_pct": "3.49%",
+            "conids": [
+                86174372
+            ]
+        },
+        {
+            "name": "ABRDN TOTAL DYNAMIC DIVIDEND FUND",
+            "rank": 2,
+            "assets_pct": "3.48%",
+            "conids": [
+                314840629
+            ]
+        },
+        {
+            "name": "BLACKROCK ESG CAPITAL ALLOCATION TERM TRUST",
+            "rank": 3,
+            "assets_pct": "3.33%",
+            "conids": [
+                517203785
+            ]
+        },
+        {
+            "name": "NUVEEN FLOATING RATE INCOME FUND",
+            "rank": 4,
+            "assets_pct": "3.24%",
+            "conids": [
+                28828789
+            ]
+        },
+        {
+            "name": "TORTOISE ENERGY INFRASTRUCTURE CORPORATION",
+            "rank": 5,
+            "assets_pct": "3.2%",
+            "conids": [
+                418728941
+            ]
+        },
+        {
+            "name": "PIMCO HIGH INCOME FUND",
+            "rank": 6,
+            "assets_pct": "3.18%",
+            "conids": [
+                17966274
+            ]
+        },
+        {
+            "name": "ABRDN GLOBAL INFRASTRUCTURE INCOME FUND",
+            "rank": 7,
+            "assets_pct": "2.78%",
+            "conids": [
+                436729641
+            ]
+        },
+        {
+            "name": "CBRE GLOBAL REAL ESTATE INCOME FUND",
+            "rank": 8,
+            "assets_pct": "2.61%",
+            "conids": [
+                90655693
+            ]
+        },
+        {
+            "name": "NUVEEN CREDIT STRATEGIES INCOME FUND",
+            "rank": 9,
+            "assets_pct": "2.59%",
+            "conids": [
+                18832912
+            ]
+        },
+        {
+            "name": "PIMCO INCOME STRATEGY FUND II",
+            "rank": 10,
+            "assets_pct": "2.57%",
+            "conids": [
+                31815560
+            ]
+        }
+    ],
+    "top_10_weight": "30.47%",
+    "industry": [
+        {
+            "name": "Not Classified - Non Equity",
+            "formatted_weight": "59.26%",
+            "weight": 59.2585,
+            "rank": 1,
+            "vs": 22.32806666666668
+        },
+        {
+            "name": "Technology",
+            "formatted_weight": "6.25%",
+            "weight": 6.2513,
+            "rank": 2,
+            "vs": 20.64239652777778
+        },
+        {
+            "name": "Healthcare",
+            "formatted_weight": "5.91%",
+            "weight": 5.9148,
+            "rank": 3,
+            "vs": 5.002147916666666
+        },
+        {
+            "name": "Utilities",
+            "formatted_weight": "4.76%",
+            "weight": 4.7593,
+            "rank": 4,
+            "vs": 2.5655534722222226
+        },
+        {
+            "name": "Energy",
+            "formatted_weight": "4.69%",
+            "weight": 4.6857,
+            "rank": 5,
+            "vs": 4.2804659722222205
+        },
+        {
+            "name": "Industrials",
+            "formatted_weight": "4.59%",
+            "weight": 4.5898,
+            "rank": 6,
+            "vs": 5.967843750000002
+        },
+        {
+            "name": "Non Classified Equity",
+            "formatted_weight": "3.99%",
+            "weight": 3.9936,
+            "rank": 7,
+            "vs": 0.4471520833333335
+        },
+        {
+            "name": "Real Estate",
+            "formatted_weight": "3.04%",
+            "weight": 3.0367,
+            "rank": 8,
+            "vs": 3.130834722222222
+        },
+        {
+            "name": "Financials",
+            "formatted_weight": "3.01%",
+            "weight": 3.0058,
+            "rank": 9,
+            "vs": 6.344859722222219
+        },
+        {
+            "name": "Consumer Cyclicals",
+            "formatted_weight": "2%",
+            "weight": 1.9965,
+            "rank": 10,
+            "vs": 5.247332638888886
+        }
+    ],
+    "currency": [
+        {
+            "name": "US Dollar",
+            "formatted_weight": "94.42%",
+            "weight": 94.425,
+            "rank": 1,
+            "vs": 82.50464027777781,
+            "code": "USD"
+        },
+        {
+            "name": "Euro",
+            "formatted_weight": "5.97%",
+            "weight": 5.97,
+            "rank": 2,
+            "vs": 2.696430555555554,
+            "code": "EUR"
+        },
+        {
+            "name": "UK Pound Sterling",
+            "formatted_weight": "2.02%",
+            "weight": 2.0184,
+            "rank": 3,
+            "vs": 0.9119687500000003,
+            "code": "GBP"
+        },
+        {
+            "name": "Indian Rupee",
+            "formatted_weight": "1.95%",
+            "weight": 1.9506,
+            "rank": 4,
+            "vs": 0.29057222222222223,
+            "code": "INR"
+        },
+        {
+            "name": "Canadian Dollar",
+            "formatted_weight": "1.2%",
+            "weight": 1.198,
+            "rank": 5,
+            "vs": 1.0798090277777774,
+            "code": "CAD"
+        },
+        {
+            "name": "Japanese Yen",
+            "formatted_weight": "0.44%",
+            "weight": 0.4381,
+            "rank": 6,
+            "vs": 1.2667395833333328,
+            "code": "JPY"
+        },
+        {
+            "name": "Australian Dollar",
+            "formatted_weight": "0.35%",
+            "weight": 0.3489,
+            "rank": 7,
+            "vs": 0.2880541666666667,
+            "code": "AUD"
+        },
+        {
+            "name": "Mexican Peso",
+            "formatted_weight": "0.32%",
+            "weight": 0.3191,
+            "rank": 8,
+            "vs": 0.20026388888888888,
+            "code": "MXN"
+        },
+        {
+            "name": "South Korean Won",
+            "formatted_weight": "0.31%",
+            "weight": 0.3131,
+            "rank": 9,
+            "vs": 0.6668527777777777,
+            "code": "KRW"
+        },
+        {
+            "name": "Colombian Peso",
+            "formatted_weight": "0.3%",
+            "weight": 0.2964,
+            "rank": 10,
+            "vs": 0.015396527777777776
+        }
+    ],
+    "debt_type": [
+        {
+            "name": "CORP",
+            "formatted_weight": "24.12%",
+            "weight": 24.1181,
+            "rank": 1,
+            "vs": 6.372704861111109
+        },
+        {
+            "name": "Bank Debt",
+            "formatted_weight": "15.13%",
+            "weight": 15.127,
+            "rank": 2,
+            "vs": 0.4911652777777778
+        },
+        {
+            "name": "Fixed Income",
+            "formatted_weight": "11.97%",
+            "weight": 11.9722,
+            "rank": 3,
+            "vs": 1.690827777777777
+        },
+        {
+            "name": "Senior Note",
+            "formatted_weight": "4.76%",
+            "weight": 4.7631,
+            "rank": 4,
+            "vs": 1.4813131944444446
+        },
+        {
+            "name": "Sovereign Bond",
+            "formatted_weight": "3.97%",
+            "weight": 3.9702,
+            "rank": 5,
+            "vs": 12.591525000000004
+        },
+        {
+            "name": "CMO Whole Loan",
+            "formatted_weight": "2.81%",
+            "weight": 2.8143,
+            "rank": 6,
+            "vs": 0.24384791666666666
+        },
+        {
+            "name": "Commercial Mortgage-Backed Security",
+            "formatted_weight": "2.34%",
+            "weight": 2.3369,
+            "rank": 7,
+            "vs": 0.4724256944444445
+        },
+        {
+            "name": "Credit Card Receivables",
+            "formatted_weight": "2.33%",
+            "weight": 2.3284,
+            "rank": 8,
+            "vs": 0.340027777777778
+        },
+        {
+            "name": "Bond",
+            "formatted_weight": "1.17%",
+            "weight": 1.171,
+            "rank": 9,
+            "vs": 0.4960222222222223
+        },
+        {
+            "name": "TBA",
+            "formatted_weight": "1.12%",
+            "weight": 1.1207,
+            "rank": 10,
+            "vs": 0.2044597222222222
+        }
+    ],
+    "maturity": [
+        {
+            "name": "% Maturity 5 to 10 Years",
+            "formatted_weight": "24.36%",
+            "weight": 24.3636,
+            "rank": 1,
+            "vs": 5.405051388888889
+        },
+        {
+            "name": "% Maturity 3 to 5 Years",
+            "formatted_weight": "19.33%",
+            "weight": 19.329,
+            "rank": 2,
+            "vs": 4.549279166666668
+        },
+        {
+            "name": "% Maturity 1 to 3 Years",
+            "formatted_weight": "11.64%",
+            "weight": 11.636,
+            "rank": 3,
+            "vs": 5.116407638888889
+        },
+        {
+            "name": "% Maturity 10 to 20 Years",
+            "formatted_weight": "7.39%",
+            "weight": 7.387,
+            "rank": 4,
+            "vs": 1.3394645833333338
+        },
+        {
+            "name": "% Maturity 20 to 30 Years",
+            "formatted_weight": "5.63%",
+            "weight": 5.6336,
+            "rank": 5,
+            "vs": 3.188029166666668
+        },
+        {
+            "name": "% Maturity Greater than 30 Years",
+            "formatted_weight": "3.01%",
+            "weight": 3.0063,
+            "rank": 6,
+            "vs": 0.37464375000000016
+        },
+        {
+            "name": "% Maturity Less than 1 Year",
+            "formatted_weight": "2.69%",
+            "weight": 2.6904,
+            "rank": 7,
+            "vs": 8.782964583333332
+        },
+        {
+            "name": "% Maturity Other",
+            "formatted_weight": "1.36%",
+            "weight": 1.357,
+            "rank": 8,
+            "vs": 0.3043583333333334
+        }
+    ],
+    "debtor": [
+        {
+            "name": "% Quality Not Available",
+            "formatted_weight": "21.31%",
+            "weight": 21.3099,
+            "rank": 1,
+            "vs": 10.015128472222225
+        },
+        {
+            "name": "% Quality/B",
+            "formatted_weight": "18.76%",
+            "weight": 18.7565,
+            "rank": 2,
+            "vs": 1.951067361111111
+        },
+        {
+            "name": "% Quality/BB",
+            "formatted_weight": "15.42%",
+            "weight": 15.4192,
+            "rank": 3,
+            "vs": 2.660090277777778
+        },
+        {
+            "name": "% Quality/BBB",
+            "formatted_weight": "6.79%",
+            "weight": 6.7854,
+            "rank": 4,
+            "vs": 2.599429166666667
+        },
+        {
+            "name": "% Quality/CCC",
+            "formatted_weight": "4.66%",
+            "weight": 4.6568,
+            "rank": 5,
+            "vs": 0.4025958333333332
+        },
+        {
+            "name": "% Quality/AA",
+            "formatted_weight": "3.08%",
+            "weight": 3.0838,
+            "rank": 6,
+            "vs": 8.640024305555555
+        },
+        {
+            "name": "% Quality Not Rated",
+            "formatted_weight": "2.34%",
+            "weight": 2.34,
+            "rank": 7,
+            "vs": 0.3183430555555555
+        },
+        {
+            "name": "% Quality/A",
+            "formatted_weight": "1.52%",
+            "weight": 1.5207,
+            "rank": 8,
+            "vs": 1.7049451388888888
+        },
+        {
+            "name": "% Quality/AAA",
+            "formatted_weight": "0.89%",
+            "weight": 0.8927,
+            "rank": 9,
+            "vs": 0.7433493055555558
+        },
+        {
+            "name": "% Quality/CC",
+            "formatted_weight": "0.31%",
+            "weight": 0.3084,
+            "rank": 10,
+            "vs": 0.02311041666666667
+        }
+    ],
+    "investor_country": [
+        {
+            "name": "United States",
+            "formatted_weight": "71.25%",
+            "weight": 71.2451,
+            "rank": 1,
+            "vs": 74.4055236111111,
+            "country_code": "US"
+        },
+        {
+            "name": "United Kingdom",
+            "formatted_weight": "3.42%",
+            "weight": 3.4206,
+            "rank": 2,
+            "vs": 1.637814583333334,
+            "country_code": "GB"
+        },
+        {
+            "name": "Canada",
+            "formatted_weight": "2.43%",
+            "weight": 2.4275,
+            "rank": 3,
+            "vs": 1.4122916666666663,
+            "country_code": "CA"
+        },
+        {
+            "name": "India",
+            "formatted_weight": "1.95%",
+            "weight": 1.9536,
+            "rank": 4,
+            "vs": 0.3179312499999999,
+            "country_code": "IN"
+        },
+        {
+            "name": "France",
+            "formatted_weight": "1.62%",
+            "weight": 1.6237,
+            "rank": 5,
+            "vs": 0.7648798611111111,
+            "country_code": "FR"
+        },
+        {
+            "name": "Netherlands",
+            "formatted_weight": "1.57%",
+            "weight": 1.5737,
+            "rank": 6,
+            "vs": 0.8338659722222217,
+            "country_code": "NL"
+        },
+        {
+            "name": "Unidentified",
+            "formatted_weight": "1.37%",
+            "weight": 1.3712,
+            "rank": 7,
+            "vs": 9.984892361111113
+        },
+        {
+            "name": "Luxembourg",
+            "formatted_weight": "1.28%",
+            "weight": 1.2802,
+            "rank": 8,
+            "vs": 0.2287611111111111,
+            "country_code": "LU"
+        },
+        {
+            "name": "Cayman Islands",
+            "formatted_weight": "1.03%",
+            "weight": 1.026,
+            "rank": 9,
+            "vs": 0.2390090277777778,
+            "country_code": "KY"
+        },
+        {
+            "name": "Ireland",
+            "formatted_weight": "0.89%",
+            "weight": 0.8917,
+            "rank": 10,
+            "vs": 0.70281875,
+            "country_code": "IE"
+        }
+    ],
+    "geographic": {
+        "mena": "0.72%",
+        "nafr": "0.93%",
+        "em_asia": "3.35%",
+        "em_eu": "0.86%",
+        "eu": "8.73%",
+        "jpn": "0.61%",
+        "latam": "3.67%",
+        "uk": "3.42%",
+        "us": "71.25%",
+        "na": "4.19%",
+        "asia": "0.9%",
+        "others": "1.37%"
+    }
+}

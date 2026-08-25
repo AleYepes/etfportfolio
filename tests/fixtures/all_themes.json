@@ -1,0 +1,3546 @@
+{
+  "title": "Investment Themes A-Z",
+  "nodes": [
+    {
+      "type": "theme",
+      "key": "006a0c27-4a9a-4766-8988-0d8acc6ede8b",
+      "name": "Discount Retail",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 149
+    },
+    {
+      "type": "theme",
+      "key": "008633cb-54cc-4636-9f4a-aaba9f54f215",
+      "name": "Sustainable Ingredients",
+      "parentKey": "24538734-0289-4834-9d0e-708458aa2723",
+      "numId": 438
+    },
+    {
+      "type": "theme",
+      "key": "00895ffa-3e66-41bf-95f3-31dd536639e0",
+      "name": "Cryptocurrency Trading",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 123
+    },
+    {
+      "type": "theme",
+      "key": "00c23a97-6299-462b-bec4-4dfec9639ed9",
+      "name": "Last-mile Logistics",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 283
+    },
+    {
+      "type": "theme",
+      "key": "00d0d758-0aa9-4aa6-9891-ddf03f7dbaac",
+      "name": "AI Infrastructure",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 20
+    },
+    {
+      "type": "theme",
+      "key": "0227f162-0cab-4a84-8984-74e90155c611",
+      "name": "Robotics",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 403
+    },
+    {
+      "type": "theme",
+      "key": "030b1ecf-fdf7-4fda-8d68-0fdefe2febab",
+      "name": "Global Logistics",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 220
+    },
+    {
+      "type": "theme",
+      "key": "032b5b3b-c8ec-4b12-8c8f-8a03f0b0cbb2",
+      "name": "Accelerated Computing",
+      "parentKey": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "numId": 5
+    },
+    {
+      "type": "theme",
+      "key": "033d44cc-01b3-4092-baef-b68a8190cb6f",
+      "name": "Circular Economy",
+      "parentKey": "a11f42db-beec-47ca-a4ed-2738d1c416f7",
+      "numId": 80
+    },
+    {
+      "type": "theme",
+      "key": "03ca27e5-2d78-4b39-bec5-c1cbb30d97ca",
+      "name": "Electric Utility",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 158
+    },
+    {
+      "type": "theme",
+      "key": "040e2408-022d-4168-bf51-121a248defe4",
+      "name": "Biopharma Royalties",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 58
+    },
+    {
+      "type": "theme",
+      "key": "04b68eac-c22a-4f68-b98e-5f92ef29aa07",
+      "name": "Aerospace Materials",
+      "parentKey": "830107ac-3409-42d6-aa86-0247ba3808f5",
+      "numId": 9
+    },
+    {
+      "type": "theme",
+      "key": "066a0069-892e-4c2a-9e73-6a19820e8ecc",
+      "name": "Open Source",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 349
+    },
+    {
+      "type": "theme",
+      "key": "06e9dccb-5367-4607-8e75-67742544e773",
+      "name": "Airlines",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 22
+    },
+    {
+      "type": "theme",
+      "key": "07399361-4223-4829-9ac8-289c49d27e57",
+      "name": "Credit Services",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 118
+    },
+    {
+      "type": "theme",
+      "key": "0740303f-4906-4b98-8dee-5a2dd67b6b25",
+      "name": "Logistics Network",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 290
+    },
+    {
+      "type": "theme",
+      "key": "076c883a-a65c-4088-918c-e4ff95a552a8",
+      "name": "Omnichannel Strategy",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 341
+    },
+    {
+      "type": "theme",
+      "key": "084f5e16-8a42-4157-8694-b6387f640f1d",
+      "name": "Shipping Routes",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 414
+    },
+    {
+      "type": "theme",
+      "key": "08ad9aae-bf11-46fd-a67e-6c9be1e61113",
+      "name": "Humanoid Robotics",
+      "parentKey": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "numId": 487
+    },
+    {
+      "type": "theme",
+      "key": "09516283-a23d-479a-8ee8-1b69a90ebd17",
+      "name": "Financial Exchanges",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 194
+    },
+    {
+      "type": "theme",
+      "key": "09af9622-942b-4ee3-a9cb-32151ad2c0b3",
+      "name": "Operating Systems",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 481
+    },
+    {
+      "type": "theme",
+      "key": "0b027423-df82-417d-8e71-dd726dfc5886",
+      "name": "Chip Manufacturing",
+      "parentKey": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "numId": 79
+    },
+    {
+      "type": "theme",
+      "key": "0b14b391-1faf-4575-b33a-98262fba6ac5",
+      "name": "Smart Mobility",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 417
+    },
+    {
+      "type": "theme",
+      "key": "0bf97aef-7f24-4b4c-a920-3a4073d864a4",
+      "name": "Building Codes Compliance",
+      "parentKey": "ceae44ab-2c7f-4074-8724-d8c04f235f81",
+      "numId": 71
+    },
+    {
+      "type": "theme",
+      "key": "0bfe5a27-dc77-4218-b9c1-b9a9bfc0ce30",
+      "name": "Electric Aviation",
+      "parentKey": "830107ac-3409-42d6-aa86-0247ba3808f5",
+      "numId": 157
+    },
+    {
+      "type": "theme",
+      "key": "0df4bc4e-20b3-4665-a4ce-4afdb448b76a",
+      "name": "Electrical Components & Equipment",
+      "parentKey": "4d5bee60-a575-4bab-8379-2e5326ab52ba",
+      "numId": 160
+    },
+    {
+      "type": "theme",
+      "key": "0eb80375-086e-4e66-9345-e45c75848cd0",
+      "name": "Digital Health Engagement",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 142
+    },
+    {
+      "type": "theme",
+      "key": "0ecbf7dc-3c50-4222-a3cc-32dacdbb5717",
+      "name": "Digital Solutions",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 144
+    },
+    {
+      "type": "theme",
+      "key": "0f4f98ca-c86d-4ff5-8671-7c90d680ba30",
+      "name": "Precision Fermentation",
+      "parentKey": "24538734-0289-4834-9d0e-708458aa2723",
+      "numId": 494
+    },
+    {
+      "type": "theme",
+      "key": "0fd7771a-29e8-4d7a-8ac1-f1ea88161dd1",
+      "name": "Electronics Innovation",
+      "parentKey": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "numId": 165
+    },
+    {
+      "type": "theme",
+      "key": "11278aeb-688e-4fa5-8e5e-b9355aaaeff3",
+      "name": "Content Creation",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 114
+    },
+    {
+      "type": "theme",
+      "key": "11db66ba-148d-48f6-b54d-d8bfea792550",
+      "name": "Mortgage REIT",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 325
+    },
+    {
+      "type": "theme",
+      "key": "124a0af0-3405-43cb-901c-54ab45324039",
+      "name": "Energy-efficient Homes",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 180
+    },
+    {
+      "type": "theme",
+      "key": "1284fec8-b466-46e4-8e9d-6a22cf692647",
+      "name": "Mining Innovation",
+      "parentKey": "ec8d106a-baef-4fcc-8f33-d5dc75d9c4a0",
+      "numId": 317
+    },
+    {
+      "type": "theme",
+      "key": "12d08edf-ac56-4a4e-b7e9-9894502ce3cb",
+      "name": "Optoelectronics",
+      "parentKey": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "numId": 350
+    },
+    {
+      "type": "theme",
+      "key": "130b3fc3-7fa4-48b3-a76e-0a846a802fdc",
+      "name": "Grid Interconnection",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 489
+    },
+    {
+      "type": "theme",
+      "key": "15fc023d-2bb4-44c8-ae35-7978e281826c",
+      "name": "Energy Solutions",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 177
+    },
+    {
+      "type": "theme",
+      "key": "171f792f-520e-4a2f-8976-2510d68f5d2f",
+      "name": "Beverage Innovation",
+      "parentKey": "24538734-0289-4834-9d0e-708458aa2723",
+      "numId": 53
+    },
+    {
+      "type": "theme",
+      "key": "17408c8b-8fd8-47cf-a03e-74802f639bc8",
+      "name": "Retail Innovation",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 395
+    },
+    {
+      "type": "theme",
+      "key": "17f607f9-fff1-49c5-9bd6-4b4af8eb0a4e",
+      "name": "Footwear Innovation",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 206
+    },
+    {
+      "type": "theme",
+      "key": "190be216-73b0-4b68-bfba-4cba6150a5b6",
+      "name": "Drug Development",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 152
+    },
+    {
+      "type": "theme",
+      "key": "194cfa22-1ac6-4bab-9561-93e5e52d3288",
+      "name": "Drug Commercialization",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 151
+    },
+    {
+      "type": "theme",
+      "key": "19ba804c-b825-41d9-b55e-d32dff3add86",
+      "name": "Real Estate Innovation",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 379
+    },
+    {
+      "type": "theme",
+      "key": "1a3a3386-4ef3-4ed8-a35b-7f588b611b7a",
+      "name": "Luxury Branding",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 293
+    },
+    {
+      "type": "theme",
+      "key": "1a3bcb7f-f5dc-47f0-a09f-1b27bbc688ff",
+      "name": "Precision Agriculture",
+      "parentKey": "86fc4a71-ed8d-4ab9-b4f5-30d3f8a680a1",
+      "numId": 367
+    },
+    {
+      "type": "theme",
+      "key": "1a7c1f0d-038f-43e9-ab3f-a2e239200e5a",
+      "name": "SaaS",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 404
+    },
+    {
+      "type": "theme",
+      "key": "1b01e0b1-60d6-483c-890c-ee2529e7ff0b",
+      "name": "Fast Food Leader",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 191
+    },
+    {
+      "type": "theme",
+      "key": "1b13ec33-b952-4f2b-940f-1569637c6baf",
+      "name": "Iron Ore Mining",
+      "parentKey": "ec8d106a-baef-4fcc-8f33-d5dc75d9c4a0",
+      "numId": 280
+    },
+    {
+      "type": "theme",
+      "key": "1b225287-1637-40e1-b7c8-21be77cb372a",
+      "name": "AI In Healthcare",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 19
+    },
+    {
+      "type": "theme",
+      "key": "1b322c84-52ae-467e-aa5d-50ba31c0de3f",
+      "name": "Automotive Logistics",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 35
+    },
+    {
+      "type": "theme",
+      "key": "1c7b18a7-9188-46bd-8619-4924128f541f",
+      "name": "Tech Hardware Innovation",
+      "parentKey": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "numId": 442
+    },
+    {
+      "type": "theme",
+      "key": "1ca88647-a4b6-4b0f-8cf9-00d9162f4593",
+      "name": "Affordable Housing",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 10
+    },
+    {
+      "type": "theme",
+      "key": "1cdabbd2-7f4a-41a5-9580-847f81a78423",
+      "name": "Waste Management",
+      "parentKey": "a11f42db-beec-47ca-a4ed-2738d1c416f7",
+      "numId": 466
+    },
+    {
+      "type": "theme",
+      "key": "1d3f9f76-7b37-494e-9184-c3c0493e9bc0",
+      "name": "EV Charging",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 189
+    },
+    {
+      "type": "theme",
+      "key": "1dc5b572-2d5b-47ca-bcbf-142f94f8468d",
+      "name": "Carbon Emissions Trading",
+      "parentKey": "a11f42db-beec-47ca-a4ed-2738d1c416f7",
+      "numId": 495
+    },
+    {
+      "type": "theme",
+      "key": "1e6d55ad-b808-481d-b2f0-86d3260c5e68",
+      "name": "Battery Swap Technology",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 51
+    },
+    {
+      "type": "theme",
+      "key": "1ea7bf6c-26c7-4526-99f0-a30e50643b86",
+      "name": "Recycling Services",
+      "parentKey": "a11f42db-beec-47ca-a4ed-2738d1c416f7",
+      "numId": 381
+    },
+    {
+      "type": "theme",
+      "key": "1f18c243-eb61-4ff7-b49d-9c40c08eced5",
+      "name": "Biosimilars",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 62
+    },
+    {
+      "type": "theme",
+      "key": "1f1dfdbc-a7de-4863-9eec-e71627d15cd0",
+      "name": "Real Estate Development",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 377
+    },
+    {
+      "type": "theme",
+      "key": "1fa45889-f231-4260-adba-3ae9da01588e",
+      "name": "Online Gaming",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 345
+    },
+    {
+      "type": "theme",
+      "key": "205483e9-9adc-4a79-8142-efdcb7cf14c3",
+      "name": "Consumer Loans",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 109
+    },
+    {
+      "type": "theme",
+      "key": "21821ee1-43ca-4247-904c-843737eb8009",
+      "name": "Digital Identity Verification",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 499
+    },
+    {
+      "type": "theme",
+      "key": "218dffdc-0c06-4b48-bce4-ef9407a53d0b",
+      "name": "Consumer Packaging",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 110
+    },
+    {
+      "type": "theme",
+      "key": "22aadf5f-78e4-4e95-89c5-dfdc2b5bc9b6",
+      "name": "Nuclear Fusion",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 498
+    },
+    {
+      "type": "theme",
+      "key": "24853382-b386-45a0-80f7-21d70826d21e",
+      "name": "Privacy Compliance",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 368
+    },
+    {
+      "type": "theme",
+      "key": "2528ab02-e799-4af7-8419-a5161896cdcd",
+      "name": "Digital Marketing Technology",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 143
+    },
+    {
+      "type": "theme",
+      "key": "258059a1-dfbe-485c-873f-e29cb6ce02b3",
+      "name": "Nearshoring",
+      "parentKey": "4d5bee60-a575-4bab-8379-2e5326ab52ba",
+      "numId": 491
+    },
+    {
+      "type": "theme",
+      "key": "262d9244-81df-476c-bd8f-31c520dfe7f0",
+      "name": "Online Shopping",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 347
+    },
+    {
+      "type": "theme",
+      "key": "265090bd-1c4f-4521-b82f-856dc590eea9",
+      "name": "Smart Infrastructure",
+      "parentKey": "ceae44ab-2c7f-4074-8724-d8c04f235f81",
+      "numId": 416
+    },
+    {
+      "type": "theme",
+      "key": "2786a3c9-a204-40c5-bcd6-f82db37d9d53",
+      "name": "Sustainable Infrastructure",
+      "parentKey": "ceae44ab-2c7f-4074-8724-d8c04f235f81",
+      "numId": 437
+    },
+    {
+      "type": "theme",
+      "key": "279d29f3-1928-4c59-8af4-92361cd67121",
+      "name": "Battery Recycling",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 50
+    },
+    {
+      "type": "theme",
+      "key": "2896a10e-0882-41ab-b892-465def144c68",
+      "name": "Healthcare Automation",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 225
+    },
+    {
+      "type": "theme",
+      "key": "289a6329-a315-4a6e-b7b8-12ed6930572b",
+      "name": "Urban Real Estate",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 453
+    },
+    {
+      "type": "theme",
+      "key": "28d4e651-9904-499d-a687-c797e49e51b6",
+      "name": "Alternative Investments",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 23
+    },
+    {
+      "type": "theme",
+      "key": "2909994c-f29d-43cb-b385-e55bd033e3aa",
+      "name": "AI Chips",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 16
+    },
+    {
+      "type": "theme",
+      "key": "293736c9-4a47-403f-9e3e-44e7290d0578",
+      "name": "Inventory Management",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 277
+    },
+    {
+      "type": "theme",
+      "key": "29400124-36fc-4429-a617-1b54f6184073",
+      "name": "Regulatory Technology",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 382
+    },
+    {
+      "type": "theme",
+      "key": "2a469c01-9780-4bf4-a9a7-082794bfda7f",
+      "name": "Clean Energy Tech",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 83
+    },
+    {
+      "type": "theme",
+      "key": "2be0618d-2e73-4c55-8e58-1beb21d2a602",
+      "name": "Bioplastics & Sustainable Packaging",
+      "parentKey": "a11f42db-beec-47ca-a4ed-2738d1c416f7",
+      "numId": 61
+    },
+    {
+      "type": "theme",
+      "key": "2be8c1b8-a1cf-47ee-8320-0f185dcec274",
+      "name": "Insurance Solutions",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 271
+    },
+    {
+      "type": "theme",
+      "key": "2cac5057-4820-4b02-bfc2-d778c0aef603",
+      "name": "Chemical Manufacturing",
+      "parentKey": "4d5bee60-a575-4bab-8379-2e5326ab52ba",
+      "numId": 78
+    },
+    {
+      "type": "theme",
+      "key": "2dd8c652-518b-4d31-8a0e-8aeb60f05d40",
+      "name": "Data Infrastructure",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 128
+    },
+    {
+      "type": "theme",
+      "key": "2f19456c-e88b-4ba2-8dee-2fac073e9ec0",
+      "name": "Energy Efficiency",
+      "parentKey": "a11f42db-beec-47ca-a4ed-2738d1c416f7",
+      "numId": 168
+    },
+    {
+      "type": "theme",
+      "key": "2f7821d5-b443-4266-9043-86324654d71f",
+      "name": "Automotive Sensors",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 38
+    },
+    {
+      "type": "theme",
+      "key": "2f9282ed-64fb-423b-9784-058630c5a919",
+      "name": "Unmanned Systems",
+      "parentKey": "830107ac-3409-42d6-aa86-0247ba3808f5",
+      "numId": 450
+    },
+    {
+      "type": "theme",
+      "key": "3024b282-8b41-4e59-9459-6c405e4375a6",
+      "name": "Industrial Fasteners",
+      "parentKey": "4d5bee60-a575-4bab-8379-2e5326ab52ba",
+      "numId": 257
+    },
+    {
+      "type": "theme",
+      "key": "3048fc91-0391-4bcc-9d19-e8b311f3a2de",
+      "name": "Automotive Electronics",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 34
+    },
+    {
+      "type": "theme",
+      "key": "3052d9b9-7407-4522-861e-cf7c19e3a25e",
+      "name": "Plant-based Products",
+      "parentKey": "24538734-0289-4834-9d0e-708458aa2723",
+      "numId": 365
+    },
+    {
+      "type": "theme",
+      "key": "308413dc-07f1-460b-aa94-638ea1b22922",
+      "name": "Vehicle-to-grid Technology",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 460
+    },
+    {
+      "type": "theme",
+      "key": "31331ef2-975d-419f-ac06-455b8969f7ea",
+      "name": "Heavy Industry Supply",
+      "parentKey": "4d5bee60-a575-4bab-8379-2e5326ab52ba",
+      "numId": 232
+    },
+    {
+      "type": "theme",
+      "key": "3150522f-32b3-4288-a1cd-d061b6a0a90f",
+      "name": "Wealth Management Services",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 468
+    },
+    {
+      "type": "theme",
+      "key": "315b5329-bcf4-4b71-91ff-48cdb3214bd6",
+      "name": "Retail Partnerships",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 396
+    },
+    {
+      "type": "theme",
+      "key": "3176ab44-8c32-4255-848c-9a55f395e767",
+      "name": "Sustainable Utilities",
+      "parentKey": "a11f42db-beec-47ca-a4ed-2738d1c416f7",
+      "numId": 440
+    },
+    {
+      "type": "theme",
+      "key": "31abdb07-0302-4357-9705-f9871e06c887",
+      "name": "Freight Forwarding",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 210
+    },
+    {
+      "type": "theme",
+      "key": "33018fe9-6ff0-449b-8d74-a8a001fe395d",
+      "name": "Virtual Reality",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 464
+    },
+    {
+      "type": "theme",
+      "key": "330374f4-2c6e-4e50-b545-981d35d302f7",
+      "name": "Shale Gas",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 413
+    },
+    {
+      "type": "theme",
+      "key": "3472da56-487c-4eda-9c7f-83afa184d8d8",
+      "name": "E-Commerce",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 153
+    },
+    {
+      "type": "theme",
+      "key": "3608905e-893a-44cb-b2de-21ac81432ef6",
+      "name": "Entertainment Services",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 186
+    },
+    {
+      "type": "theme",
+      "key": "36360187-ebf5-4697-b281-49aab5108003",
+      "name": "Brick-and-mortar Presence",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 69
+    },
+    {
+      "type": "theme",
+      "key": "36b9d0fa-a02a-4073-8519-db368eab3771",
+      "name": "Communication Tools",
+      "parentKey": "23f61537-a6dd-4ce2-9ea3-4bf554c9f527",
+      "numId": 97
+    },
+    {
+      "type": "theme",
+      "key": "3727b8c9-7b24-4cd1-99bf-7c4586ea099f",
+      "name": "Data Security",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 130
+    },
+    {
+      "type": "theme",
+      "key": "37ad490b-9891-4743-abc9-3a59f5b8d86d",
+      "name": "Agriculture Technology",
+      "parentKey": "86fc4a71-ed8d-4ab9-b4f5-30d3f8a680a1",
+      "numId": 15
+    },
+    {
+      "type": "theme",
+      "key": "38567175-24bc-4d48-97f9-66b6794734ac",
+      "name": "Biologics Solutions",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 57
+    },
+    {
+      "type": "theme",
+      "key": "38696f8e-234a-42fa-a658-01620fdb9172",
+      "name": "Electronics Manufacturing",
+      "parentKey": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "numId": 166
+    },
+    {
+      "type": "theme",
+      "key": "38cc71ed-1fdf-424a-b90e-e0ddc554220b",
+      "name": "Telemedicine",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 478
+    },
+    {
+      "type": "theme",
+      "key": "396e8a4c-c08e-4bb6-bfc8-3b01616d0f40",
+      "name": "Commercial EVs",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 94
+    },
+    {
+      "type": "theme",
+      "key": "39df170c-6b14-4afe-8e8c-ae5b594764cc",
+      "name": "Pet Care Products",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 361
+    },
+    {
+      "type": "theme",
+      "key": "3a2bcb42-920d-40a7-ace3-037967ecce9f",
+      "name": "Mobile Gaming",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 320
+    },
+    {
+      "type": "theme",
+      "key": "3ab1a8b0-0f4c-485b-92c4-62002c86b049",
+      "name": "Wearables",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 469
+    },
+    {
+      "type": "theme",
+      "key": "3b3a9f29-716b-4983-ae66-f83e3e2d5ed1",
+      "name": "Retail Giant",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 394
+    },
+    {
+      "type": "theme",
+      "key": "3b56ab21-0cec-41ad-8b6e-f836c6f38733",
+      "name": "Residential Real Estate",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 387
+    },
+    {
+      "type": "theme",
+      "key": "3ba549e7-4b5f-4a51-ac21-83b2e83ae448",
+      "name": "Oil & Gas Services",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 338
+    },
+    {
+      "type": "theme",
+      "key": "3c5d2231-a067-45b3-b155-69509474a4b5",
+      "name": "Hydrocarbon Production",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 245
+    },
+    {
+      "type": "theme",
+      "key": "3d01647e-7d34-4a24-b760-b67ebfb102aa",
+      "name": "Steel Industry",
+      "parentKey": "ec8d106a-baef-4fcc-8f33-d5dc75d9c4a0",
+      "numId": 429
+    },
+    {
+      "type": "theme",
+      "key": "3e1b5ea0-a8e5-4a82-85e9-893b2275ed1b",
+      "name": "E-Commerce Logistics",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 154
+    },
+    {
+      "type": "theme",
+      "key": "3e31dce3-179a-4467-af96-c4692fce2f62",
+      "name": "Original Content",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 353
+    },
+    {
+      "type": "theme",
+      "key": "3e591782-ffeb-41b8-9ab1-d9f328ca72d6",
+      "name": "Insurance Services",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 270
+    },
+    {
+      "type": "theme",
+      "key": "3eadd41b-6e15-429f-a48c-75b9ead89bd2",
+      "name": "Biotechnology in Agriculture",
+      "parentKey": "86fc4a71-ed8d-4ab9-b4f5-30d3f8a680a1",
+      "numId": 65
+    },
+    {
+      "type": "theme",
+      "key": "3f6a5034-c435-4ee3-9517-253f59a1b6ca",
+      "name": "Metaverse",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 309
+    },
+    {
+      "type": "theme",
+      "key": "3feaa25b-02a0-46d9-9c94-47c51b245087",
+      "name": "Film Production",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 193
+    },
+    {
+      "type": "theme",
+      "key": "4050f43b-a0b3-40cc-ba38-ee7a2e2a0332",
+      "name": "Fleet Management Solutions",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 199
+    },
+    {
+      "type": "theme",
+      "key": "40b113b8-4b7e-4a57-a539-91e7d62f6e58",
+      "name": "Coal & Consumable Fuels",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 92
+    },
+    {
+      "type": "theme",
+      "key": "41096bf5-af45-42ea-bce0-0505adcf4a35",
+      "name": "Impact Investing",
+      "parentKey": "a11f42db-beec-47ca-a4ed-2738d1c416f7",
+      "numId": 248
+    },
+    {
+      "type": "theme",
+      "key": "4185eeeb-3cba-48e8-b0dc-b11048c090c1",
+      "name": "Paper Products",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 356
+    },
+    {
+      "type": "theme",
+      "key": "4199a10e-ef02-480f-9406-e00ca226fb5d",
+      "name": "Sports Franchises",
+      "parentKey": "44a21120-40ee-416d-8699-7c8037ee47b1",
+      "numId": 428
+    },
+    {
+      "type": "theme",
+      "key": "41ec7426-5040-495c-aca0-ee67a1a21048",
+      "name": "Private Equity",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 369
+    },
+    {
+      "type": "theme",
+      "key": "41ec7d85-2890-4b9b-8659-82fc444a9b0b",
+      "name": "Apparel Manufacturing",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 25
+    },
+    {
+      "type": "theme",
+      "key": "4209a810-d833-42a7-950b-27a18ae3b9e5",
+      "name": "Quantum Computing",
+      "parentKey": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "numId": 374
+    },
+    {
+      "type": "theme",
+      "key": "424e4b17-4fed-40e4-92a7-ef53ffada4a8",
+      "name": "Healthcare Diagnostics",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 226
+    },
+    {
+      "type": "theme",
+      "key": "42cb6b91-fa6f-45a4-a05a-42db18654ed8",
+      "name": "Enterprise Software",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 183
+    },
+    {
+      "type": "theme",
+      "key": "42cc9668-27db-462a-b1da-25ef87016471",
+      "name": "Energy Exploration",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 169
+    },
+    {
+      "type": "theme",
+      "key": "42e2758a-31c2-413a-aa4e-de9b0ab19132",
+      "name": "Cybersecurity",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 124
+    },
+    {
+      "type": "theme",
+      "key": "43989e7c-2c11-4ce8-812c-2d30074ba650",
+      "name": "Healthcare Monitoring",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 228
+    },
+    {
+      "type": "theme",
+      "key": "43dddd94-e063-4726-9f99-6ff014953104",
+      "name": "Hospitality Industry",
+      "parentKey": "44a21120-40ee-416d-8699-7c8037ee47b1",
+      "numId": 237
+    },
+    {
+      "type": "theme",
+      "key": "453bfb03-44fa-48b5-85b8-3dcec34d2abe",
+      "name": "Gold Production",
+      "parentKey": "ec8d106a-baef-4fcc-8f33-d5dc75d9c4a0",
+      "numId": 221
+    },
+    {
+      "type": "theme",
+      "key": "456cc9f1-37ca-4a91-b19b-ccbe43a0bd4c",
+      "name": "Electronic Components",
+      "parentKey": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "numId": 163
+    },
+    {
+      "type": "theme",
+      "key": "4588fee5-daaa-469f-8d08-151293fa42eb",
+      "name": "5G Infrastructure",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 2
+    },
+    {
+      "type": "theme",
+      "key": "45b329b8-f688-4715-9a92-da3ee268c043",
+      "name": "Media Networks",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 300
+    },
+    {
+      "type": "theme",
+      "key": "45e8a248-c80e-445b-b806-110ebfb5e14d",
+      "name": "Energy Transition",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 179
+    },
+    {
+      "type": "theme",
+      "key": "45ef0768-2c97-4d9d-93ee-0c8fa951764d",
+      "name": "Open Banking Solutions",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 348
+    },
+    {
+      "type": "theme",
+      "key": "4674e09c-7576-4427-8aa0-a6dcb5b9909f",
+      "name": "Gene Therapy",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 216
+    },
+    {
+      "type": "theme",
+      "key": "47bb7c76-dec4-486d-be66-2ebe61ee54b5",
+      "name": "Financial Products",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 196
+    },
+    {
+      "type": "theme",
+      "key": "480a61a1-fa36-4cee-bbe3-896dd16d1496",
+      "name": "Construction Technology",
+      "parentKey": "ceae44ab-2c7f-4074-8724-d8c04f235f81",
+      "numId": 101
+    },
+    {
+      "type": "theme",
+      "key": "48cf8c76-2c7c-417b-97d9-d54a3ad384d0",
+      "name": "5G Rollout",
+      "parentKey": "23f61537-a6dd-4ce2-9ea3-4bf554c9f527",
+      "numId": 3
+    },
+    {
+      "type": "theme",
+      "key": "49275526-57a9-4e85-a3cb-b9b143b13ff2",
+      "name": "Application Development",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 26
+    },
+    {
+      "type": "theme",
+      "key": "4a0685f2-ef44-46fd-8973-8030650104ec",
+      "name": "Esports And Gaming",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 188
+    },
+    {
+      "type": "theme",
+      "key": "4b5a0438-2273-4fd7-a565-eeadf3721794",
+      "name": "Professional Visualization",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 370
+    },
+    {
+      "type": "theme",
+      "key": "4c49d4f4-b18c-41cd-be02-1cfadfc72400",
+      "name": "Streaming Platforms & Services",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 431
+    },
+    {
+      "type": "theme",
+      "key": "4c4e8665-33f0-4171-95ec-e007bfedae46",
+      "name": "Metal Fabrication",
+      "parentKey": "ec8d106a-baef-4fcc-8f33-d5dc75d9c4a0",
+      "numId": 307
+    },
+    {
+      "type": "theme",
+      "key": "4c7e00fc-a735-4138-8892-bee022cd8f68",
+      "name": "Energy Exports",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 170
+    },
+    {
+      "type": "theme",
+      "key": "4cb9ff3c-99f1-425f-a3ff-03d6ae0779ab",
+      "name": "Food Ingredients",
+      "parentKey": "24538734-0289-4834-9d0e-708458aa2723",
+      "numId": 202
+    },
+    {
+      "type": "theme",
+      "key": "4cc0ad01-1103-4573-b374-d20f0d16f347",
+      "name": "Biotech R&D",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 63
+    },
+    {
+      "type": "theme",
+      "key": "4d75bf0c-5fff-4049-9e3d-de2a72ee3d8a",
+      "name": "Cruise Operations",
+      "parentKey": "44a21120-40ee-416d-8699-7c8037ee47b1",
+      "numId": 122
+    },
+    {
+      "type": "theme",
+      "key": "4dcefe26-30c5-473e-923d-81eca8b33aac",
+      "name": "Synthetic Biology",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 441
+    },
+    {
+      "type": "theme",
+      "key": "4e0e3ae4-9908-4270-a94d-40996d867e9f",
+      "name": "Tokenized Finance",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 490
+    },
+    {
+      "type": "theme",
+      "key": "4fd02ee8-ea8b-4ce9-9238-498289daf79c",
+      "name": "Aviation Systems",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 46
+    },
+    {
+      "type": "theme",
+      "key": "512f0de4-da00-4846-9c2a-be4847d182a4",
+      "name": "Cloud Computing",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 87
+    },
+    {
+      "type": "theme",
+      "key": "526a322e-668e-49e2-9f50-1b0b096ace15",
+      "name": "Audio Solutions",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 28
+    },
+    {
+      "type": "theme",
+      "key": "5286c2ec-31f5-40b6-8669-88010feb8a5a",
+      "name": "Commercial Fleets",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 95
+    },
+    {
+      "type": "theme",
+      "key": "537f09b2-981b-4e13-ad66-c584d492241b",
+      "name": "Longevity Therapeutics",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 496
+    },
+    {
+      "type": "theme",
+      "key": "53f0af69-6511-47ff-9f2e-8dcc40c386c4",
+      "name": "Aviation Finance",
+      "parentKey": "830107ac-3409-42d6-aa86-0247ba3808f5",
+      "numId": 44
+    },
+    {
+      "type": "theme",
+      "key": "54945708-bdcc-465d-893a-fd91642fcff3",
+      "name": "Supply Chain Solutions",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 474
+    },
+    {
+      "type": "theme",
+      "key": "54d9d1d6-70ec-4f5f-b991-b5c2982a596d",
+      "name": "Digital Twin Technology",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 147
+    },
+    {
+      "type": "theme",
+      "key": "54e64bb3-b6ab-4e95-8e81-d0d4b1addd13",
+      "name": "Marine Transportation",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 296
+    },
+    {
+      "type": "theme",
+      "key": "54fbf7f8-b121-4cad-bb85-4bceefbed925",
+      "name": "Automotive Steel Products",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 39
+    },
+    {
+      "type": "theme",
+      "key": "55847ee1-83f5-40c3-90a4-278b48569471",
+      "name": "Warehouse Management",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 465
+    },
+    {
+      "type": "theme",
+      "key": "559a7be0-e479-4ff7-a8ac-cb58eeb4244c",
+      "name": "Leisure Products",
+      "parentKey": "44a21120-40ee-416d-8699-7c8037ee47b1",
+      "numId": 284
+    },
+    {
+      "type": "theme",
+      "key": "565fb381-a89e-4dcb-9c05-a330730a593f",
+      "name": "Consumer-to-consumer",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 113
+    },
+    {
+      "type": "theme",
+      "key": "5675a4a9-0feb-4f98-951e-bd87af4fffc5",
+      "name": "Nuclear Energy",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 335
+    },
+    {
+      "type": "theme",
+      "key": "57a37b9e-ec25-46b1-846a-bc7295ee99a9",
+      "name": "Entertainment Resorts",
+      "parentKey": "44a21120-40ee-416d-8699-7c8037ee47b1",
+      "numId": 185
+    },
+    {
+      "type": "theme",
+      "key": "5a237f4f-d9e4-466b-9207-578e45bcc6eb",
+      "name": "Music Production",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 327
+    },
+    {
+      "type": "theme",
+      "key": "5a83b17f-933b-4312-9ec1-7858d3382ed1",
+      "name": "Home Furnishings",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 234
+    },
+    {
+      "type": "theme",
+      "key": "5b1a21c0-248f-4c00-aa0e-353fbac1683e",
+      "name": "Gaming Hardware",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 211
+    },
+    {
+      "type": "theme",
+      "key": "5b78281a-c45d-4a2c-addc-b8b7571cbd87",
+      "name": "Oil Exploration",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 339
+    },
+    {
+      "type": "theme",
+      "key": "5ba0369f-9e77-4c80-8e64-217f559156d2",
+      "name": "Health-conscious Branding",
+      "parentKey": "24538734-0289-4834-9d0e-708458aa2723",
+      "numId": 224
+    },
+    {
+      "type": "theme",
+      "key": "5bca6c37-ffce-4e75-ada9-7d84f374a00a",
+      "name": "Gene Editing",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 215
+    },
+    {
+      "type": "theme",
+      "key": "5c2306b1-7de4-4611-a83b-d16cf05f707c",
+      "name": "Multi-Family Residential",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 326
+    },
+    {
+      "type": "theme",
+      "key": "5c84c10a-20a5-469a-a825-fc350fca72a7",
+      "name": "Convenience Stores",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 115
+    },
+    {
+      "type": "theme",
+      "key": "5cb8e376-97b5-4b07-8f60-a4b30bc60a3a",
+      "name": "Defense Electronics",
+      "parentKey": "830107ac-3409-42d6-aa86-0247ba3808f5",
+      "numId": 134
+    },
+    {
+      "type": "theme",
+      "key": "5cce0040-d2cb-4176-b5a0-3251111964f9",
+      "name": "Machine Learning",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 295
+    },
+    {
+      "type": "theme",
+      "key": "5cdce4ae-1341-46fe-921c-3be0dec3bb89",
+      "name": "Social Networking",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 421
+    },
+    {
+      "type": "theme",
+      "key": "5d3f8788-09ef-460e-8c1b-163016bf807b",
+      "name": "Medical Devices",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 301
+    },
+    {
+      "type": "theme",
+      "key": "5e5a5b29-6382-4f95-b0e5-d1aaf97a0e57",
+      "name": "Sporting Goods Retail",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 426
+    },
+    {
+      "type": "theme",
+      "key": "5e617715-a3da-4e04-82a9-618fa71e4086",
+      "name": "Hydrogen Fuel Technology",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 246
+    },
+    {
+      "type": "theme",
+      "key": "5e6de687-6971-46a6-a06b-1100a4d9b78c",
+      "name": "Mining Equipment",
+      "parentKey": "ec8d106a-baef-4fcc-8f33-d5dc75d9c4a0",
+      "numId": 315
+    },
+    {
+      "type": "theme",
+      "key": "5f0861dc-ac6b-44c7-83b6-d1d70d893373",
+      "name": "Infrastructure Development",
+      "parentKey": "ceae44ab-2c7f-4074-8724-d8c04f235f81",
+      "numId": 479
+    },
+    {
+      "type": "theme",
+      "key": "5fae56b0-6030-4ee5-b871-7cd26a2b6a1c",
+      "name": "Environmental Technologies",
+      "parentKey": "a11f42db-beec-47ca-a4ed-2738d1c416f7",
+      "numId": 187
+    },
+    {
+      "type": "theme",
+      "key": "5fb1f2a6-5f7a-4534-b75e-676b8f8921ea",
+      "name": "Industrial Machinery",
+      "parentKey": "4d5bee60-a575-4bab-8379-2e5326ab52ba",
+      "numId": 259
+    },
+    {
+      "type": "theme",
+      "key": "5fc320da-f3df-4c6d-927d-e70e1d076358",
+      "name": "Urban Property Development",
+      "parentKey": "ceae44ab-2c7f-4074-8724-d8c04f235f81",
+      "numId": 452
+    },
+    {
+      "type": "theme",
+      "key": "60721398-db64-41e2-8672-55b412ba74f2",
+      "name": "Marketing Services",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 297
+    },
+    {
+      "type": "theme",
+      "key": "610e942c-0dd2-4701-b6f1-41520ed19bd3",
+      "name": "Industrial Technologies",
+      "parentKey": "4d5bee60-a575-4bab-8379-2e5326ab52ba",
+      "numId": 266
+    },
+    {
+      "type": "theme",
+      "key": "614acbd3-e10b-42e7-a546-5d9e77449c21",
+      "name": "Metal Recycling Technology",
+      "parentKey": "ec8d106a-baef-4fcc-8f33-d5dc75d9c4a0",
+      "numId": 308
+    },
+    {
+      "type": "theme",
+      "key": "619d6af6-ff18-4b77-85c1-ac77855cfd0c",
+      "name": "Wind Energy",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 470
+    },
+    {
+      "type": "theme",
+      "key": "61a7c68c-25a7-4833-ae0b-8e9f8f0b32ca",
+      "name": "Private Credit",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 488
+    },
+    {
+      "type": "theme",
+      "key": "61d2895d-12be-4785-a439-395f466c74a7",
+      "name": "Green Bonds",
+      "parentKey": "a11f42db-beec-47ca-a4ed-2738d1c416f7",
+      "numId": 222
+    },
+    {
+      "type": "theme",
+      "key": "628619d7-4b36-43dd-b675-816f06b52524",
+      "name": "Crop Protection",
+      "parentKey": "86fc4a71-ed8d-4ab9-b4f5-30d3f8a680a1",
+      "numId": 121
+    },
+    {
+      "type": "theme",
+      "key": "630f9413-c7f5-4b01-9959-72dfc9629704",
+      "name": "Semiconductor Equipment",
+      "parentKey": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "numId": 409
+    },
+    {
+      "type": "theme",
+      "key": "63d9d68c-6077-46e3-bfa9-84b9a7452bb0",
+      "name": "Consumer Health Products",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 108
+    },
+    {
+      "type": "theme",
+      "key": "642f1812-8766-41bd-bbe9-35347732526d",
+      "name": "Financial Marketplaces",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 195
+    },
+    {
+      "type": "theme",
+      "key": "6498e9fb-2e26-4d41-8507-ed3e0775096c",
+      "name": "Restaurant Expansion",
+      "parentKey": "24538734-0289-4834-9d0e-708458aa2723",
+      "numId": 390
+    },
+    {
+      "type": "theme",
+      "key": "657dafe3-8422-4375-9b15-b76f92f8f68d",
+      "name": "LNG Projects",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 287
+    },
+    {
+      "type": "theme",
+      "key": "65811fd8-02a5-4e15-9be6-f73532f69e39",
+      "name": "Missile Defense",
+      "parentKey": "830107ac-3409-42d6-aa86-0247ba3808f5",
+      "numId": 319
+    },
+    {
+      "type": "theme",
+      "key": "661185c5-737f-4722-bdd6-3f80554c76d4",
+      "name": "Digital Transformation",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 146
+    },
+    {
+      "type": "theme",
+      "key": "68086f35-fb59-4c60-bfa4-e3b54047c213",
+      "name": "Organic Farming",
+      "parentKey": "86fc4a71-ed8d-4ab9-b4f5-30d3f8a680a1",
+      "numId": 351
+    },
+    {
+      "type": "theme",
+      "key": "68bc0a89-c530-4e8f-b4ef-a6a1eee111f3",
+      "name": "Renewable Energy",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 384
+    },
+    {
+      "type": "theme",
+      "key": "68fdb71f-a248-4ab8-83b7-01cdac92beb6",
+      "name": "Low Code/No Code Development",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 291
+    },
+    {
+      "type": "theme",
+      "key": "694fc578-da65-4b0e-bd7d-1d92db9f7299",
+      "name": "Autonomous Vehicles",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 43
+    },
+    {
+      "type": "theme",
+      "key": "695cfb00-3832-46ee-bbb1-9f75a4832dfb",
+      "name": "Foodservice Solutions",
+      "parentKey": "24538734-0289-4834-9d0e-708458aa2723",
+      "numId": 205
+    },
+    {
+      "type": "theme",
+      "key": "69d9c830-3a7b-41b6-a796-746539839d1a",
+      "name": "Food And Beverage",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 200
+    },
+    {
+      "type": "theme",
+      "key": "69e3986c-23c7-48a1-86b0-cc287e4dd0f0",
+      "name": "Industrial Supplies",
+      "parentKey": "4d5bee60-a575-4bab-8379-2e5326ab52ba",
+      "numId": 265
+    },
+    {
+      "type": "theme",
+      "key": "6a089583-e3d4-4aab-adfa-b1a62f1f6f61",
+      "name": "Data Networking",
+      "parentKey": "23f61537-a6dd-4ce2-9ea3-4bf554c9f527",
+      "numId": 129
+    },
+    {
+      "type": "theme",
+      "key": "6aad7583-a4e8-4f57-9657-1696f706b866",
+      "name": "Investment Banking",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 278
+    },
+    {
+      "type": "theme",
+      "key": "6b5f9f8d-8019-4f73-a573-db7d06ae69d5",
+      "name": "Travel Platform",
+      "parentKey": "44a21120-40ee-416d-8699-7c8037ee47b1",
+      "numId": 448
+    },
+    {
+      "type": "theme",
+      "key": "6b643cba-fd2c-4464-9954-f0cb0258b7a4",
+      "name": "Healthcare Retail",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 229
+    },
+    {
+      "type": "theme",
+      "key": "6bc0cd50-6390-4360-87a5-d52a62ded48e",
+      "name": "Urban Housing",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 451
+    },
+    {
+      "type": "theme",
+      "key": "6bc23c7b-cd75-4097-9ff0-80fcb3a87a7d",
+      "name": "Real Estate Holdings",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 378
+    },
+    {
+      "type": "theme",
+      "key": "6c3784ca-4661-4bc5-a5ab-82af3b212ed4",
+      "name": "Education Technology",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 156
+    },
+    {
+      "type": "theme",
+      "key": "6c4e26f7-36ab-4d06-aa16-f522bd97b7b4",
+      "name": "Mortgage Financing Services",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 324
+    },
+    {
+      "type": "theme",
+      "key": "6cd6aceb-6e7a-44cf-ac7c-4c4d1cfcbe6e",
+      "name": "Deposit Services",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 136
+    },
+    {
+      "type": "theme",
+      "key": "6d264f38-b3b3-48de-a449-a23b8be20335",
+      "name": "Broadband Services",
+      "parentKey": "23f61537-a6dd-4ce2-9ea3-4bf554c9f527",
+      "numId": 70
+    },
+    {
+      "type": "theme",
+      "key": "6d47eac2-d4db-46e8-81d0-fd5cee93bfd0",
+      "name": "Diversified Financial Services",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 197
+    },
+    {
+      "type": "theme",
+      "key": "6d817c3e-049e-45f9-b36e-639802dd6738",
+      "name": "Natural Gas",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 329
+    },
+    {
+      "type": "theme",
+      "key": "6d952a1a-e964-44d3-b05b-e4b2e0b1c8bf",
+      "name": "Data Centers",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 127
+    },
+    {
+      "type": "theme",
+      "key": "6e2abfdd-ac76-4aba-8cc8-239623d28db3",
+      "name": "Industrial Automation",
+      "parentKey": "4d5bee60-a575-4bab-8379-2e5326ab52ba",
+      "numId": 250
+    },
+    {
+      "type": "theme",
+      "key": "6fc3a8a1-ef7e-471f-aa6a-f57da5a4ba47",
+      "name": "Mobility Solutions",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 322
+    },
+    {
+      "type": "theme",
+      "key": "6fca7da6-b488-47d9-a172-42ed12780c63",
+      "name": "Satellite Technology",
+      "parentKey": "830107ac-3409-42d6-aa86-0247ba3808f5",
+      "numId": 406
+    },
+    {
+      "type": "theme",
+      "key": "70520c37-7263-460f-961d-d39168f91077",
+      "name": "Fintech Solutions",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 198
+    },
+    {
+      "type": "theme",
+      "key": "705f4d7d-0d83-43e9-801f-c058a71d52e3",
+      "name": "Agricultural Commodities",
+      "parentKey": "86fc4a71-ed8d-4ab9-b4f5-30d3f8a680a1",
+      "numId": 13
+    },
+    {
+      "type": "theme",
+      "key": "709db14e-5ee9-418f-91bf-1ff4f82448ca",
+      "name": "Gas Distribution Networks",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 214
+    },
+    {
+      "type": "theme",
+      "key": "7287e805-70d1-4fa1-9d89-c8b098e4b244",
+      "name": "Drone Delivery Systems",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 150
+    },
+    {
+      "type": "theme",
+      "key": "72b65672-84b2-4e3a-a2e4-20e01491971b",
+      "name": "Gaming Industry",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 212
+    },
+    {
+      "type": "theme",
+      "key": "73617c34-dc6f-428f-83e1-8560f37045c6",
+      "name": "Vertical AI",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 484
+    },
+    {
+      "type": "theme",
+      "key": "736cf2e8-88b3-4e30-ae68-256bc1ed6543",
+      "name": "Retail Furniture",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 393
+    },
+    {
+      "type": "theme",
+      "key": "74263aea-0cb9-4972-8192-d5c48b009bad",
+      "name": "Oncology Research",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 343
+    },
+    {
+      "type": "theme",
+      "key": "74aa6031-c0ca-4f1e-8ed9-83114b931a06",
+      "name": "Augmented Reality",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 29
+    },
+    {
+      "type": "theme",
+      "key": "74ee18d3-757e-4d36-9444-f64d0f2c129e",
+      "name": "Beverage Manufacturing",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 54
+    },
+    {
+      "type": "theme",
+      "key": "750c8762-ccca-4b94-8961-25361ff147dc",
+      "name": "Mineral Reserves",
+      "parentKey": "ec8d106a-baef-4fcc-8f33-d5dc75d9c4a0",
+      "numId": 313
+    },
+    {
+      "type": "theme",
+      "key": "75d69873-1e0d-44a4-9c32-f4869a868b4d",
+      "name": "Automotive E-commerce",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 33
+    },
+    {
+      "type": "theme",
+      "key": "75dd7396-cc72-407e-9911-d9e8dec4b86f",
+      "name": "Industrial Software",
+      "parentKey": "4d5bee60-a575-4bab-8379-2e5326ab52ba",
+      "numId": 264
+    },
+    {
+      "type": "theme",
+      "key": "75edfdd2-2bd0-45d3-9e2c-ee77ca655f6d",
+      "name": "3D Printing & Additive Manufacturing",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 1
+    },
+    {
+      "type": "theme",
+      "key": "76f7ba48-3060-411d-851f-3fe05e9c275c",
+      "name": "Social Media Platforms",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 420
+    },
+    {
+      "type": "theme",
+      "key": "77899ed0-c248-47c1-b242-844db1ab397c",
+      "name": "Casino Gaming",
+      "parentKey": "44a21120-40ee-416d-8699-7c8037ee47b1",
+      "numId": 77
+    },
+    {
+      "type": "theme",
+      "key": "77b8cd48-48cf-4f28-82ff-2064014f00cc",
+      "name": "Critical Minerals",
+      "parentKey": "ec8d106a-baef-4fcc-8f33-d5dc75d9c4a0",
+      "numId": 120
+    },
+    {
+      "type": "theme",
+      "key": "789d96da-96d2-48c2-b12e-b051f1ba8087",
+      "name": "Vehicle Software",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 459
+    },
+    {
+      "type": "theme",
+      "key": "78d9c395-73dc-476e-9d66-851764e80d0e",
+      "name": "Aerospace Manufacturing",
+      "parentKey": "830107ac-3409-42d6-aa86-0247ba3808f5",
+      "numId": 8
+    },
+    {
+      "type": "theme",
+      "key": "79b61e40-904e-42ba-9645-aaba2638da11",
+      "name": "Cloud Storage",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 91
+    },
+    {
+      "type": "theme",
+      "key": "7a7f7218-be82-42e3-af7f-91e539406843",
+      "name": "Industrial Electronics",
+      "parentKey": "4d5bee60-a575-4bab-8379-2e5326ab52ba",
+      "numId": 256
+    },
+    {
+      "type": "theme",
+      "key": "7b140703-be37-44ef-a40f-8ae205aabbe4",
+      "name": "Socially Responsible Investing",
+      "parentKey": "a11f42db-beec-47ca-a4ed-2738d1c416f7",
+      "numId": 422
+    },
+    {
+      "type": "theme",
+      "key": "7b1c77ec-8c37-4420-96ec-6a87e661b273",
+      "name": "Loan Origination",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 288
+    },
+    {
+      "type": "theme",
+      "key": "7b591726-553c-4435-aa22-c71ee5799a62",
+      "name": "Carbon Capture",
+      "parentKey": "a11f42db-beec-47ca-a4ed-2738d1c416f7",
+      "numId": 74
+    },
+    {
+      "type": "theme",
+      "key": "7bc5f615-a923-4bf6-a13e-22a4d9c3dcf8",
+      "name": "Insurtech Partnerships",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 272
+    },
+    {
+      "type": "theme",
+      "key": "7c3b2f6f-ad23-4a95-b661-1de262c1f439",
+      "name": "Hydrocarbon Exploration",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 244
+    },
+    {
+      "type": "theme",
+      "key": "7d844d91-c9c0-457f-9b7e-04c81c14aeed",
+      "name": "Search Engine Services",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 407
+    },
+    {
+      "type": "theme",
+      "key": "7dedf06b-9a77-47c9-8d13-f26bdb15860a",
+      "name": "Cardiovascular Disease",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 75
+    },
+    {
+      "type": "theme",
+      "key": "7f842f75-197b-4f8e-9c49-9757768dfe51",
+      "name": "Genetic Medicines",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 218
+    },
+    {
+      "type": "theme",
+      "key": "8036e159-5b99-4cfc-ab9c-1009990bff7f",
+      "name": "Memory Chips",
+      "parentKey": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "numId": 305
+    },
+    {
+      "type": "theme",
+      "key": "8065912d-c7d1-4852-b964-e14bbf661ffc",
+      "name": "Institutional Trading",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 268
+    },
+    {
+      "type": "theme",
+      "key": "80f7e47a-dc30-46d0-b0c6-f1c797933a3d",
+      "name": "Biotechnology Leader",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 66
+    },
+    {
+      "type": "theme",
+      "key": "812943db-e78e-4849-a6f4-c37f437a82cd",
+      "name": "Mobile Payments",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 321
+    },
+    {
+      "type": "theme",
+      "key": "812fee01-cb33-40f9-b37a-4c80e856cccf",
+      "name": "Reinsurance",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 383
+    },
+    {
+      "type": "theme",
+      "key": "814bc156-0f3c-4c60-922c-cd435d47580d",
+      "name": "Industrial Real Estate",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 262
+    },
+    {
+      "type": "theme",
+      "key": "820a7778-d2f8-47b1-a1d3-a23212e0d486",
+      "name": "Medical Innovation",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 303
+    },
+    {
+      "type": "theme",
+      "key": "8245dffe-2c21-464c-83ae-8225a1d0e7c7",
+      "name": "Single-family Rentals",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 415
+    },
+    {
+      "type": "theme",
+      "key": "82be5625-1588-4545-9316-455cbeb9803b",
+      "name": "Digital Economy",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 140
+    },
+    {
+      "type": "theme",
+      "key": "82c09040-f3c8-4fe1-a4f6-13396e2d175d",
+      "name": "Retail & Universal Banking",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 47
+    },
+    {
+      "type": "theme",
+      "key": "83401811-e9b8-4553-8d3c-3639d6e5728e",
+      "name": "Medical Supplies",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 304
+    },
+    {
+      "type": "theme",
+      "key": "8354b329-1ef4-4620-8c75-183c1befbd88",
+      "name": "Blockchain Technology",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 68
+    },
+    {
+      "type": "theme",
+      "key": "83f1478d-4991-4a72-a789-7528834f17cf",
+      "name": "Residential REIT",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 388
+    },
+    {
+      "type": "theme",
+      "key": "841ce503-f0f1-47d8-9e11-9d545d505dc4",
+      "name": "Life Science Tools",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 285
+    },
+    {
+      "type": "theme",
+      "key": "847ebb6e-7f5f-4dd8-b809-09126045283a",
+      "name": "Biopharmaceutical Partnerships",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 60
+    },
+    {
+      "type": "theme",
+      "key": "85aab5b4-8d6d-404b-8479-5f36af77aed9",
+      "name": "Real Estate Investment Trust",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 380
+    },
+    {
+      "type": "theme",
+      "key": "85b53b8e-8f28-4dec-a58d-c19ad5dab347",
+      "name": "Capital Markets",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 72
+    },
+    {
+      "type": "theme",
+      "key": "8654c156-f5ea-4d20-a109-23222391c0f3",
+      "name": "Diabetes Treatments",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 138
+    },
+    {
+      "type": "theme",
+      "key": "882fae4f-eaa4-4973-8658-599d71a6fc99",
+      "name": "Industrial Prototyping",
+      "parentKey": "4d5bee60-a575-4bab-8379-2e5326ab52ba",
+      "numId": 261
+    },
+    {
+      "type": "theme",
+      "key": "8843de23-fc3f-48d3-83e6-926a16350cfa",
+      "name": "Supply Chain Automation",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 432
+    },
+    {
+      "type": "theme",
+      "key": "8983a1dc-7adb-4890-9aab-47383ab8cca9",
+      "name": "Wireless Services",
+      "parentKey": "23f61537-a6dd-4ce2-9ea3-4bf554c9f527",
+      "numId": 472
+    },
+    {
+      "type": "theme",
+      "key": "89bb80d7-c939-4c9b-b906-4ddfc9cde836",
+      "name": "Property Redevelopment",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 373
+    },
+    {
+      "type": "theme",
+      "key": "8a2ed26b-92bc-4529-85ee-70bc914c82cf",
+      "name": "Home Improvement",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 235
+    },
+    {
+      "type": "theme",
+      "key": "8a4db4c9-9115-4bad-8ef6-c1dc7c6a36be",
+      "name": "Investment Management",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 279
+    },
+    {
+      "type": "theme",
+      "key": "8ad03f1f-8a24-4bfb-bb7a-2f7721d16b0f",
+      "name": "Oncology Drugs",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 342
+    },
+    {
+      "type": "theme",
+      "key": "8bff3578-9b42-4a74-85c1-d66b1f55bc8f",
+      "name": "Data Analytics",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 125
+    },
+    {
+      "type": "theme",
+      "key": "8c00d67d-e587-4a84-a0ad-8818c07b5a20",
+      "name": "GLP-1 Ripple Effects",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 492
+    },
+    {
+      "type": "theme",
+      "key": "8c4e4431-93f9-4dbd-a651-a7e62b1bd7d7",
+      "name": "Homebuilding",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 236
+    },
+    {
+      "type": "theme",
+      "key": "8c76e474-6753-4375-a828-ee5b8793ec99",
+      "name": "Copper Mining",
+      "parentKey": "ec8d106a-baef-4fcc-8f33-d5dc75d9c4a0",
+      "numId": 116
+    },
+    {
+      "type": "theme",
+      "key": "8c9e924f-4650-4deb-b138-da5ed1aec823",
+      "name": "Digital Wallets",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 148
+    },
+    {
+      "type": "theme",
+      "key": "8d0bd48b-1cc0-44b2-bb18-827e3dcbd646",
+      "name": "Biologic Drugs",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 56
+    },
+    {
+      "type": "theme",
+      "key": "8d5c6d44-e108-4aa8-8b22-737460f82fd5",
+      "name": "Internet Infrastructure",
+      "parentKey": "23f61537-a6dd-4ce2-9ea3-4bf554c9f527",
+      "numId": 275
+    },
+    {
+      "type": "theme",
+      "key": "8d6f8d4b-2595-4680-8bc1-674da4669a40",
+      "name": "Gaming Technology",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 213
+    },
+    {
+      "type": "theme",
+      "key": "8eb4b5b7-1402-4ca8-9026-c56f6d1c48dd",
+      "name": "Cargo Services",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 76
+    },
+    {
+      "type": "theme",
+      "key": "8eb953cf-8908-4ed1-bede-2f02bf463ea7",
+      "name": "Immunology",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 247
+    },
+    {
+      "type": "theme",
+      "key": "8ed1f5db-84a0-4423-aec3-593a0411179f",
+      "name": "Medical Imaging AI",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 302
+    },
+    {
+      "type": "theme",
+      "key": "8ff01e1d-59fb-4b43-a3a5-05025bb50430",
+      "name": "Mental Health Services",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 306
+    },
+    {
+      "type": "theme",
+      "key": "8ff17986-b0a3-4e0e-9751-b001446836d7",
+      "name": "Industrial Transportation",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 267
+    },
+    {
+      "type": "theme",
+      "key": "90d9a864-8174-4308-813a-88c660619b3a",
+      "name": "Healthcare Solutions",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 231
+    },
+    {
+      "type": "theme",
+      "key": "91258ece-9794-4bf2-96ac-9336aea0352a",
+      "name": "Consumer Products",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 111
+    },
+    {
+      "type": "theme",
+      "key": "929c3307-e6f7-4abd-8275-891a1b3fc342",
+      "name": "Internet Of Things",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 276
+    },
+    {
+      "type": "theme",
+      "key": "938ffe10-7d43-4f8c-8fb1-2c321ed8e802",
+      "name": "Blockchain Services",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 67
+    },
+    {
+      "type": "theme",
+      "key": "94aca543-b364-494b-b087-f1271a873bcb",
+      "name": "Space Exploration",
+      "parentKey": "830107ac-3409-42d6-aa86-0247ba3808f5",
+      "numId": 424
+    },
+    {
+      "type": "theme",
+      "key": "96144a14-c8cd-4b46-bcd6-97c435fc5682",
+      "name": "Online Banking",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 344
+    },
+    {
+      "type": "theme",
+      "key": "966bf12f-7302-42e6-8708-043b4d2e0b4f",
+      "name": "IT Consulting",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 281
+    },
+    {
+      "type": "theme",
+      "key": "9723f07d-74ac-4750-9fce-73602ba4ad58",
+      "name": "Threat Intelligence",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 446
+    },
+    {
+      "type": "theme",
+      "key": "97a1ec21-4fcf-48d7-b9ac-2ac583e0b160",
+      "name": "CRISPR Technology",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 119
+    },
+    {
+      "type": "theme",
+      "key": "98835833-a901-4c76-8ddf-58a485744f91",
+      "name": "Credit & Lending",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 117
+    },
+    {
+      "type": "theme",
+      "key": "98a9c793-4ab2-4ba0-a84c-2c6d50b28b42",
+      "name": "Automotive Aftermarket",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 31
+    },
+    {
+      "type": "theme",
+      "key": "98ebcbfe-5d92-42b2-8811-aec6d08ee53a",
+      "name": "Retail REIT",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 397
+    },
+    {
+      "type": "theme",
+      "key": "99dd78a8-3fe3-4d35-b4d0-f312f3b204ab",
+      "name": "Healthcare Materials",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 227
+    },
+    {
+      "type": "theme",
+      "key": "9a38e7ab-6b1a-4140-a4a1-bc7cdb3a1ca5",
+      "name": "Consulting Services",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 102
+    },
+    {
+      "type": "theme",
+      "key": "9a5b11e6-db77-45ba-85de-f9498f694b1b",
+      "name": "Electricity Generation",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 161
+    },
+    {
+      "type": "theme",
+      "key": "9b09511d-fcab-4dad-b223-20181f08c22e",
+      "name": "Merchant Power Trading",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 497
+    },
+    {
+      "type": "theme",
+      "key": "9bc11518-5555-4bf5-af2a-d031ac10cff8",
+      "name": "Freight Brokerage",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 209
+    },
+    {
+      "type": "theme",
+      "key": "9ce3c98a-136e-4dab-97cb-ce8b6a679241",
+      "name": "Renewable Energy Integration",
+      "parentKey": "ceae44ab-2c7f-4074-8724-d8c04f235f81",
+      "numId": 386
+    },
+    {
+      "type": "theme",
+      "key": "9cff2c71-9207-4078-89cd-912cac37020b",
+      "name": "ESG Investments",
+      "parentKey": "a11f42db-beec-47ca-a4ed-2738d1c416f7",
+      "numId": 477
+    },
+    {
+      "type": "theme",
+      "key": "9d1c04a2-501e-4b20-9405-091bc12105fe",
+      "name": "Franchise Model",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 208
+    },
+    {
+      "type": "theme",
+      "key": "9d8e5b8d-04cb-4cbb-aadd-84ba79a388e3",
+      "name": "Data Center Power",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 486
+    },
+    {
+      "type": "theme",
+      "key": "9dc02465-5747-4e16-9399-569cb1681972",
+      "name": "Cloud Infrastructure",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 88
+    },
+    {
+      "type": "theme",
+      "key": "9e1b6c1e-d047-4131-9755-6abd0cd5d6d1",
+      "name": "Media Broadcasting",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 298
+    },
+    {
+      "type": "theme",
+      "key": "9e2b216c-5588-4191-8915-bbd89e9dbcb8",
+      "name": "Solar Power",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 423
+    },
+    {
+      "type": "theme",
+      "key": "9ea1cb55-6d4d-407a-827b-9100b7bdc083",
+      "name": "Neuroscience",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 333
+    },
+    {
+      "type": "theme",
+      "key": "9fb849b5-ab3e-4aed-9321-cf4aede246ac",
+      "name": "Industrial Sensors",
+      "parentKey": "4d5bee60-a575-4bab-8379-2e5326ab52ba",
+      "numId": 263
+    },
+    {
+      "type": "theme",
+      "key": "9ffb0d40-1e7a-4339-9b23-15083cef66d9",
+      "name": "Plant-based Alternatives",
+      "parentKey": "86fc4a71-ed8d-4ab9-b4f5-30d3f8a680a1",
+      "numId": 364
+    },
+    {
+      "type": "theme",
+      "key": "a0223cb0-e06e-438b-acef-bf17a646fedb",
+      "name": "Digital Banking Expansion",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 139
+    },
+    {
+      "type": "theme",
+      "key": "a08fb740-6a2b-42bd-b12e-d9a90b7fe2df",
+      "name": "Urban Transportation",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 454
+    },
+    {
+      "type": "theme",
+      "key": "a0bb6cef-ad4b-44e8-bde7-5800cc0215bd",
+      "name": "Utility-scale Solar",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 458
+    },
+    {
+      "type": "theme",
+      "key": "a17ae85a-02cb-47cf-adc0-ef1b03bd9e05",
+      "name": "Automotive Telematics",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 41
+    },
+    {
+      "type": "theme",
+      "key": "a23e9261-7316-4243-857b-c1161ed140df",
+      "name": "Sustainable Products",
+      "parentKey": "a11f42db-beec-47ca-a4ed-2738d1c416f7",
+      "numId": 439
+    },
+    {
+      "type": "theme",
+      "key": "a345ac6d-8b73-4bd0-8ee7-b0c5d11e57e2",
+      "name": "Payment Solutions",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 357
+    },
+    {
+      "type": "theme",
+      "key": "a353dad1-609a-47df-a817-df6022ff212a",
+      "name": "AI In Fintech",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 480
+    },
+    {
+      "type": "theme",
+      "key": "a3d2c1b0-e759-4e11-9141-df46b4047277",
+      "name": "Biopharmaceutical Manufacturing",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 59
+    },
+    {
+      "type": "theme",
+      "key": "a3dcd7fe-3a71-4010-939d-fcc95591d478",
+      "name": "Telecommunications Infrastructure",
+      "parentKey": "23f61537-a6dd-4ce2-9ea3-4bf554c9f527",
+      "numId": 444
+    },
+    {
+      "type": "theme",
+      "key": "a40cef5f-fb24-404e-a73d-e25c2403aa61",
+      "name": "Surgical Robotics",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 434
+    },
+    {
+      "type": "theme",
+      "key": "a431fb61-0814-4d8d-8035-2e71c6098300",
+      "name": "Car Rental Integration",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 73
+    },
+    {
+      "type": "theme",
+      "key": "a4ad38ae-88ff-4023-85db-18cee231fae5",
+      "name": "Forest Products",
+      "parentKey": "4d5bee60-a575-4bab-8379-2e5326ab52ba",
+      "numId": 207
+    },
+    {
+      "type": "theme",
+      "key": "a4ccab4c-3eea-4ac9-bb2e-98a89a33a2d5",
+      "name": "Industrial Distribution",
+      "parentKey": "4d5bee60-a575-4bab-8379-2e5326ab52ba",
+      "numId": 254
+    },
+    {
+      "type": "theme",
+      "key": "a52ecc88-0d58-418c-ada2-e709e09fc742",
+      "name": "Sustainable Finance",
+      "parentKey": "a11f42db-beec-47ca-a4ed-2738d1c416f7",
+      "numId": 436
+    },
+    {
+      "type": "theme",
+      "key": "a5591410-d682-4e0b-8f93-11402d39f4df",
+      "name": "Interactive Entertainment",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 274
+    },
+    {
+      "type": "theme",
+      "key": "a95c7851-4823-4d7e-b86e-ffe2d762e6f4",
+      "name": "Automotive Semiconductors",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 37
+    },
+    {
+      "type": "theme",
+      "key": "a97f7bf2-99f9-438a-bb39-ab2a19942058",
+      "name": "Energy Services",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 176
+    },
+    {
+      "type": "theme",
+      "key": "a9ce9314-bd93-4663-83b0-a41c6e901800",
+      "name": "Regenerative Medicine",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 233
+    },
+    {
+      "type": "theme",
+      "key": "a9ff098a-0821-44f8-a8e1-fd958b2606d7",
+      "name": "Satellite Communications",
+      "parentKey": "23f61537-a6dd-4ce2-9ea3-4bf554c9f527",
+      "numId": 405
+    },
+    {
+      "type": "theme",
+      "key": "aabe369f-31a5-42e3-878d-f6fb613a8bf6",
+      "name": "Healthcare Delivery & Facilities",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 230
+    },
+    {
+      "type": "theme",
+      "key": "abe976cd-72a6-4112-85fe-ebec1bb956ea",
+      "name": "Pharmacy Benefit Management",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 363
+    },
+    {
+      "type": "theme",
+      "key": "abf19b45-946d-45e9-b346-e56adc5ed187",
+      "name": "Sustainable Agriculture",
+      "parentKey": "86fc4a71-ed8d-4ab9-b4f5-30d3f8a680a1",
+      "numId": 435
+    },
+    {
+      "type": "theme",
+      "key": "ac18bd30-e3f3-4109-a3e2-4b749a9231d3",
+      "name": "Energy Investments",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 172
+    },
+    {
+      "type": "theme",
+      "key": "ac19a4fb-5598-452e-bb18-c88f94210c8f",
+      "name": "Clothing And Accessories",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 86
+    },
+    {
+      "type": "theme",
+      "key": "ac5a9876-9f8b-4718-8ca4-426b9fa92cd7",
+      "name": "Energy Storage",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 178
+    },
+    {
+      "type": "theme",
+      "key": "ad091f4c-16cc-4a9d-b472-35f40e95e1e6",
+      "name": "Oil Production",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 340
+    },
+    {
+      "type": "theme",
+      "key": "ad72b6a4-0353-4c82-85e6-f2a068d072f2",
+      "name": "Ride-sharing Services",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 401
+    },
+    {
+      "type": "theme",
+      "key": "adbee071-e812-4c73-be69-9fef578093fd",
+      "name": "AI-driven Insights",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 21
+    },
+    {
+      "type": "theme",
+      "key": "ae6e2c29-bd04-4251-8803-98b915fcd6ca",
+      "name": "Network Security",
+      "parentKey": "23f61537-a6dd-4ce2-9ea3-4bf554c9f527",
+      "numId": 332
+    },
+    {
+      "type": "theme",
+      "key": "af055221-23ae-40e3-bc27-17e0e0660cf9",
+      "name": "Semiconductor Chips",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 408
+    },
+    {
+      "type": "theme",
+      "key": "b026a83c-7175-47b1-8047-c220c412b6a2",
+      "name": "Nutraceuticals",
+      "parentKey": "24538734-0289-4834-9d0e-708458aa2723",
+      "numId": 476
+    },
+    {
+      "type": "theme",
+      "key": "b051cf90-ee3e-4cc9-b6c8-8803001128a9",
+      "name": "Depository Services",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 137
+    },
+    {
+      "type": "theme",
+      "key": "b053da6d-77c0-4a43-acec-ef96aadb9d3c",
+      "name": "Automotive Displays",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 32
+    },
+    {
+      "type": "theme",
+      "key": "b06aaed0-39d7-4098-85de-00f9ebfbcd92",
+      "name": "Venture Capital",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 461
+    },
+    {
+      "type": "theme",
+      "key": "b2872dbe-6e61-4a7c-94b6-73cd44df9bca",
+      "name": "Generative AI & LLMs",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 217
+    },
+    {
+      "type": "theme",
+      "key": "b3c9e7f9-340e-4ed3-aaa2-c62ac752497b",
+      "name": "Foodservice Distribution",
+      "parentKey": "24538734-0289-4834-9d0e-708458aa2723",
+      "numId": 204
+    },
+    {
+      "type": "theme",
+      "key": "b4daed50-4a5a-4021-b73f-12bf21ca9d4b",
+      "name": "Rare Earth Elements",
+      "parentKey": "ec8d106a-baef-4fcc-8f33-d5dc75d9c4a0",
+      "numId": 376
+    },
+    {
+      "type": "theme",
+      "key": "b4e1b371-6539-42bc-a757-da7af72bc957",
+      "name": "Engineering Services",
+      "parentKey": "ceae44ab-2c7f-4074-8724-d8c04f235f81",
+      "numId": 181
+    },
+    {
+      "type": "theme",
+      "key": "b55c7c58-5b71-45cf-be95-863822bfd9c8",
+      "name": "Farm Equipment IoT",
+      "parentKey": "86fc4a71-ed8d-4ab9-b4f5-30d3f8a680a1",
+      "numId": 190
+    },
+    {
+      "type": "theme",
+      "key": "b6421ea1-a961-48f0-ad93-eff4ec7ed5c5",
+      "name": "Energy Infrastructure",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 171
+    },
+    {
+      "type": "theme",
+      "key": "b6467002-eae3-4ac3-8eff-39ae785882b3",
+      "name": "Mineral Rights",
+      "parentKey": "ec8d106a-baef-4fcc-8f33-d5dc75d9c4a0",
+      "numId": 314
+    },
+    {
+      "type": "theme",
+      "key": "b64f6442-5e44-4be1-b7bf-b78893a8a1da",
+      "name": "Data Center REITs",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 126
+    },
+    {
+      "type": "theme",
+      "key": "b6d75788-a9dc-4129-a30a-9d92c4ae8ccf",
+      "name": "Servers",
+      "parentKey": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "numId": 412
+    },
+    {
+      "type": "theme",
+      "key": "b6db4986-bb84-4b06-84f5-7e85fdf53362",
+      "name": "Enterprise Networking",
+      "parentKey": "23f61537-a6dd-4ce2-9ea3-4bf554c9f527",
+      "numId": 182
+    },
+    {
+      "type": "theme",
+      "key": "b6ec28fd-88a2-4e06-865c-5de442dfbda9",
+      "name": "Advertising",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 6
+    },
+    {
+      "type": "theme",
+      "key": "b8290110-4d16-477c-94ad-93a3c8b0ce1d",
+      "name": "Personalized Medicine",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 360
+    },
+    {
+      "type": "theme",
+      "key": "b88df012-fd16-4623-8751-d669b93da94f",
+      "name": "Personal Care Products",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 359
+    },
+    {
+      "type": "theme",
+      "key": "b89b0c0e-7f3a-403d-a233-928a0edd1df7",
+      "name": "5G Technology Support",
+      "parentKey": "23f61537-a6dd-4ce2-9ea3-4bf554c9f527",
+      "numId": 4
+    },
+    {
+      "type": "theme",
+      "key": "b8f1dafa-bc06-4a5f-8a34-1dd5ccc23391",
+      "name": "Consumer Electronics",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 106
+    },
+    {
+      "type": "theme",
+      "key": "b9fa09f5-e043-4fb5-98c5-503c4efb3cec",
+      "name": "Mortgage Banking",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 323
+    },
+    {
+      "type": "theme",
+      "key": "ba3db4b5-569f-4529-8ba1-98e667ef35da",
+      "name": "Agricultural Processing",
+      "parentKey": "86fc4a71-ed8d-4ab9-b4f5-30d3f8a680a1",
+      "numId": 14
+    },
+    {
+      "type": "theme",
+      "key": "ba8e0e88-a553-4afd-b2b0-5f0c3de8e4e3",
+      "name": "SME Financial Services",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 419
+    },
+    {
+      "type": "theme",
+      "key": "bad922b6-39e9-44ec-b63b-03a6248dcd5b",
+      "name": "Logistics Innovation",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 289
+    },
+    {
+      "type": "theme",
+      "key": "bbc97966-f141-46d5-a89b-4dad0986671d",
+      "name": "Household Products",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 240
+    },
+    {
+      "type": "theme",
+      "key": "bcd01417-9157-470f-9751-66524086d5c4",
+      "name": "Battery Materials",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 49
+    },
+    {
+      "type": "theme",
+      "key": "bd22155a-a7a4-4ebf-8499-7169b78e322d",
+      "name": "Consumer Banking",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 103
+    },
+    {
+      "type": "theme",
+      "key": "bd4bce95-8832-456c-b92f-7a486312836f",
+      "name": "Agribusiness",
+      "parentKey": "86fc4a71-ed8d-4ab9-b4f5-30d3f8a680a1",
+      "numId": 11
+    },
+    {
+      "type": "theme",
+      "key": "be479fa9-4dc7-4256-89ea-4e12c1d3c8b8",
+      "name": "Virtual Events & Conferencing Software",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 463
+    },
+    {
+      "type": "theme",
+      "key": "beb94c0f-1e78-4dcd-bbd6-17effc994500",
+      "name": "NFT Marketplaces",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 334
+    },
+    {
+      "type": "theme",
+      "key": "bf4136bc-7971-4e17-8069-35cd4b7f8b9f",
+      "name": "Luxury Hotels",
+      "parentKey": "44a21120-40ee-416d-8699-7c8037ee47b1",
+      "numId": 294
+    },
+    {
+      "type": "theme",
+      "key": "bf867998-a5eb-4b09-b066-3176b0297d3c",
+      "name": "Food Processing",
+      "parentKey": "24538734-0289-4834-9d0e-708458aa2723",
+      "numId": 203
+    },
+    {
+      "type": "theme",
+      "key": "c102574b-ea2a-4fab-97a4-28acc02f78c6",
+      "name": "Military Applications",
+      "parentKey": "830107ac-3409-42d6-aa86-0247ba3808f5",
+      "numId": 312
+    },
+    {
+      "type": "theme",
+      "key": "c119c154-cb08-4477-8a14-2312236993ac",
+      "name": "Truckload Services",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 449
+    },
+    {
+      "type": "theme",
+      "key": "c1b5353b-3b8f-4ca5-8340-8e99a64179e1",
+      "name": "Retail Banking Innovation",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 392
+    },
+    {
+      "type": "theme",
+      "key": "c1b6bf2a-8cbc-4289-857f-6edaef502525",
+      "name": "Loyalty Programs",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 292
+    },
+    {
+      "type": "theme",
+      "key": "c2de940b-ea07-40cc-b449-9d6324d27b6e",
+      "name": "Electricity Transmission",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 162
+    },
+    {
+      "type": "theme",
+      "key": "c36be81a-f480-4eac-a389-078348c4f41d",
+      "name": "Hotel Operations",
+      "parentKey": "44a21120-40ee-416d-8699-7c8037ee47b1",
+      "numId": 239
+    },
+    {
+      "type": "theme",
+      "key": "c5684d68-b089-4c14-ad53-89dd808df429",
+      "name": "Electronic Devices",
+      "parentKey": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "numId": 164
+    },
+    {
+      "type": "theme",
+      "key": "c5a2a244-8526-442b-8213-8a6cdf382fec",
+      "name": "Industrial Digitization",
+      "parentKey": "4d5bee60-a575-4bab-8379-2e5326ab52ba",
+      "numId": 253
+    },
+    {
+      "type": "theme",
+      "key": "c6b3d439-5f51-465b-b81b-efc3b73063bf",
+      "name": "Semiconductor Materials",
+      "parentKey": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "numId": 411
+    },
+    {
+      "type": "theme",
+      "key": "c74abaa8-68b4-4ff2-89d3-ddfb17eeb3f6",
+      "name": "Pain Management",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 355
+    },
+    {
+      "type": "theme",
+      "key": "c8913b63-cb62-4e1b-882b-db8a2820acab",
+      "name": "Hybrid Vehicles",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 243
+    },
+    {
+      "type": "theme",
+      "key": "c8b4a283-34ae-4844-bc90-c31e75eda1b2",
+      "name": "Battery Technology",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 52
+    },
+    {
+      "type": "theme",
+      "key": "c8db7b8a-ff7c-4fe5-ae61-0e2415e506b7",
+      "name": "Insurance Products",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 269
+    },
+    {
+      "type": "theme",
+      "key": "c9378433-a8da-4a6d-a823-1bbb754fe20d",
+      "name": "Food Delivery",
+      "parentKey": "24538734-0289-4834-9d0e-708458aa2723",
+      "numId": 201
+    },
+    {
+      "type": "theme",
+      "key": "cad9c6ca-cbf1-4e21-82e6-742b0491c2da",
+      "name": "Property Leasing",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 371
+    },
+    {
+      "type": "theme",
+      "key": "cb47cedd-2e6f-4133-bd4c-f9a8e0652498",
+      "name": "Edge Computing",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 155
+    },
+    {
+      "type": "theme",
+      "key": "cc0bb4ab-ed23-4098-8feb-6e28e770db45",
+      "name": "Artificial Intelligence",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 27
+    },
+    {
+      "type": "theme",
+      "key": "cc3aea2c-d002-4e36-b539-e873f16540f1",
+      "name": "Defense Contracting",
+      "parentKey": "830107ac-3409-42d6-aa86-0247ba3808f5",
+      "numId": 132
+    },
+    {
+      "type": "theme",
+      "key": "ccd6e5a0-b51d-4f78-b0c8-e3bd60d485b4",
+      "name": "Rail Freight Transport",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 375
+    },
+    {
+      "type": "theme",
+      "key": "cdd6f098-3dfe-435e-a2b8-57d45e5d9b79",
+      "name": "Consumer Finance",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 107
+    },
+    {
+      "type": "theme",
+      "key": "ce15b5f1-0695-48b9-998d-0185119c0778",
+      "name": "Organic Products",
+      "parentKey": "24538734-0289-4834-9d0e-708458aa2723",
+      "numId": 352
+    },
+    {
+      "type": "theme",
+      "key": "cf7ea8e4-0fb9-4be7-9819-f28efbf1e555",
+      "name": "Automotive Parts",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 36
+    },
+    {
+      "type": "theme",
+      "key": "cfd6d924-3641-48a6-9800-f2ad5a6256a5",
+      "name": "Clinical Trials",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 85
+    },
+    {
+      "type": "theme",
+      "key": "d03c1923-3fdc-42cd-88c4-04d31e3d356a",
+      "name": "Defense Technology",
+      "parentKey": "830107ac-3409-42d6-aa86-0247ba3808f5",
+      "numId": 135
+    },
+    {
+      "type": "theme",
+      "key": "d12d1385-2b3e-4c69-9e2d-3a1098a3746c",
+      "name": "Obesity Treatments",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 336
+    },
+    {
+      "type": "theme",
+      "key": "d137495a-4d41-4cfb-9b8e-0f2a55b26b3a",
+      "name": "Cloud Services",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 89
+    },
+    {
+      "type": "theme",
+      "key": "d15935d3-2e58-497a-8455-ed2ced469c3c",
+      "name": "Utility Infrastructure",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 455
+    },
+    {
+      "type": "theme",
+      "key": "d1c01434-0617-4a23-a51c-3464349f11ea",
+      "name": "Integrated Circuits",
+      "parentKey": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "numId": 273
+    },
+    {
+      "type": "theme",
+      "key": "d28b8699-93aa-48eb-9ace-e48050925e90",
+      "name": "Aerospace Defense",
+      "parentKey": "830107ac-3409-42d6-aa86-0247ba3808f5",
+      "numId": 7
+    },
+    {
+      "type": "theme",
+      "key": "d3c4266a-ef48-42e7-8ab7-d041dccd8513",
+      "name": "Retail Space Leasing",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 399
+    },
+    {
+      "type": "theme",
+      "key": "d3eccb3e-b11d-44a2-8e36-f9890e9b0788",
+      "name": "Construction Materials",
+      "parentKey": "ceae44ab-2c7f-4074-8724-d8c04f235f81",
+      "numId": 99
+    },
+    {
+      "type": "theme",
+      "key": "d4298f1f-c9b9-436e-bae8-c060fcf43541",
+      "name": "Hospitality Management",
+      "parentKey": "44a21120-40ee-416d-8699-7c8037ee47b1",
+      "numId": 238
+    },
+    {
+      "type": "theme",
+      "key": "d455321b-8d65-4489-9185-f8f5b86d6e93",
+      "name": "Robotic Process Automation",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 402
+    },
+    {
+      "type": "theme",
+      "key": "d4ae70b0-9325-4603-87eb-4e2b86b7fa10",
+      "name": "Precious Metals",
+      "parentKey": "ec8d106a-baef-4fcc-8f33-d5dc75d9c4a0",
+      "numId": 366
+    },
+    {
+      "type": "theme",
+      "key": "d5d9a219-5392-4eae-94c8-5115f5a868cb",
+      "name": "Housing Market Resilience",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 241
+    },
+    {
+      "type": "theme",
+      "key": "d5ee84b1-8874-42d4-8c8d-fc1bbae2df04",
+      "name": "Online Marketplace",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 346
+    },
+    {
+      "type": "theme",
+      "key": "d61c29d1-ce9e-488a-af7f-441c27178c43",
+      "name": "Aviation Safety",
+      "parentKey": "830107ac-3409-42d6-aa86-0247ba3808f5",
+      "numId": 45
+    },
+    {
+      "type": "theme",
+      "key": "d6e5d2ea-404a-426a-a2cc-cd7502e05219",
+      "name": "Steel Recycling Leader",
+      "parentKey": "ec8d106a-baef-4fcc-8f33-d5dc75d9c4a0",
+      "numId": 430
+    },
+    {
+      "type": "theme",
+      "key": "d6eb45a8-6add-4092-a79e-8c0aac63ce39",
+      "name": "Genomic Medicine",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 219
+    },
+    {
+      "type": "theme",
+      "key": "d78a0cbe-298b-40de-9152-2c7711dc279a",
+      "name": "Pharmaceuticals",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 362
+    },
+    {
+      "type": "theme",
+      "key": "d8133a88-b799-4942-9b06-619fb33fda3d",
+      "name": "Automotive Technology",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 40
+    },
+    {
+      "type": "theme",
+      "key": "d82d6a01-83b9-462f-b406-8f78795991f5",
+      "name": "Retail And Foodservice",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 391
+    },
+    {
+      "type": "theme",
+      "key": "d8a49144-ab80-4349-8134-99a23427e485",
+      "name": "Big Data",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 55
+    },
+    {
+      "type": "theme",
+      "key": "da10a0a7-aad8-441f-aae4-998c667a176d",
+      "name": "Aluminum Production",
+      "parentKey": "ec8d106a-baef-4fcc-8f33-d5dc75d9c4a0",
+      "numId": 24
+    },
+    {
+      "type": "theme",
+      "key": "da5ff3d9-1d0a-4861-8857-ef6ccb782694",
+      "name": "Telecommunications Equipment",
+      "parentKey": "23f61537-a6dd-4ce2-9ea3-4bf554c9f527",
+      "numId": 443
+    },
+    {
+      "type": "theme",
+      "key": "da916f0b-9c1e-475a-b218-f4ca2d572162",
+      "name": "Natural Gas Production",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 331
+    },
+    {
+      "type": "theme",
+      "key": "dafd4de4-d98f-4182-bec7-9a4507fa674b",
+      "name": "Supply Chain Management",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 433
+    },
+    {
+      "type": "theme",
+      "key": "db722778-594e-4bc3-9854-7e55c1d6550f",
+      "name": "Civil Infrastructure",
+      "parentKey": "ceae44ab-2c7f-4074-8724-d8c04f235f81",
+      "numId": 81
+    },
+    {
+      "type": "theme",
+      "key": "dd140009-a1f5-4bbf-802f-c0dd6ee566ff",
+      "name": "Grocery Retail",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 223
+    },
+    {
+      "type": "theme",
+      "key": "dd4685bb-5bae-4a79-bbb8-ff0620dac605",
+      "name": "Lithium Production",
+      "parentKey": "ec8d106a-baef-4fcc-8f33-d5dc75d9c4a0",
+      "numId": 286
+    },
+    {
+      "type": "theme",
+      "key": "dd68d5f4-afe9-4562-a809-332fac155066",
+      "name": "AI Consulting",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 17
+    },
+    {
+      "type": "theme",
+      "key": "dd874b8c-bdad-482a-8204-011e7298c7a9",
+      "name": "Wireless Infrastructure",
+      "parentKey": "23f61537-a6dd-4ce2-9ea3-4bf554c9f527",
+      "numId": 471
+    },
+    {
+      "type": "theme",
+      "key": "dd8b04fb-8529-47df-b179-4c68d78f34e5",
+      "name": "AI Inference",
+      "parentKey": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "numId": 483
+    },
+    {
+      "type": "theme",
+      "key": "ddee2d3c-c201-4216-b6ab-62f0ea0415ba",
+      "name": "Fiber Optic Communications",
+      "parentKey": "23f61537-a6dd-4ce2-9ea3-4bf554c9f527",
+      "numId": 192
+    },
+    {
+      "type": "theme",
+      "key": "de2589f0-376b-4efe-9603-7c7cbe41bce0",
+      "name": "Video Games",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 462
+    },
+    {
+      "type": "theme",
+      "key": "df151053-fa83-46b9-a408-b9f028279ec3",
+      "name": "Electric Vehicles",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 159
+    },
+    {
+      "type": "theme",
+      "key": "dfd1dcb5-21ab-4c71-be41-39cf64dd9571",
+      "name": "Packaged Foods",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 354
+    },
+    {
+      "type": "theme",
+      "key": "e0d95f99-bc5e-483e-9f3b-a744ef0b686c",
+      "name": "Resort Destinations",
+      "parentKey": "44a21120-40ee-416d-8699-7c8037ee47b1",
+      "numId": 389
+    },
+    {
+      "type": "theme",
+      "key": "e1b062ce-8cf7-4617-98fc-0b474360e71c",
+      "name": "Clean Energy",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 82
+    },
+    {
+      "type": "theme",
+      "key": "e23cc792-81c6-4ea1-b68f-534b84e81c3c",
+      "name": "Mining Exploration",
+      "parentKey": "ec8d106a-baef-4fcc-8f33-d5dc75d9c4a0",
+      "numId": 316
+    },
+    {
+      "type": "theme",
+      "key": "e2e686a0-0259-430c-b696-1c3510e63e49",
+      "name": "Defense Drones",
+      "parentKey": "830107ac-3409-42d6-aa86-0247ba3808f5",
+      "numId": 133
+    },
+    {
+      "type": "theme",
+      "key": "e356e16d-01c2-48dd-bb92-738d1c4fc838",
+      "name": "Online Sports Betting",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 500
+    },
+    {
+      "type": "theme",
+      "key": "e37ab02a-dc29-4227-a6fc-678c35654078",
+      "name": "Water Treatment",
+      "parentKey": "a11f42db-beec-47ca-a4ed-2738d1c416f7",
+      "numId": 467
+    },
+    {
+      "type": "theme",
+      "key": "e390e87b-dbd5-4be9-9aa1-90adfce5a1d3",
+      "name": "Specialty Foods",
+      "parentKey": "24538734-0289-4834-9d0e-708458aa2723",
+      "numId": 425
+    },
+    {
+      "type": "theme",
+      "key": "e3f6893f-700e-4b17-8a92-261649926230",
+      "name": "Retail Technology Solutions",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 400
+    },
+    {
+      "type": "theme",
+      "key": "e4180ae9-f42f-4c31-bbce-376b786901d5",
+      "name": "Energy Policy Compliance",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 173
+    },
+    {
+      "type": "theme",
+      "key": "e4cb0e0f-24d4-4d52-89f0-9c70f5654473",
+      "name": "Microelectronics",
+      "parentKey": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "numId": 310
+    },
+    {
+      "type": "theme",
+      "key": "e4ee5103-0cd9-410d-b39f-02141ffbb5a4",
+      "name": "Decentralized Finance",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 131
+    },
+    {
+      "type": "theme",
+      "key": "e6f03170-9470-4a15-9aa7-ab9910a4b648",
+      "name": "Property Management",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 372
+    },
+    {
+      "type": "theme",
+      "key": "e74bdadd-ad5f-49f5-ba45-f60f4908cac7",
+      "name": "Offshore Oil",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 337
+    },
+    {
+      "type": "theme",
+      "key": "e78b6e6b-e150-4a4f-80ba-c8d2c5723d99",
+      "name": "Digital Therapeutics",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 145
+    },
+    {
+      "type": "theme",
+      "key": "e7bde005-aecb-49df-acf9-ff928166a695",
+      "name": "Industrial Gas Turbine",
+      "parentKey": "4d5bee60-a575-4bab-8379-2e5326ab52ba",
+      "numId": 258
+    },
+    {
+      "type": "theme",
+      "key": "e82d665c-9996-496a-9cef-99b3949ffa03",
+      "name": "Biotech Treatments",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 64
+    },
+    {
+      "type": "theme",
+      "key": "e90b3b4e-2fb8-4383-990a-35660c290b73",
+      "name": "Hybrid Cloud Computing",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 242
+    },
+    {
+      "type": "theme",
+      "key": "e9b13688-93e7-41a7-8485-f63b8cd8ff9c",
+      "name": "Commercial Banking",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 93
+    },
+    {
+      "type": "theme",
+      "key": "ea6468fa-3853-40cc-91a7-a9aaa55a9f25",
+      "name": "Automobile Manufacturers",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 30
+    },
+    {
+      "type": "theme",
+      "key": "ec714502-abe0-401c-9c5d-f7056b8cf567",
+      "name": "Zero-Trust Cybersecurity",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 473
+    },
+    {
+      "type": "theme",
+      "key": "ec7e565e-5496-4e20-89d0-8ce874924399",
+      "name": "Sports Entertainment",
+      "parentKey": "44a21120-40ee-416d-8699-7c8037ee47b1",
+      "numId": 427
+    },
+    {
+      "type": "theme",
+      "key": "ed918d09-e6d7-4334-be15-a5bfa7cb6c55",
+      "name": "Small Modular Reactors",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 485
+    },
+    {
+      "type": "theme",
+      "key": "edb92ea7-f93b-49e2-a5a9-5b10127cd1b1",
+      "name": "Natural Gas Infrastructure",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 330
+    },
+    {
+      "type": "theme",
+      "key": "ee1541a6-1281-4a84-8cdc-30bcf937f0a9",
+      "name": "Construction Services",
+      "parentKey": "ceae44ab-2c7f-4074-8724-d8c04f235f81",
+      "numId": 100
+    },
+    {
+      "type": "theme",
+      "key": "eeae5e4c-d4ab-4300-8e11-098ad08dfbd4",
+      "name": "Energy Consultancy",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 167
+    },
+    {
+      "type": "theme",
+      "key": "ef1ef218-7388-458a-a9ef-0538bd59b880",
+      "name": "Consumer Behavior",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 104
+    },
+    {
+      "type": "theme",
+      "key": "ef5223a4-b822-47f9-95af-c41d2398df41",
+      "name": "Telehealth",
+      "parentKey": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "numId": 475
+    },
+    {
+      "type": "theme",
+      "key": "ef5b85e6-34b0-4597-b700-3dd2add720ab",
+      "name": "Theme Parks",
+      "parentKey": "44a21120-40ee-416d-8699-7c8037ee47b1",
+      "numId": 445
+    },
+    {
+      "type": "theme",
+      "key": "ef734422-7132-45e1-a084-79b55ac53bb8",
+      "name": "Smartphones",
+      "parentKey": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "numId": 418
+    },
+    {
+      "type": "theme",
+      "key": "f14b97b4-fbbf-4411-bfc2-6d9af20944d1",
+      "name": "Agentic AI",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 482
+    },
+    {
+      "type": "theme",
+      "key": "f1957830-ce31-4399-ac68-519292c26612",
+      "name": "Nanotechnology Applications",
+      "parentKey": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "numId": 328
+    },
+    {
+      "type": "theme",
+      "key": "f22e8bc1-3a7e-4b3e-a36c-3888ae1ea0f8",
+      "name": "Mining Services",
+      "parentKey": "ec8d106a-baef-4fcc-8f33-d5dc75d9c4a0",
+      "numId": 318
+    },
+    {
+      "type": "theme",
+      "key": "f23b46f4-04fd-427a-ab1e-27c1699c685a",
+      "name": "Renewable Energy Equipment",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 385
+    },
+    {
+      "type": "theme",
+      "key": "f261688b-25bd-4191-8ca6-ad75a83365e3",
+      "name": "PC Manufacturing",
+      "parentKey": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "numId": 358
+    },
+    {
+      "type": "theme",
+      "key": "f30755bb-3450-4941-8468-ceca4c4a27cc",
+      "name": "Digital Entertainment",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 141
+    },
+    {
+      "type": "theme",
+      "key": "f3fcc84e-531b-4ea9-8537-97824fd85979",
+      "name": "AI Enterprise Integration",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 18
+    },
+    {
+      "type": "theme",
+      "key": "f5c82090-6d61-4d49-97f4-8954a6407b9f",
+      "name": "Media Diversification",
+      "parentKey": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "numId": 299
+    },
+    {
+      "type": "theme",
+      "key": "f62ca3e1-3513-40e1-b204-8023c26f8c70",
+      "name": "Autonomous Driving",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 42
+    },
+    {
+      "type": "theme",
+      "key": "f6c48b4d-b044-4e48-8543-e67384777a35",
+      "name": "Connected Vehicles",
+      "parentKey": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "numId": 98
+    },
+    {
+      "type": "theme",
+      "key": "f749c684-6b09-4a93-9b69-95bc0c03d5e1",
+      "name": "Semiconductor Manufacturing",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 410
+    },
+    {
+      "type": "theme",
+      "key": "f7e6a9af-915a-46b1-abed-f0078e65fbd3",
+      "name": "Retail Segment",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 398
+    },
+    {
+      "type": "theme",
+      "key": "f8147a1d-cce7-41b3-9c36-668b5f8d9816",
+      "name": "Agricultural Chemicals",
+      "parentKey": "86fc4a71-ed8d-4ab9-b4f5-30d3f8a680a1",
+      "numId": 12
+    },
+    {
+      "type": "theme",
+      "key": "f97d07cb-5699-4da4-9180-fbdd94160b6f",
+      "name": "IT Solutions",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 282
+    },
+    {
+      "type": "theme",
+      "key": "f9995b50-8310-46cd-8a73-9a55e040c869",
+      "name": "Microgrid Solutions",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 311
+    },
+    {
+      "type": "theme",
+      "key": "fbad8040-1a24-4f15-ac89-aff34cf32828",
+      "name": "Commercial Real Estate",
+      "parentKey": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "numId": 96
+    },
+    {
+      "type": "theme",
+      "key": "fc0af45e-aa0b-4020-af97-a80205f622ca",
+      "name": "Transportation",
+      "parentKey": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "numId": 447
+    },
+    {
+      "type": "theme",
+      "key": "fc0f16e7-36db-467c-ad77-4c7a8c9402e5",
+      "name": "Banking Technology",
+      "parentKey": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "numId": 48
+    },
+    {
+      "type": "theme",
+      "key": "fc4193af-fee9-4a91-ae8f-0270a0415eda",
+      "name": "Industrial Coatings",
+      "parentKey": "4d5bee60-a575-4bab-8379-2e5326ab52ba",
+      "numId": 252
+    },
+    {
+      "type": "theme",
+      "key": "fd457a38-548a-4b03-9ec8-205a3a9bb8eb",
+      "name": "Industrial Chemicals",
+      "parentKey": "4d5bee60-a575-4bab-8379-2e5326ab52ba",
+      "numId": 251
+    },
+    {
+      "type": "theme",
+      "key": "fda786b9-e037-44c9-81ff-9a991fe5d699",
+      "name": "Cloud Software",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 90
+    },
+    {
+      "type": "theme",
+      "key": "fe67e561-c19d-4b1b-b8f8-5ec376ed3bb0",
+      "name": "Consumer Brands",
+      "parentKey": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "numId": 105
+    },
+    {
+      "type": "theme",
+      "key": "fe8d5d26-5e1a-473f-b53c-e558e1b0e414",
+      "name": "Synthetic Data",
+      "parentKey": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "numId": 493
+    },
+    {
+      "type": "theme",
+      "key": "ff252bfa-4736-42e7-b432-f5de76c6c6fc",
+      "name": "Utility-scale Projects",
+      "parentKey": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "numId": 457
+    },
+    {
+      "type": "theme",
+      "key": "ffc51a74-eb01-4ddc-861c-3244f1d15b5c",
+      "name": "Climate Tech",
+      "parentKey": "a11f42db-beec-47ca-a4ed-2738d1c416f7",
+      "numId": 84
+    }
+  ],
+  "parents": [
+    {
+      "type": "theme",
+      "key": "bcca51f3-41ed-4864-b604-5088a98d4d4c",
+      "name": "Consumer Goods and Retail"
+    },
+    {
+      "type": "theme",
+      "key": "24538734-0289-4834-9d0e-708458aa2723",
+      "name": "Food and Beverage"
+    },
+    {
+      "type": "theme",
+      "key": "d6bbc5a6-57fa-4d9b-b8a7-4f7972f54c69",
+      "name": "Financial Services and FinTech"
+    },
+    {
+      "type": "theme",
+      "key": "74b04ae5-d4f4-49a0-bb93-d2b51eb8c2eb",
+      "name": "Transportation and Logistics"
+    },
+    {
+      "type": "theme",
+      "key": "75632d31-bede-4221-b10c-11b9abfc7f51",
+      "name": "Technology and Innovation"
+    },
+    {
+      "type": "theme",
+      "key": "c8187a1c-ca8b-4012-a1db-c01846949789",
+      "name": "Technology Hardware and Semiconductors"
+    },
+    {
+      "type": "theme",
+      "key": "a11f42db-beec-47ca-a4ed-2738d1c416f7",
+      "name": "Environmental and Sustainability Solutions"
+    },
+    {
+      "type": "theme",
+      "key": "4a42ff82-2527-4c0f-82d4-b425dfc34f1c",
+      "name": "Energy and Utilities"
+    },
+    {
+      "type": "theme",
+      "key": "321e84d2-e013-403f-9ef8-719d2c976ede",
+      "name": "Healthcare and Biotechnology"
+    },
+    {
+      "type": "theme",
+      "key": "830107ac-3409-42d6-aa86-0247ba3808f5",
+      "name": "Aerospace and Defense"
+    },
+    {
+      "type": "theme",
+      "key": "3f3dfbfb-9892-4cc0-a045-11470ba3e4e5",
+      "name": "Automotive and Mobility"
+    },
+    {
+      "type": "theme",
+      "key": "ceae44ab-2c7f-4074-8724-d8c04f235f81",
+      "name": "Construction and Infrastructure"
+    },
+    {
+      "type": "theme",
+      "key": "4d5bee60-a575-4bab-8379-2e5326ab52ba",
+      "name": "Industrial Products and Services"
+    },
+    {
+      "type": "theme",
+      "key": "1561765b-bbe3-4953-9ea2-4070c5159826",
+      "name": "Entertainment and Media"
+    },
+    {
+      "type": "theme",
+      "key": "0691707a-4ac2-451a-958e-8a5149f665a1",
+      "name": "Real Estate and Property Management"
+    },
+    {
+      "type": "theme",
+      "key": "ec8d106a-baef-4fcc-8f33-d5dc75d9c4a0",
+      "name": "Mining and Metals"
+    },
+    {
+      "type": "theme",
+      "key": "86fc4a71-ed8d-4ab9-b4f5-30d3f8a680a1",
+      "name": "Agriculture and Food Production"
+    },
+    {
+      "type": "theme",
+      "key": "23f61537-a6dd-4ce2-9ea3-4bf554c9f527",
+      "name": "Telecommunications and Connectivity"
+    },
+    {
+      "type": "theme",
+      "key": "44a21120-40ee-416d-8699-7c8037ee47b1",
+      "name": "Hospitality and Leisure"
+    }
+  ]
+}

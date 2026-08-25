@@ -1,0 +1,80 @@
+{
+    "title": "ESG",
+    "content": [
+        {
+            "name": "TRESGS",
+            "value": 6
+        },
+        {
+            "name": "TRESGCS",
+            "value": 4
+        },
+        {
+            "name": "TRESGCCS",
+            "value": 3
+        },
+        {
+            "name": "TRESGENS",
+            "value": 6,
+            "children": [
+                {
+                    "name": "TRESGENRRS",
+                    "value": 8
+                },
+                {
+                    "name": "TRESGENERS",
+                    "value": 7
+                },
+                {
+                    "name": "TRESGENPIS",
+                    "value": 4
+                }
+            ]
+        },
+        {
+            "name": "TRESGSOS",
+            "value": 6,
+            "children": [
+                {
+                    "name": "TRESGSOWOS",
+                    "value": 6
+                },
+                {
+                    "name": "TRESGSOHRS",
+                    "value": 7
+                },
+                {
+                    "name": "TRESGSOCOS",
+                    "value": 7
+                },
+                {
+                    "name": "TRESGSOPRS",
+                    "value": 6
+                }
+            ]
+        },
+        {
+            "name": "TRESGCGS",
+            "value": 7,
+            "children": [
+                {
+                    "name": "TRESGCGBDS",
+                    "value": 7
+                },
+                {
+                    "name": "TRESGCGSRS",
+                    "value": 6
+                },
+                {
+                    "name": "TRESGCGVSS",
+                    "value": 8
+                }
+            ]
+        }
+    ],
+    "asOfDate": "20260815",
+    "coverage": 0.980016,
+    "source": "CALCULATED",
+    "symbol": "SPY",
+    "no_settings": true
+}

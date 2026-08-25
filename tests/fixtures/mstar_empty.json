@@ -1,0 +1,20 @@
+{
+  "as_of_date": "20100930",
+  "summary": [
+    {
+      "id": "category",
+      "title": "Category",
+      "value": "Commodities - Precious Metals",
+      "q": false
+    }
+  ],
+  "commentary": [
+    {
+      "id": "sustainability",
+      "title": "Sustainability",
+      "q": true,
+      "publish_date": "20250531",
+      "text": "Morningstar generates quantitatively driven content that covers the environmental, social, and governance characteristics for managed investments that have both a Morningstar Sustainability Rating and a Morningstar Carbon Risk Score, called the Sustainability Strategy Summary. This share class’ Sustainability Strategy Summary content was not generated because of insufficient data. To generate individualized content, the Sustainability Strategy Summary requires sufficient data to create its framework of “mental models” designed to mimic content written by analysts. The Sustainability Strategy Summary uses an algorithm designed to predict the ESG analysis that analysts would produce on the investment product if they covered it."
+    }
+  ]
+}

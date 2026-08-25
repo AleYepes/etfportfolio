@@ -1,0 +1,203 @@
+{
+  "objective": "The Fund seeks to track the investment results of the Cboe S&P 500 Enhanced 1% OTM BuyWrite Index. The Underlying Index is designed to measure the performance of a strategy of holding the iShares Core S&P 500 ETF while writing (selling) one-month call options primarily on the S&P 500 Index to generate income.",
+  "symbol": "IVVW",
+  "fund_and_profile": [
+    {
+      "name": "Fund Management Company",
+      "name_tag": "Fund_Management_Company",
+      "value": "BlackRock Fund Advisors"
+    },
+    {
+      "name": "Distribution Details",
+      "name_tag": "Distribution_Details",
+      "value": "Paid",
+      "value_tag": "paid_tag"
+    },
+    {
+      "name": "Fiscal Date",
+      "name_tag": "Fiscal_Date",
+      "value": "10/31"
+    },
+    {
+      "name": "Launch Opening Price",
+      "name_tag": "Launch_Opening_Price",
+      "value": "2024-03-14"
+    },
+    {
+      "name": "Geographical Focus",
+      "name_tag": "Geographical_Focus",
+      "value": "United States of America"
+    },
+    {
+      "name": "Asset Type",
+      "name_tag": "Asset_Type",
+      "value": "Alternatives"
+    },
+    {
+      "name": "Fund Manager Benchmark",
+      "name_tag": "Fund_Manager_Benchmark",
+      "value": "Index is not available on Lipper Database"
+    },
+    {
+      "name": "Management Approach",
+      "name_tag": "Management_Approach",
+      "value": "Passive"
+    },
+    {
+      "name": "Total Expense Ratio",
+      "name_tag": "Total_Expense_Ratio",
+      "value": "0.25%"
+    },
+    {
+      "name": "Inception Date",
+      "name_tag": "Inception_Date",
+      "value": "2024/03/14"
+    },
+    {
+      "name": "Domicile",
+      "name_tag": "Domicile",
+      "value": "USA"
+    },
+    {
+      "name": "Fund Category",
+      "name_tag": "Fund_Category",
+      "value": "Open-End Funds"
+    },
+    {
+      "name": "Classification",
+      "name_tag": "Classification",
+      "value": "Option Income Strategies Funds"
+    },
+    {
+      "name": "Fund Market Cap Focus",
+      "name_tag": "Fund_Market_Cap_Focus",
+      "value": "Large-cap"
+    },
+    {
+      "name": "Scheme",
+      "name_tag": "Scheme",
+      "value": "US Mutual Fund Classification"
+    },
+    {
+      "name": "Total Net Assets (Month End)",
+      "name_tag": "Total_Net_Assets_Month_End",
+      "value": "$329.53M (2026/07/31)"
+    },
+    {
+      "name": "Objective Type",
+      "name_tag": "Objective_Type",
+      "value": "Option Income Strategies Funds"
+    },
+    {
+      "name": "Portfolio Manager",
+      "name_tag": "Portfolio_Manager",
+      "value": "Montalvo/Armstrong/McClements"
+    },
+    {
+      "name": "Manager Tenure",
+      "name_tag": "Manager_Tenure",
+      "value": "2025/01/01"
+    },
+    {
+      "name": "Management Expenses",
+      "name_tag": "management_expenses",
+      "value": "100%"
+    }
+  ],
+  "reports": [
+    {
+      "name": "Annual Report",
+      "as_of_date": 1761883200000,
+      "fields": [
+        {
+          "name": "Total Expense",
+          "value": "0.22%",
+          "is_summary": true
+        },
+        {
+          "name": "Total Gross Expense",
+          "value": "0.2201%",
+          "is_summary": true
+        },
+        {
+          "name": "Total Net Expense",
+          "value": "0.22%",
+          "is_summary": true
+        },
+        {
+          "name": "Management Fees",
+          "value": "0.22%",
+          "is_summary": true
+        },
+        {
+          "name": "Advisor Expenses",
+          "value": "0.22%"
+        },
+        {
+          "name": "Non-Management Expenses",
+          "value": "0%",
+          "is_summary": true
+        },
+        {
+          "name": "Other Expense",
+          "value": "0.0001%"
+        }
+      ]
+    },
+    {
+      "name": "Prospectus Report",
+      "as_of_date": 1772168400000,
+      "fields": [
+        {
+          "name": "Prospectus Gross Acquired Fund Expense Ratio",
+          "value": "0.03%"
+        },
+        {
+          "name": "Prospectus Gross Expense Ratio",
+          "value": "0.25%"
+        },
+        {
+          "name": "Prospectus Gross Management Fee Ratio",
+          "value": "0.25%"
+        },
+        {
+          "name": "Prospectus Net 12b-1 Fee Ratio",
+          "value": "0.03%"
+        },
+        {
+          "name": "Prospectus Net Acquired Fund Expense Ratio",
+          "value": "0.03%"
+        },
+        {
+          "name": "Prospectus Net Expense Ratio",
+          "value": "0.25%"
+        },
+        {
+          "name": "Prospectus Net Management Fee Ratio",
+          "value": "0.22%"
+        }
+      ]
+    }
+  ],
+  "themes": [
+    "Fdof Fds Affiliated",
+    "Fundof Etfs",
+    "Fund of Funds",
+    "Fund of Funds Internal",
+    "Fund of Funds Passive",
+    "Index Tracking"
+  ],
+  "expenses_allocation": [
+    {
+      "name": "Management Expenses",
+      "value": "100%",
+      "ratio": 1
+    },
+    {
+      "name": "Non-Management Expenses",
+      "value": "0%",
+      "ratio": 0
+    }
+  ],
+  "jap_fund_warning": false
+}

@@ -1,0 +1,70 @@
+{
+  "conid": 52197301,
+  "name": "Vanguard Total World Stock Index Fund In",
+  "symbol": "VT",
+  "exchange": "SMART",
+  "assetType": "STK",
+  "coverage": 0.925019,
+  "themes": [
+    {
+      "key": "dd8b04fb-8529-47df-b179-4c68d78f34e5",
+      "name": "AI Inference",
+      "weight": 0.267545,
+      "rank_adjusted_weight": 0.208054786666667
+    },
+    {
+      "key": "5cce0040-d2cb-4176-b5a0-3251111964f9",
+      "name": "Machine Learning",
+      "weight": 0.257455,
+      "rank_adjusted_weight": 0.190656146666667
+    },
+    {
+      "key": "cc0bb4ab-ed23-4098-8feb-6e28e770db45",
+      "name": "Artificial Intelligence",
+      "weight": 0.238168,
+      "rank_adjusted_weight": 0.18518088
+    },
+    {
+      "key": "b2872dbe-6e61-4a7c-94b6-73cd44df9bca",
+      "name": "Generative AI & LLMs",
+      "weight": 0.26136,
+      "rank_adjusted_weight": 0.180972853333333
+    },
+    {
+      "key": "82be5625-1588-4545-9316-455cbeb9803b",
+      "name": "Digital Economy",
+      "weight": 0.239649,
+      "rank_adjusted_weight": 0.17049752
+    },
+    {
+      "key": "032b5b3b-c8ec-4b12-8c8f-8a03f0b0cbb2",
+      "name": "Accelerated Computing",
+      "weight": 0.217116,
+      "rank_adjusted_weight": 0.16651084
+    },
+    {
+      "key": "00d0d758-0aa9-4aa6-9891-ddf03f7dbaac",
+      "name": "AI Infrastructure",
+      "weight": 0.223334,
+      "rank_adjusted_weight": 0.16589244
+    },
+    {
+      "key": "f14b97b4-fbbf-4411-bfc2-6d9af20944d1",
+      "name": "Agentic AI",
+      "weight": 0.221545,
+      "rank_adjusted_weight": 0.162382706666667
+    },
+    {
+      "key": "3f6a5034-c435-4ee3-9517-253f59a1b6ca",
+      "name": "Metaverse",
+      "weight": 0.234594,
+      "rank_adjusted_weight": 0.16218284
+    },
+    {
+      "key": "0fd7771a-29e8-4d7a-8ac1-f1ea88161dd1",
+      "name": "Electronics Innovation",
+      "weight": 0.198342,
+      "rank_adjusted_weight": 0.15810128
+    }
+  ]
+}

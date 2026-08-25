@@ -1,0 +1,736 @@
+{
+  "universes": [
+    {
+      "as_of_date": 1785470400000,
+      "overall": [
+        {
+          "name": "Total Return",
+          "name_tag": "total_return",
+          "rating": {
+            "name": "1549 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Consistent Return",
+          "name_tag": "consistent_return",
+          "rating": {
+            "name": "1549 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Preservation",
+          "name_tag": "preservation",
+          "rating": {
+            "name": "17035 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Expense",
+          "name_tag": "expense",
+          "rating": {
+            "name": "1529 funds",
+            "value": 5
+          }
+        }
+      ],
+      "3_year": [
+        {
+          "name": "Total Return",
+          "name_tag": "total_return",
+          "rating": {
+            "name": "1549 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Consistent Return",
+          "name_tag": "consistent_return",
+          "rating": {
+            "name": "1549 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Preservation",
+          "name_tag": "preservation",
+          "rating": {
+            "name": "17035 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Expense",
+          "name_tag": "expense",
+          "rating": {
+            "name": "1529 funds",
+            "value": 5
+          }
+        }
+      ],
+      "5_year": [
+        {
+          "name": "Total Return",
+          "name_tag": "total_return",
+          "rating": {
+            "name": "1381 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Consistent Return",
+          "name_tag": "consistent_return",
+          "rating": {
+            "name": "1381 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Preservation",
+          "name_tag": "preservation",
+          "rating": {
+            "name": "14890 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Expense",
+          "name_tag": "expense",
+          "rating": {
+            "name": "1362 funds",
+            "value": 5
+          }
+        }
+      ],
+      "10_year": [
+        {
+          "name": "Total Return",
+          "name_tag": "total_return",
+          "rating": {
+            "name": "822 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Consistent Return",
+          "name_tag": "consistent_return",
+          "rating": {
+            "name": "822 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Preservation",
+          "name_tag": "preservation",
+          "rating": {
+            "name": "8551 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Expense",
+          "name_tag": "expense",
+          "rating": {
+            "name": "815 funds",
+            "value": 5
+          }
+        }
+      ],
+      "name": "Singapore"
+    },
+    {
+      "as_of_date": 1785470400000,
+      "overall": [
+        {
+          "name": "Total Return",
+          "name_tag": "total_return",
+          "rating": {
+            "name": "181 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Consistent Return",
+          "name_tag": "consistent_return",
+          "rating": {
+            "name": "181 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Preservation",
+          "name_tag": "preservation",
+          "rating": {
+            "name": "2530 funds",
+            "value": 4
+          }
+        },
+        {
+          "name": "Expense",
+          "name_tag": "expense",
+          "rating": {
+            "name": "147 funds",
+            "value": 5
+          }
+        }
+      ],
+      "3_year": [
+        {
+          "name": "Total Return",
+          "name_tag": "total_return",
+          "rating": {
+            "name": "181 funds",
+            "value": 4
+          }
+        },
+        {
+          "name": "Consistent Return",
+          "name_tag": "consistent_return",
+          "rating": {
+            "name": "181 funds",
+            "value": 4
+          }
+        },
+        {
+          "name": "Preservation",
+          "name_tag": "preservation",
+          "rating": {
+            "name": "2530 funds",
+            "value": 4
+          }
+        },
+        {
+          "name": "Expense",
+          "name_tag": "expense",
+          "rating": {
+            "name": "147 funds",
+            "value": 5
+          }
+        }
+      ],
+      "5_year": [
+        {
+          "name": "Total Return",
+          "name_tag": "total_return",
+          "rating": {
+            "name": "148 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Consistent Return",
+          "name_tag": "consistent_return",
+          "rating": {
+            "name": "148 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Preservation",
+          "name_tag": "preservation",
+          "rating": {
+            "name": "2230 funds",
+            "value": 4
+          }
+        },
+        {
+          "name": "Expense",
+          "name_tag": "expense",
+          "rating": {
+            "name": "125 funds",
+            "value": 5
+          }
+        }
+      ],
+      "10_year": [
+        {
+          "name": "Total Return",
+          "name_tag": "total_return",
+          "rating": {
+            "name": "68 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Consistent Return",
+          "name_tag": "consistent_return",
+          "rating": {
+            "name": "68 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Preservation",
+          "name_tag": "preservation",
+          "rating": {
+            "name": "1441 funds",
+            "value": 4
+          }
+        },
+        {
+          "name": "Expense",
+          "name_tag": "expense",
+          "rating": {
+            "name": "61 funds",
+            "value": 5
+          }
+        }
+      ],
+      "name": "Japan"
+    },
+    {
+      "as_of_date": 1785470400000,
+      "overall": [
+        {
+          "name": "Total Return",
+          "name_tag": "total_return",
+          "rating": {
+            "name": "114 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Consistent Return",
+          "name_tag": "consistent_return",
+          "rating": {
+            "name": "114 funds",
+            "value": 4
+          }
+        },
+        {
+          "name": "Preservation",
+          "name_tag": "preservation",
+          "rating": {
+            "name": "11931 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Tax Efficiency",
+          "name_tag": "tax_efficiency",
+          "rating": {
+            "name": "114 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Expense",
+          "name_tag": "expense",
+          "rating": {
+            "name": "40 funds",
+            "value": 5
+          }
+        }
+      ],
+      "3_year": [
+        {
+          "name": "Total Return",
+          "name_tag": "total_return",
+          "rating": {
+            "name": "114 funds",
+            "value": 4
+          }
+        },
+        {
+          "name": "Consistent Return",
+          "name_tag": "consistent_return",
+          "rating": {
+            "name": "114 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Preservation",
+          "name_tag": "preservation",
+          "rating": {
+            "name": "11931 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Tax Efficiency",
+          "name_tag": "tax_efficiency",
+          "rating": {
+            "name": "114 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Expense",
+          "name_tag": "expense",
+          "rating": {
+            "name": "40 funds",
+            "value": 5
+          }
+        }
+      ],
+      "5_year": [
+        {
+          "name": "Total Return",
+          "name_tag": "total_return",
+          "rating": {
+            "name": "113 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Consistent Return",
+          "name_tag": "consistent_return",
+          "rating": {
+            "name": "113 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Preservation",
+          "name_tag": "preservation",
+          "rating": {
+            "name": "11149 funds",
+            "value": 4
+          }
+        },
+        {
+          "name": "Tax Efficiency",
+          "name_tag": "tax_efficiency",
+          "rating": {
+            "name": "113 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Expense",
+          "name_tag": "expense",
+          "rating": {
+            "name": "40 funds",
+            "value": 5
+          }
+        }
+      ],
+      "10_year": [
+        {
+          "name": "Total Return",
+          "name_tag": "total_return",
+          "rating": {
+            "name": "101 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Consistent Return",
+          "name_tag": "consistent_return",
+          "rating": {
+            "name": "101 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Preservation",
+          "name_tag": "preservation",
+          "rating": {
+            "name": "8659 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Tax Efficiency",
+          "name_tag": "tax_efficiency",
+          "rating": {
+            "name": "101 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Expense",
+          "name_tag": "expense",
+          "rating": {
+            "name": "39 funds",
+            "value": 5
+          }
+        }
+      ],
+      "name": "United States"
+    },
+    {
+      "as_of_date": 1785470400000,
+      "overall": [
+        {
+          "name": "Total Return",
+          "name_tag": "total_return",
+          "rating": {
+            "name": "959 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Consistent Return",
+          "name_tag": "consistent_return",
+          "rating": {
+            "name": "959 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Preservation",
+          "name_tag": "preservation",
+          "rating": {
+            "name": "7399 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Expense",
+          "name_tag": "expense",
+          "rating": {
+            "name": "954 funds",
+            "value": 5
+          }
+        }
+      ],
+      "3_year": [
+        {
+          "name": "Total Return",
+          "name_tag": "total_return",
+          "rating": {
+            "name": "959 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Consistent Return",
+          "name_tag": "consistent_return",
+          "rating": {
+            "name": "959 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Preservation",
+          "name_tag": "preservation",
+          "rating": {
+            "name": "7399 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Expense",
+          "name_tag": "expense",
+          "rating": {
+            "name": "954 funds",
+            "value": 5
+          }
+        }
+      ],
+      "5_year": [
+        {
+          "name": "Total Return",
+          "name_tag": "total_return",
+          "rating": {
+            "name": "924 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Consistent Return",
+          "name_tag": "consistent_return",
+          "rating": {
+            "name": "924 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Preservation",
+          "name_tag": "preservation",
+          "rating": {
+            "name": "6974 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Expense",
+          "name_tag": "expense",
+          "rating": {
+            "name": "920 funds",
+            "value": 5
+          }
+        }
+      ],
+      "10_year": [
+        {
+          "name": "Total Return",
+          "name_tag": "total_return",
+          "rating": {
+            "name": "660 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Consistent Return",
+          "name_tag": "consistent_return",
+          "rating": {
+            "name": "660 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Preservation",
+          "name_tag": "preservation",
+          "rating": {
+            "name": "4788 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Expense",
+          "name_tag": "expense",
+          "rating": {
+            "name": "659 funds",
+            "value": 5
+          }
+        }
+      ],
+      "name": "Chile"
+    },
+    {
+      "as_of_date": 1785470400000,
+      "overall": [
+        {
+          "name": "Total Return",
+          "name_tag": "total_return",
+          "rating": {
+            "name": "148 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Consistent Return",
+          "name_tag": "consistent_return",
+          "rating": {
+            "name": "148 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Preservation",
+          "name_tag": "preservation",
+          "rating": {
+            "name": "999 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Expense",
+          "name_tag": "expense",
+          "rating": {
+            "name": "144 funds",
+            "value": 5
+          }
+        }
+      ],
+      "3_year": [
+        {
+          "name": "Total Return",
+          "name_tag": "total_return",
+          "rating": {
+            "name": "148 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Consistent Return",
+          "name_tag": "consistent_return",
+          "rating": {
+            "name": "148 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Preservation",
+          "name_tag": "preservation",
+          "rating": {
+            "name": "999 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Expense",
+          "name_tag": "expense",
+          "rating": {
+            "name": "144 funds",
+            "value": 5
+          }
+        }
+      ],
+      "5_year": [
+        {
+          "name": "Total Return",
+          "name_tag": "total_return",
+          "rating": {
+            "name": "144 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Consistent Return",
+          "name_tag": "consistent_return",
+          "rating": {
+            "name": "144 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Preservation",
+          "name_tag": "preservation",
+          "rating": {
+            "name": "982 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Expense",
+          "name_tag": "expense",
+          "rating": {
+            "name": "142 funds",
+            "value": 5
+          }
+        }
+      ],
+      "10_year": [
+        {
+          "name": "Total Return",
+          "name_tag": "total_return",
+          "rating": {
+            "name": "135 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Consistent Return",
+          "name_tag": "consistent_return",
+          "rating": {
+            "name": "135 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Preservation",
+          "name_tag": "preservation",
+          "rating": {
+            "name": "868 funds",
+            "value": 5
+          }
+        },
+        {
+          "name": "Expense",
+          "name_tag": "expense",
+          "rating": {
+            "name": "134 funds",
+            "value": 5
+          }
+        }
+      ],
+      "name": "Peru"
+    }
+  ]
+}

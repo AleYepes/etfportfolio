@@ -1,0 +1,240 @@
+{
+  "objective": {
+    "meta": {
+      "name": "Fund Objective",
+      "name_tag": "fund_objective"
+    },
+    "data": "The Fund seeks to provide investment results that correspond generally to the price and yield performance of the S&P 500 Index (the Index). The Funds Portfolio consists of substantially all of the component common stocks that comprise the Index, which are weighted in accordance with the terms of the Trust Agreement."
+  },
+  "key_profile": {
+    "meta": {
+      "name": "Key Profile",
+      "name_tag": "key_profile"
+    },
+    "data": {
+      "total_expense_ratio": "0.0945",
+      "total_net_assets": "$795B (2026/07/31)",
+      "domicile": "USA",
+      "market_geo_focus": "U.S.",
+      "market_cap_focus": "Large-cap",
+      "fund_category": "Open-End Funds"
+    }
+  },
+  "mstar": {
+    "meta": {
+      "name": "Style Matrix",
+      "name_tag": "style_matrix"
+    },
+    "data": {
+      "name": "Global Multi-Cap Core",
+      "x_axis": [
+        "Value",
+        "Core",
+        "Growth"
+      ],
+      "y_axis": [
+        "Large",
+        "Multi",
+        "Mid",
+        "Small"
+      ],
+      "x_axis_tag": [
+        "value",
+        "core",
+        "growth"
+      ],
+      "y_axis_tag": [
+        "large",
+        "multi",
+        "mid",
+        "small"
+      ],
+      "selected": [
+        [1, 1]
+      ],
+      "hist": [
+        [0, 1]
+      ]
+    }
+  },
+  "overall_ratings": {
+    "meta": {
+      "name": "Overall Ratings",
+      "name_tag": "overall_ratings"
+    },
+    "data": [
+      {
+        "name": "Total Return",
+        "name_tag": "total_return",
+        "rating": {
+          "name": "114 funds",
+          "value": 5
+        }
+      },
+      {
+        "name": "Consistent Return",
+        "name_tag": "consistent_return",
+        "rating": {
+          "name": "114 funds",
+          "value": 4
+        }
+      },
+      {
+        "name": "Preservation",
+        "name_tag": "preservation",
+        "rating": {
+          "name": "11931 funds",
+          "value": 5
+        }
+      },
+      {
+        "name": "Tax Efficiency",
+        "name_tag": "tax_efficiency",
+        "rating": {
+          "name": "114 funds",
+          "value": 5
+        }
+      },
+      {
+        "name": "Expense",
+        "name_tag": "expense",
+        "rating": {
+          "name": "40 funds",
+          "value": 5
+        }
+      }
+    ]
+  },
+  "top10": {
+    "meta": {
+      "name": "Holdings",
+      "name_tag": "holdings"
+    },
+    "data": {
+      "allocation": [
+        {
+          "name": "Equity",
+          "formatted_weight": "99.92%",
+          "weight": 99.9181,
+          "rank": 1,
+          "vs": 115.380862222222
+        },
+        {
+          "name": "Cash",
+          "formatted_weight": "0.05%",
+          "weight": 0.0456,
+          "rank": 2,
+          "vs": 0.11224
+        },
+        {
+          "name": "Other",
+          "formatted_weight": "0.04%",
+          "weight": 0.0363,
+          "rank": 3,
+          "vs": -15.9862311111111
+        }
+      ],
+      "top10": [
+        {
+          "name": "NVIDIA CORPORATION",
+          "ticker": "NVDA",
+          "rank": 1,
+          "assets_pct": "7.55%",
+          "conids": [4815747, 13104788, 84223567, 835397161, 837454790]
+        },
+        {
+          "name": "APPLE INC.",
+          "ticker": "AAPL",
+          "rank": 2,
+          "assets_pct": "7.04%",
+          "conids": [265598, 13013300, 38708077, 242506861, 273982664]
+        },
+        {
+          "name": "MICROSOFT CORPORATION",
+          "ticker": "MSFT",
+          "rank": 3,
+          "assets_pct": "5.36%",
+          "conids": [272093, 8988746, 11462841, 12178239, 38708990, 415569505]
+        }
+      ]
+    }
+  },
+  "mf_key_ratios": {
+    "meta": {
+      "name": "Key Ratios",
+      "name_tag": "key_ratios",
+      "symbol": "SPY",
+      "vs": "vs Peers",
+      "vs_tag": "vs_peers"
+    },
+    "data": [
+      {
+        "name": "Price/Sales",
+        "name_tag": "price_sales",
+        "value_fmt": "8.71%",
+        "value": 8.7070678805,
+        "vs_value": -0.267726878563843
+      },
+      {
+        "name": "Price to Book",
+        "name_tag": "price_to_book",
+        "value_fmt": "11.38%",
+        "value": 11.3821491318,
+        "vs_value": -0.443621428236668
+      },
+      {
+        "name": "Price to Earnings",
+        "name_tag": "price_to_earnings",
+        "value_fmt": "30.93%",
+        "value": 30.9275417189,
+        "vs_value": -0.885068981127574
+      }
+    ]
+  },
+  "ownership": {
+    "title": "Ownership",
+    "titleTag": "Ownership",
+    "content": {
+      "summary": [
+        {
+          "name": "Strat. Entit.",
+          "value": 0.134827876292395,
+          "name_tag": "Strat__Entit_",
+          "formatted_value": "0.13%"
+        },
+        {
+          "name": "Institutions",
+          "value": 57.6283963897866,
+          "name_tag": "Institutions",
+          "formatted_value": "57.63%"
+        },
+        {
+          "name": "Others",
+          "value": 42.236775733921,
+          "name_tag": "Others",
+          "formatted_value": "42.24%"
+        }
+      ],
+      "top": {
+        "title": "TOP 3",
+        "data": [
+          {
+            "name": "Jane Street Capital, L.L.C.",
+            "value": 44258657,
+            "formatted_value": "4.12%"
+          },
+          {
+            "name": "JPMorgan Private Bank (United States)",
+            "value": 34673195,
+            "formatted_value": "3.23%"
+          },
+          {
+            "name": "Goldman Sachs & Co. LLC",
+            "value": 25788176,
+            "formatted_value": "2.4%"
+          }
+        ]
+      }
+    }
+  }
+}

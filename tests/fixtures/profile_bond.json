@@ -1,0 +1,213 @@
+{
+  "objective": "The Fund seeks to track the performance of a market-weighted bond index with a short-term dollar-weighted average maturity.  The Fund employs an indexing investment approach designed to track the performance of the Bloomberg U.S. 1-5 Year Government/ Credit Float Adjusted Index.",
+  "symbol": "BSV",
+  "fund_and_profile": [
+    {
+      "name": "Fund Management Company",
+      "name_tag": "Fund_Management_Company",
+      "value": "Vanguard Capital Management, LLC"
+    },
+    {
+      "name": "Distribution Details",
+      "name_tag": "Distribution_Details",
+      "value": "Paid",
+      "value_tag": "paid_tag"
+    },
+    {
+      "name": "Fiscal Date",
+      "name_tag": "Fiscal_Date",
+      "value": "12/31"
+    },
+    {
+      "name": "Launch Opening Price",
+      "name_tag": "Launch_Opening_Price",
+      "value": "2007-04-03"
+    },
+    {
+      "name": "Geographical Focus",
+      "name_tag": "Geographical_Focus",
+      "value": "United States of America"
+    },
+    {
+      "name": "Asset Type",
+      "name_tag": "Asset_Type",
+      "value": "Bond"
+    },
+    {
+      "name": "Fund Manager Benchmark",
+      "name_tag": "Fund_Manager_Benchmark",
+      "value": "Bloomberg 1-5 Y Govt/Credit Float Adj TR"
+    },
+    {
+      "name": "Management Approach",
+      "name_tag": "Management_Approach",
+      "value": "Passive"
+    },
+    {
+      "name": "Total Expense Ratio",
+      "name_tag": "Total_Expense_Ratio",
+      "value": "0.03%"
+    },
+    {
+      "name": "Inception Date",
+      "name_tag": "Inception_Date",
+      "value": "2007/04/03"
+    },
+    {
+      "name": "Domicile",
+      "name_tag": "Domicile",
+      "value": "USA"
+    },
+    {
+      "name": "Fund Category",
+      "name_tag": "Fund_Category",
+      "value": "Open-End Funds"
+    },
+    {
+      "name": "Classification",
+      "name_tag": "Classification",
+      "value": "Short Investment Grade Debt Funds"
+    },
+    {
+      "name": "Scheme",
+      "name_tag": "Scheme",
+      "value": "US Mutual Fund Classification"
+    },
+    {
+      "name": "Total Net Assets (Month End)",
+      "name_tag": "Total_Net_Assets_Month_End",
+      "value": "$45.61B (2026/07/31)"
+    },
+    {
+      "name": "Objective Type",
+      "name_tag": "Objective_Type",
+      "value": "Short Investment Grade Debt Funds"
+    },
+    {
+      "name": "Portfolio Manager",
+      "name_tag": "Portfolio_Manager",
+      "value": "Joshua C. Barrickman"
+    },
+    {
+      "name": "Manager Tenure",
+      "name_tag": "Manager_Tenure",
+      "value": "2013/01/01"
+    },
+    {
+      "name": "Management Expenses",
+      "name_tag": "management_expenses",
+      "value": "78.48%"
+    }
+  ],
+  "reports": [
+    {
+      "name": "Annual Report",
+      "as_of_date": 1767157200000,
+      "fields": [
+        {
+          "name": "Total Expense",
+          "value": "0.0304%",
+          "is_summary": true
+        },
+        {
+          "name": "Total Gross Expense",
+          "value": "0.0304%",
+          "is_summary": true
+        },
+        {
+          "name": "Total Net Expense",
+          "value": "0.0304%",
+          "is_summary": true
+        },
+        {
+          "name": "Management Fees",
+          "value": "0.0238%",
+          "is_summary": true
+        },
+        {
+          "name": "Advisor Expenses",
+          "value": "0.0031%"
+        },
+        {
+          "name": "Administrator Expenses",
+          "value": "0.0207%"
+        },
+        {
+          "name": "Non-Management Expenses",
+          "value": "0.0065%",
+          "is_summary": true
+        },
+        {
+          "name": "Audit Expenses",
+          "value": "0.0001%"
+        },
+        {
+          "name": "Custodian Expenses",
+          "value": "0.0001%"
+        },
+        {
+          "name": "Director Expense",
+          "value": "0.0001%"
+        },
+        {
+          "name": "Misc. Expenses",
+          "value": "0.0035%"
+        },
+        {
+          "name": "Postage and Printing Expenses",
+          "value": "0.0028%"
+        },
+        {
+          "name": "Other Non-Management Fees",
+          "value": "0%"
+        }
+      ]
+    },
+    {
+      "name": "Prospectus Report",
+      "as_of_date": 1777348800000,
+      "fields": [
+        {
+          "name": "Prospectus Gross Expense Ratio",
+          "value": "0.03%"
+        },
+        {
+          "name": "Prospectus Gross Management Fee Ratio",
+          "value": "0.03%"
+        },
+        {
+          "name": "Prospectus Gross Other Expense Ratio",
+          "value": "0.01%"
+        },
+        {
+          "name": "Prospectus Net Expense Ratio",
+          "value": "0.03%"
+        },
+        {
+          "name": "Prospectus Net Management Fee Ratio",
+          "value": "0.02%"
+        },
+        {
+          "name": "Prospectus Net Other Expense Ratio",
+          "value": "0.01%"
+        }
+      ]
+    }
+  ],
+  "themes": [
+    "Index Tracking"
+  ],
+  "expenses_allocation": [
+    {
+      "name": "Management Expenses",
+      "value": "78.48%",
+      "ratio": 0.784768121569968
+    },
+    {
+      "name": "Non-Management Expenses",
+      "value": "21.52%",
+      "ratio": 0.215231878430032
+    }
+  ],
+  "jap_fund_warning": false
+}

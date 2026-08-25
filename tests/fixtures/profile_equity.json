@@ -1,0 +1,251 @@
+{
+  "objective": "The Fund seeks to track the performance of a benchmark index that measures the investment return of stocks of companies located in developed and emerging markets around the world. The Fund employs an indexing investment approach to track the performance of the FTSE Global All Cap Index and attempts to sample the index.",
+  "symbol": "VT",
+  "fund_and_profile": [
+    {
+      "name": "Fund Management Company",
+      "name_tag": "Fund_Management_Company",
+      "value": "Vanguard Capital Management, LLC"
+    },
+    {
+      "name": "Distribution Details",
+      "name_tag": "Distribution_Details",
+      "value": "Paid",
+      "value_tag": "paid_tag"
+    },
+    {
+      "name": "Fiscal Date",
+      "name_tag": "Fiscal_Date",
+      "value": "10/31"
+    },
+    {
+      "name": "Launch Opening Price",
+      "name_tag": "Launch_Opening_Price",
+      "value": "2008-06-24"
+    },
+    {
+      "name": "Geographical Focus",
+      "name_tag": "Geographical_Focus",
+      "value": "Global"
+    },
+    {
+      "name": "Asset Type",
+      "name_tag": "Asset_Type",
+      "value": "Equity"
+    },
+    {
+      "name": "Fund Manager Benchmark",
+      "name_tag": "Fund_Manager_Benchmark",
+      "value": "FTSE Global All Cap TR USD"
+    },
+    {
+      "name": "Management Approach",
+      "name_tag": "Management_Approach",
+      "value": "Passive"
+    },
+    {
+      "name": "Total Expense Ratio",
+      "name_tag": "Total_Expense_Ratio",
+      "value": "0.06%"
+    },
+    {
+      "name": "Inception Date",
+      "name_tag": "Inception_Date",
+      "value": "2008/06/24"
+    },
+    {
+      "name": "Domicile",
+      "name_tag": "Domicile",
+      "value": "USA"
+    },
+    {
+      "name": "Fund Category",
+      "name_tag": "Fund_Category",
+      "value": "Open-End Funds"
+    },
+    {
+      "name": "Classification",
+      "name_tag": "Classification",
+      "value": "Global Multi-Cap Core"
+    },
+    {
+      "name": "Fund Market Cap Focus",
+      "name_tag": "Fund_Market_Cap_Focus",
+      "value": "Large-cap"
+    },
+    {
+      "name": "Scheme",
+      "name_tag": "Scheme",
+      "value": "US Mutual Fund Classification"
+    },
+    {
+      "name": "Total Net Assets (Month End)",
+      "name_tag": "Total_Net_Assets_Month_End",
+      "value": "$78.63B (2026/07/31)"
+    },
+    {
+      "name": "Objective Type",
+      "name_tag": "Objective_Type",
+      "value": "Global Funds"
+    },
+    {
+      "name": "Portfolio Manager",
+      "name_tag": "Portfolio_Manager",
+      "value": "Franquin/Geiger"
+    },
+    {
+      "name": "Manager Tenure",
+      "name_tag": "Manager_Tenure",
+      "value": "2013/01/01"
+    },
+    {
+      "name": "Management Expenses",
+      "name_tag": "management_expenses",
+      "value": "88.71%"
+    }
+  ],
+  "mstar": {
+    "name": "Global Multi-Cap Core",
+    "x_axis": [
+      "Value",
+      "Core",
+      "Growth"
+    ],
+    "y_axis": [
+      "Large",
+      "Multi",
+      "Mid",
+      "Small"
+    ],
+    "x_axis_tag": [
+      "value",
+      "core",
+      "growth"
+    ],
+    "y_axis_tag": [
+      "large",
+      "multi",
+      "mid",
+      "small"
+    ],
+    "selected": [
+      [1, 1]
+    ],
+    "hist": []
+  },
+  "reports": [
+    {
+      "name": "Annual Report",
+      "as_of_date": 1761883200000,
+      "fields": [
+        {
+          "name": "Total Expense",
+          "value": "0.0564%",
+          "is_summary": true
+        },
+        {
+          "name": "Total Gross Expense",
+          "value": "0.1527%",
+          "is_summary": true
+        },
+        {
+          "name": "Total Net Expense",
+          "value": "0.0564%",
+          "is_summary": true
+        },
+        {
+          "name": "Management Fees",
+          "value": "0.0475%",
+          "is_summary": true
+        },
+        {
+          "name": "Advisor Expenses",
+          "value": "0.0056%"
+        },
+        {
+          "name": "Administrator Expenses",
+          "value": "0.0419%"
+        },
+        {
+          "name": "Non-Management Expenses",
+          "value": "0.006%",
+          "is_summary": true
+        },
+        {
+          "name": "Audit Expenses",
+          "value": "0.0001%"
+        },
+        {
+          "name": "Custodian Expenses",
+          "value": "0.0035%"
+        },
+        {
+          "name": "Director Expense",
+          "value": "0%"
+        },
+        {
+          "name": "Misc. Expenses",
+          "value": "0.0008%"
+        },
+        {
+          "name": "Postage and Printing Expenses",
+          "value": "0.0017%"
+        },
+        {
+          "name": "Other Non-Management Fees",
+          "value": "0%"
+        },
+        {
+          "name": "Other Expense",
+          "value": "0.0964%"
+        }
+      ]
+    },
+    {
+      "name": "Prospectus Report",
+      "as_of_date": 1772168400000,
+      "fields": [
+        {
+          "name": "Prospectus Gross Expense Ratio",
+          "value": "0.06%"
+        },
+        {
+          "name": "Prospectus Gross Management Fee Ratio",
+          "value": "0.06%"
+        },
+        {
+          "name": "Prospectus Gross Other Expense Ratio",
+          "value": "0.01%"
+        },
+        {
+          "name": "Prospectus Net Expense Ratio",
+          "value": "0.06%"
+        },
+        {
+          "name": "Prospectus Net Management Fee Ratio",
+          "value": "0.05%"
+        },
+        {
+          "name": "Prospectus Net Other Expense Ratio",
+          "value": "0.01%"
+        }
+      ]
+    }
+  ],
+  "themes": [
+    "Index Tracking"
+  ],
+  "expenses_allocation": [
+    {
+      "name": "Management Expenses",
+      "value": "88.71%",
+      "ratio": 0.887127365149982
+    },
+    {
+      "name": "Non-Management Expenses",
+      "value": "11.29%",
+      "ratio": 0.112872634850018
+    }
+  ],
+  "jap_fund_warning": false
+}

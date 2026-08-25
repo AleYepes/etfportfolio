@@ -1,0 +1,192 @@
+{
+  "objective": {
+    "meta": {
+      "name": "Fund Objective",
+      "name_tag": "fund_objective"
+    },
+    "data": "The Fund seeks to track the performance of a benchmark index that measures the investment return of stocks of companies located in developed and emerging markets around the world. The Fund employs an indexing investment approach to track the performance of the FTSE Global All Cap Index and attempts to sample the index."
+  },
+  "key_profile": {
+    "meta": {
+      "name": "Key Profile",
+      "name_tag": "key_profile"
+    },
+    "data": {
+      "total_expense_ratio": "0.06",
+      "total_net_assets": "$78.63B (2026/07/31)",
+      "domicile": "USA",
+      "market_geo_focus": "Global",
+      "market_cap_focus": "Large-cap",
+      "fund_category": "Open-End Funds"
+    }
+  },
+  "mstar": {
+    "meta": {
+      "name": "Style Matrix",
+      "name_tag": "style_matrix"
+    },
+    "data": {
+      "name": "Global Multi-Cap Core",
+      "x_axis": [
+        "Value",
+        "Core",
+        "Growth"
+      ],
+      "y_axis": [
+        "Large",
+        "Multi",
+        "Mid",
+        "Small"
+      ],
+      "x_axis_tag": [
+        "value",
+        "core",
+        "growth"
+      ],
+      "y_axis_tag": [
+        "large",
+        "multi",
+        "mid",
+        "small"
+      ],
+      "selected": [
+        [1, 1]
+      ],
+      "hist": []
+    }
+  },
+  "overall_ratings": {
+    "meta": {
+      "name": "Overall Ratings",
+      "name_tag": "overall_ratings"
+    },
+    "data": [
+      {
+        "name": "Total Return",
+        "name_tag": "total_return",
+        "rating": {
+          "name": "79 funds",
+          "value": 5
+        }
+      },
+      {
+        "name": "Consistent Return",
+        "name_tag": "consistent_return",
+        "rating": {
+          "name": "79 funds",
+          "value": 5
+        }
+      },
+      {
+        "name": "Preservation",
+        "name_tag": "preservation",
+        "rating": {
+          "name": "11931 funds",
+          "value": 5
+        }
+      },
+      {
+        "name": "Tax Efficiency",
+        "name_tag": "tax_efficiency",
+        "rating": {
+          "name": "79 funds",
+          "value": 5
+        }
+      },
+      {
+        "name": "Expense",
+        "name_tag": "expense",
+        "rating": {
+          "name": "37 funds",
+          "value": 5
+        }
+      }
+    ]
+  },
+  "top10": {
+    "meta": {
+      "name": "Holdings",
+      "name_tag": "holdings"
+    },
+    "data": {
+      "allocation": [
+        {
+          "name": "Equity",
+          "formatted_weight": "98.73%",
+          "weight": 98.7252,
+          "rank": 1,
+          "vs": 95.8213101694915
+        },
+        {
+          "name": "Other",
+          "formatted_weight": "1.18%",
+          "weight": 1.178,
+          "rank": 2,
+          "vs": 1.78386779661017
+        },
+        {
+          "name": "Cash",
+          "formatted_weight": "0.1%",
+          "weight": 0.0968,
+          "rank": 3,
+          "vs": 1.01017966101695
+        }
+      ],
+      "top10": [
+        {
+          "name": "NVIDIA CORPORATION",
+          "ticker": "NVDA",
+          "rank": 1,
+          "assets_pct": "4%",
+          "conids": [4815747, 13104788, 84223567, 835397161, 837454790]
+        },
+        {
+          "name": "APPLE INC.",
+          "ticker": "AAPL",
+          "rank": 2,
+          "assets_pct": "3.58%",
+          "conids": [265598, 13013300, 38708077, 242506861, 273982664]
+        },
+        {
+          "name": "MICROSOFT CORPORATION",
+          "ticker": "MSFT",
+          "rank": 3,
+          "assets_pct": "2.37%",
+          "conids": [272093, 8988746, 11462841, 12178239, 38708990, 415569505]
+        }
+      ]
+    }
+  },
+  "mf_key_ratios": {
+    "meta": {
+      "name": "Key Ratios",
+      "name_tag": "key_ratios",
+      "symbol": "VT",
+      "vs": "vs Peers",
+      "vs_tag": "vs_peers"
+    },
+    "data": [
+      {
+        "name": "Price/Sales",
+        "name_tag": "price_sales",
+        "value_fmt": "8.07%",
+        "value": 8.0688797595,
+        "vs_value": 0.314495800605887
+      },
+      {
+        "name": "Price to Book",
+        "name_tag": "price_to_book",
+        "value_fmt": "9.24%",
+        "value": 9.2385083924,
+        "vs_value": 0.3101977045497
+      },
+      {
+        "name": "Price to Earnings",
+        "name_tag": "price_to_earnings",
+        "value_fmt": "30.75%",
+        "value": 30.7516979811,
+        "vs_value": 0.19473004834458
+      }
+    ]
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "objective": {
+    "meta": {
+      "name": "Fund Objective",
+      "name_tag": "fund_objective"
+    },
+    "data": "The Fund seeks to track the investment results of the Cboe S&P 500 Enhanced 1% OTM BuyWrite Index. The Underlying Index is designed to measure the performance of a strategy of holding the iShares Core S&P 500 ETF while writing (selling) one-month call options primarily on the S&P 500 Index to generate income."
+  },
+  "key_profile": {
+    "meta": {
+      "name": "Key Profile",
+      "name_tag": "key_profile"
+    },
+    "data": {
+      "total_expense_ratio": "0.25",
+      "total_net_assets": "$329.53M (2026/07/31)",
+      "domicile": "USA",
+      "market_geo_focus": "U.S.",
+      "market_cap_focus": "Large-cap",
+      "fund_category": "Open-End Funds"
+    }
+  },
+  "overall_ratings": {
+    "meta": {
+      "name": "Overall Ratings",
+      "name_tag": "overall_ratings"
+    }
+  },
+  "top10": {
+    "meta": {
+      "name": "Holdings",
+      "name_tag": "holdings"
+    },
+    "data": {
+      "allocation": [
+        {
+          "name": "Equity",
+          "formatted_weight": "99.97%",
+          "weight": 99.9707,
+          "rank": 1,
+          "vs": 42.3478831325301
+        },
+        {
+          "name": "Cash",
+          "formatted_weight": "0.17%",
+          "weight": 0.1663,
+          "rank": 2,
+          "vs": 4.8741234939759
+        },
+        {
+          "name": "Fixed Income",
+          "formatted_weight": "0.13%",
+          "weight": 0.1265,
+          "rank": 3,
+          "vs": 43.954336746988
+        },
+        {
+          "name": "Other",
+          "formatted_weight": "-0.26%",
+          "weight": -0.2634,
+          "rank": 4,
+          "vs": 8.82365602409639
+        }
+      ],
+      "top10": [
+        {
+          "name": "iShares Core S&P 500 ETF",
+          "rank": 1,
+          "assets_pct": "100.14%",
+          "conids": [8991352, 38708815]
+        },
+        {
+          "name": "BlackRock Cash Funds: Treasury;SL Agency",
+          "rank": 2,
+          "assets_pct": "0.18%",
+          "conids": []
+        },
+        {
+          "name": "SPX Aug6 7650.0C",
+          "ticker": "SPXH2126B765000",
+          "rank": 4,
+          "assets_pct": "-0.31%",
+          "conids": []
+        }
+      ]
+    }
+  },
+  "mf_key_ratios": {
+    "meta": {
+      "name": "Key Ratios",
+      "name_tag": "key_ratios",
+      "symbol": "IVVW",
+      "vs": "vs Peers",
+      "vs_tag": "vs_peers"
+    },
+    "data": [
+      {
+        "name": "Price/Sales",
+        "name_tag": "price_sales",
+        "value_fmt": "9.58%",
+        "value": 9.5768166647,
+        "vs_value": 0.165475690938622
+      },
+      {
+        "name": "Price to Book",
+        "name_tag": "price_to_book",
+        "value_fmt": "12.13%",
+        "value": 12.1307899204,
+        "vs_value": 0.519190856196972
+      },
+      {
+        "name": "Price to Earnings",
+        "name_tag": "price_to_earnings",
+        "value_fmt": "33.37%",
+        "value": 33.3653748122,
+        "vs_value": 0.177447491845285
+      }
+    ]
+  }
+}
