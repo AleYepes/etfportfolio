@@ -5,6 +5,14 @@ build/
 dist/
 wheels/
 *.egg-info
+.ruff_cache
 
 # Virtual environments
 .venv
+
+# Secrets
+.env
+
+# Dev testing
+*.ipynb
+data/

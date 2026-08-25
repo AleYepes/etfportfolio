@@ -1,5 +1,5 @@
 def main():
-    print("Hello from etfportfolio!")
+    return
 
 
 if __name__ == "__main__":

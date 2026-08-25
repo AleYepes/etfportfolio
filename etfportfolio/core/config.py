@@ -1,0 +1,31 @@
+from pydantic_settings import (
+    BaseSettings, SettingsConfigDict, PydanticBaseSettingsSource,
+    PyprojectTomlConfigSettingsSource,
+)
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        pyproject_toml_table_header=("tool", "etfportfolio"),
+        env_file=".env",
+    )
+
+    db_path: str = "data/etf.duckdb"
+    data_dir: str = "data"
+    session_state_path: str = "data/session_state.json"
+    log_dir: str = "data/logs"
+    ibkr_base_url: str = "https://www.interactivebrokers.ie"
+    endpoint_concurrency: int = 5
+
+    ibkr_username: str | None = None   # reserved for future automated login, unused in v1
+    ibkr_password: str | None = None   # reserved for future automated login, unused in v1
+    account_id: str | None = None      # set once after first successful probe; see §7.3
+
+    @classmethod
+    def settings_customise_sources(cls, settings_cls, init_settings, env_settings,
+                                    dotenv_settings, file_secret_settings):
+        return (
+            init_settings,
+            env_settings,
+            dotenv_settings,
+            PyprojectTomlConfigSettingsSource(settings_cls),
+        )

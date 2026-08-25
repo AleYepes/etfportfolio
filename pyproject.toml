@@ -1,7 +1,52 @@
 [project]
 name = "etfportfolio"
 version = "0.1.0"
-description = "Add your description here"
+description = "ETF factor analysis pipeline to calculate efficient frontier portfolios."
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "duckdb>=1.5.5",
+    "fire>=0.7.1",
+    "httpx>=0.28.1",
+    "orjson>=3.12.0",
+    "playwright>=1.62.0",
+    "pydantic-settings>=2.15.0",
+    "xxhash>=4.0.1",
+    "zstandard>=0.25.0",
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.3.0",
+    "pandas>=3.0.5",
+    "pytest>=9.1.1",
+    "respx>=0.23.1",
+    "ruff>=0.16.4",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 120
+extend-exclude = [
+    "docs",
+    "data",
+    ".venv"
+]
+
+[tool.ruff.lint]
+select = [
+    "F",    # Pyflakes (errors, unused imports)
+    "E",    # pycodestyle (errors)
+    "W",    # pycodestyle (warnings)
+    "I",    # isort (import sorting)
+    "UP",   # pyupgrade (upgrades code to Python 3.12 syntax)
+    "B",    # flake8-bugbear (catches tricky design flaws and logic bugs)
+    "SIM",  # flake8-simplify (helps you refactor messy if/else blocks)
+    "N",    # pep8 conventions
+]
+ignore = ["E501"]
+fixable = ["ALL"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
