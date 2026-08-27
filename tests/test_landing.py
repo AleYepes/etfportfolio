@@ -17,7 +17,7 @@ async def test_landing_fetch_and_gate_lifecycle(tmp_path):
 
     pid = 756733
     landing_url = (
-        f"https://www.interactivebrokers.ie/fundamentals/landing/{pid}"
+        f"https://www.interactivebrokers.ie/tws.proxy/fundamentals/landing/{pid}"
         "?widgets=objective,keyProfile,lipper_ratings,holdings,mf_key_ratios,ownership,mstar&lang=en"
     )
 

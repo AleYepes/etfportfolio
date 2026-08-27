@@ -48,7 +48,7 @@ async def test_full_pipeline_mocked_run(tmp_path):
     # Phase 3: Landing for 756733
     landing_fixture = json.loads(Path("tests/fixtures/landing_equity.json").read_text(encoding="utf-8"))
     respx.get(
-        f"{base}/fundamentals/landing/756733?widgets=objective,keyProfile,lipper_ratings,holdings,mf_key_ratios,ownership,mstar&lang=en"
+        f"{base}/tws.proxy/fundamentals/landing/756733?widgets=objective,keyProfile,lipper_ratings,holdings,mf_key_ratios,ownership,mstar&lang=en"
     ).mock(return_value=httpx.Response(200, json=landing_fixture))
 
     # Snapshot endpoints
@@ -61,24 +61,28 @@ async def test_full_pipeline_mocked_run(tmp_path):
     esg_fx = json.loads(Path("tests/fixtures/esg.json").read_text(encoding="utf-8"))
     themes_prod_fx = json.loads(Path("tests/fixtures/themes.json").read_text(encoding="utf-8"))
 
-    respx.get(f"{base}/fundamentals/mf_holdings/756733?lang=en").mock(
+    respx.get(f"{base}/tws.proxy/fundamentals/mf_holdings/756733?lang=en").mock(
         return_value=httpx.Response(200, json=holdings_fx)
     )
-    respx.get(f"{base}/fundamentals/mf_ratios_fundamentals/756733?lang=en").mock(
+    respx.get(f"{base}/tws.proxy/fundamentals/mf_ratios_fundamentals/756733?lang=en").mock(
         return_value=httpx.Response(200, json=ratios_fx)
     )
     respx.get(
-        f"{base}/fundamentals/ownership/756733?fields=owners_types,institutional_owners,insider_owners,institutional_total,insider_total,institutional_summary,insider_summary,others_summary&lang=en"
+        f"{base}/tws.proxy/fundamentals/ownership/756733?fields=owners_types,institutional_owners,insider_owners,institutional_total,insider_total,institutional_summary,insider_summary,others_summary&lang=en"
     ).mock(return_value=httpx.Response(200, json=ownership_fx))
-    respx.get(f"{base}/fundamentals/mf_profile_and_fees/756733?lang=en").mock(
+    respx.get(f"{base}/tws.proxy/fundamentals/mf_profile_and_fees/756733?lang=en").mock(
         return_value=httpx.Response(200, json=profile_fx)
     )
-    respx.get(f"{base}/fundamentals/mf_lip_ratings/756733?lang=en").mock(
+    respx.get(f"{base}/tws.proxy/fundamentals/mf_lip_ratings/756733?lang=en").mock(
         return_value=httpx.Response(200, json=lipper_fx)
     )
-    respx.get(f"{base}/mstar/fund/detail?conid=756733&lang=en").mock(return_value=httpx.Response(200, json=mstar_fx))
-    respx.get(f"{base}/impact/esg/756733?accounts=U1234567&lang=en").mock(return_value=httpx.Response(200, json=esg_fx))
-    respx.get(f"{base}/knowledge-graph/ui/fund?conid=756733&max=999999999&lang=en").mock(
+    respx.get(f"{base}/tws.proxy/mstar/fund/detail?conid=756733&lang=en").mock(
+        return_value=httpx.Response(200, json=mstar_fx)
+    )
+    respx.get(f"{base}/tws.proxy/impact/esg/756733?accounts=U1234567&lang=en").mock(
+        return_value=httpx.Response(200, json=esg_fx)
+    )
+    respx.get(f"{base}/tws.proxy/knowledge-graph/ui/fund?conid=756733&max=999999999&lang=en").mock(
         return_value=httpx.Response(200, json=themes_prod_fx)
     )
 
@@ -86,10 +90,10 @@ async def test_full_pipeline_mocked_run(tmp_path):
     price_fx = json.loads(Path("tests/fixtures/price_incremental.json").read_text(encoding="utf-8"))
     sentiment_fx = json.loads(Path("tests/fixtures/sentiment_incremental.json").read_text(encoding="utf-8"))
 
-    respx.get(f"{base}/fundamentals/mf_performance_chart/756733?chart_period=MAX&lang=en").mock(
+    respx.get(f"{base}/tws.proxy/fundamentals/mf_performance_chart/756733?chart_period=MAX&lang=en").mock(
         return_value=httpx.Response(200, json=price_fx)
     )
-    respx.get(url__regex=r".*/sma/request\?type=search&conid=756733&from=.*").mock(
+    respx.get(url__regex=r".*/tws\.proxy/sma/request\?type=search&conid=756733&from=.*").mock(
         return_value=httpx.Response(200, json=sentiment_fx)
     )
 

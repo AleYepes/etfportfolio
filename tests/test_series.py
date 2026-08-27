@@ -108,14 +108,16 @@ def test_store_and_get_last_series(tmp_path):
         store_series(
             conn=conn,
             product_id=2001,
-            url_prefix="fundamentals/mf_performance_chart/",
+            url_prefix="/tws.proxy/fundamentals/mf_performance_chart/",
             url_slug="2001?chart_period=1M&lang=en",
             first_date=first_dt,
             last_date=last_dt,
             payload=fixture,
         )
 
-        stored_last_date, stored_payload = get_last_series_info(conn, 2001, "fundamentals/mf_performance_chart/")
+        stored_last_date, stored_payload = get_last_series_info(
+            conn, 2001, "/tws.proxy/fundamentals/mf_performance_chart/"
+        )
         assert stored_last_date == last_dt
         assert stored_payload is not None
         assert stored_payload["plot"]["series"][0]["name"] == "price"

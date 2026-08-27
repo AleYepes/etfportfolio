@@ -20,7 +20,7 @@ def test_store_snapshot(tmp_path):
         digest = store_snapshot(
             conn=conn,
             product_id=1001,
-            url_prefix="fundamentals/mf_holdings/",
+            url_prefix="/tws.proxy/fundamentals/mf_holdings/",
             url_slug="1001?lang=en",
             payload=payload,
         )
@@ -36,13 +36,13 @@ def test_store_snapshot(tmp_path):
         snap = conn.execute(
             "SELECT product_id, url_prefix, url_slug, hash FROM bronze.snapshots WHERE product_id = 1001"
         ).fetchone()
-        assert snap == (1001, "fundamentals/mf_holdings/", "1001?lang=en", digest)
+        assert snap == (1001, "/tws.proxy/fundamentals/mf_holdings/", "1001?lang=en", digest)
 
         # Store again with exact same payload -> should insert another lineage row but payload_blobs remains 1
         store_snapshot(
             conn=conn,
             product_id=1001,
-            url_prefix="fundamentals/mf_holdings/",
+            url_prefix="/tws.proxy/fundamentals/mf_holdings/",
             url_slug="1001?lang=en",
             payload=payload,
         )
