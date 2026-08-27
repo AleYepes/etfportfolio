@@ -12,6 +12,7 @@ dependencies = [
     "orjson>=3.12.0",
     "playwright>=1.62.0",
     "pydantic-settings>=2.15.0",
+    "questionary>=2.1.1",
     "requests>=2.34.2",
     "xxhash>=4.0.1",
     "zstandard>=0.25.0",
@@ -25,6 +26,17 @@ dev = [
     "respx>=0.23.1",
     "ruff>=0.16.4",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[tool.etfportfolio]
+db_path = "data/etf.duckdb"
+data_dir = "data"
+session_state_path = "data/session_state.json"
+log_dir = "data/logs"
+ibkr_base_url = "https://www.interactivebrokers.ie"
+endpoint_concurrency = 5
 
 [tool.ruff]
 target-version = "py314"
