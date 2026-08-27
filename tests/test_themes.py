@@ -61,3 +61,10 @@ async def test_themes_sync_with_fixture(tmp_path):
 
             total = conn.execute("SELECT COUNT(*) FROM bronze.themes").fetchone()[0]
             assert total == p_cnt + n_cnt
+
+            # Second sync against the same populated database to verify FK constraint idempotency
+            p_cnt_2, n_cnt_2 = await sync(client=client, conn=conn)
+            assert p_cnt_2 == p_cnt
+            assert n_cnt_2 == n_cnt
+            total_2 = conn.execute("SELECT COUNT(*) FROM bronze.themes").fetchone()[0]
+            assert total_2 == total

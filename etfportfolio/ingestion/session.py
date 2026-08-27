@@ -228,9 +228,11 @@ def reconcile_account_id(account_id: str, env_path: Path | None = None) -> bool:
     env_account_id = (settings.account_id or "").strip()
 
     if env_account_id and env_account_id != account_id:
-        answer = input(
-            f"Account mismatch: '{account_id}' (new) vs '{env_account_id}' (expected). Continue? [y/N] "
-        ).strip().lower()
+        answer = (
+            input(f"Account mismatch: '{account_id}' (new) vs '{env_account_id}' (expected). Continue? [y/N] ")
+            .strip()
+            .lower()
+        )
         if answer != "y":
             return False
         # User confirmed — fall through to persist the new ID.
@@ -359,8 +361,12 @@ async def _dismiss_cookie_modal(page: Any) -> None:
         await asyncio.sleep(0.5)
         return
 
-    for selector in ("#gdpr-reject-all", "#btn_accept_cookies",
-                     "button#onetrust-reject-all-handler", "button#onetrust-accept-btn-handler"):
+    for selector in (
+        "#gdpr-reject-all",
+        "#btn_accept_cookies",
+        "button#onetrust-reject-all-handler",
+        "button#onetrust-accept-btn-handler",
+    ):
         try:
             elem = await page.wait_for_selector(selector, state="visible", timeout=2000)
             if elem:
@@ -375,22 +381,19 @@ async def _fill_and_submit(page: Any, username: str, password: str) -> bool:
     """Dismisses the cookie modal then fills and submits the login form."""
     try:
         await _dismiss_cookie_modal(page)
-        try:
+        with contextlib.suppress(Exception):
             await page.wait_for_function(
                 "() => !document.getElementById('cookie-modal') || "
                 "getComputedStyle(document.getElementById('cookie-modal')).display === 'none'",
                 timeout=5000,
             )
-        except Exception:
-            pass
 
         await page.wait_for_selector("input#xyz-field-username, input[name='username']", state="visible", timeout=15000)
         await page.fill("input#xyz-field-username, input[name='username']", username)
         await page.fill("input#xyz-field-password, input[name='password']", password)
 
         submit_selector = (
-            "form.xyzform-username button[type='submit'], "
-            "form[name='xyzform-username'] button[type='submit']"
+            "form.xyzform-username button[type='submit'], form[name='xyzform-username'] button[type='submit']"
         )
         submit_btn = await page.wait_for_selector(submit_selector, state="visible", timeout=5000)
         if submit_btn:
@@ -408,7 +411,6 @@ def _is_login_url(url: str) -> bool:
     if "#/" in url:
         return False
     return any(frag in url for frag in _LOGIN_URL_FRAGMENTS)
-
 
 
 async def _watch_login_page(page: Any, timeout_s: float) -> str:
@@ -459,13 +461,14 @@ async def _watch_login_page(page: Any, timeout_s: float) -> str:
 
         if not tfa_hint_shown:
             try:
-                panel_visible = await page.evaluate("""() => {
-                    const selectors = %s;
-                    return selectors.some(sel => {
+                selectors_json = json.dumps(_2FA_PANEL_SELECTORS)
+                panel_visible = await page.evaluate(f"""() => {{
+                    const selectors = {selectors_json};
+                    return selectors.some(sel => {{
                         const el = document.querySelector(sel);
                         return !!el && el.style.display !== 'none' && !!el.offsetParent;
-                    });
-                }""" % str(_2FA_PANEL_SELECTORS).replace("'", '"'))
+                    }});
+                }}""")
                 if panel_visible:
                     logger.info("2FA prompt detected in browser — please complete authentication there.")
                     tfa_hint_shown = True
@@ -511,7 +514,7 @@ async def login(timeout_s: float = 300.0) -> None:
                             raise RuntimeError("Login timed out.")
 
                         # outcome == "error:…" — IBKR reset the form; re-prompt and retry
-                        msg = outcome[len("error:"):]
+                        msg = outcome[len("error:") :]
                         logger.warning("Login failed: %s", msg)
                         username, password = await _prompt_credentials()
 

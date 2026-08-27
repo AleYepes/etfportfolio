@@ -17,14 +17,23 @@ def upsert_themes(conn: duckdb.DuckDBPyConnection, payload: dict[str, Any]) -> t
     parents = payload.get("parents", [])
     nodes = payload.get("nodes", [])
 
-    upsert_query = """
+    existing_ids = {row[0] for row in conn.execute("SELECT theme_id FROM bronze.themes").fetchall()}
+
+    insert_query = """
     INSERT INTO bronze.themes (theme_id, num_id, name, parent_id, created_at, updated_at)
-    VALUES ($1, $2, $3, $4, now(), now())
-    ON CONFLICT (theme_id) DO UPDATE SET
-        num_id = EXCLUDED.num_id,
-        name = EXCLUDED.name,
-        parent_id = EXCLUDED.parent_id,
-        updated_at = now()
+    VALUES (?, ?, ?, ?, now(), now())
+    """
+
+    update_parent_query = """
+    UPDATE bronze.themes
+    SET num_id = ?, name = ?, updated_at = now()
+    WHERE theme_id = ?
+    """
+
+    update_node_query = """
+    UPDATE bronze.themes
+    SET num_id = ?, name = ?, parent_id = ?, updated_at = now()
+    WHERE theme_id = ?
     """
 
     # 1. Upsert parents first (parent_id is NULL)
@@ -35,7 +44,11 @@ def upsert_themes(conn: duckdb.DuckDBPyConnection, payload: dict[str, Any]) -> t
             continue
         num_id = p.get("numId")
         name = p.get("name")
-        conn.execute(upsert_query, [theme_id, num_id, name, None])
+        if theme_id in existing_ids:
+            conn.execute(update_parent_query, [num_id, name, theme_id])
+        else:
+            conn.execute(insert_query, [theme_id, num_id, name, None])
+            existing_ids.add(theme_id)
         p_count += 1
 
     # 2. Upsert child nodes second (parent_id is parentKey)
@@ -47,7 +60,11 @@ def upsert_themes(conn: duckdb.DuckDBPyConnection, payload: dict[str, Any]) -> t
         num_id = n.get("numId")
         name = n.get("name")
         parent_id = n.get("parentKey")
-        conn.execute(upsert_query, [theme_id, num_id, name, parent_id])
+        if theme_id in existing_ids:
+            conn.execute(update_node_query, [num_id, name, parent_id, theme_id])
+        else:
+            conn.execute(insert_query, [theme_id, num_id, name, parent_id])
+            existing_ids.add(theme_id)
         n_count += 1
 
     return p_count, n_count
