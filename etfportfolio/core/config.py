@@ -20,9 +20,9 @@ class Settings(BaseSettings):
     ibkr_base_url: str = "https://www.interactivebrokers.ie"
     endpoint_concurrency: int = 5
 
-    ibkr_username: str | None = None  # reserved for future automated login, unused in v1
-    ibkr_password: str | None = None  # reserved for future automated login, unused in v1
-    account_id: str | None = None  # set once after first successful probe; see §7.3
+    ibkr_username: str | None = None
+    ibkr_password: str | None = None
+    account_id: str | None = None
 
     @classmethod
     def settings_customise_sources(

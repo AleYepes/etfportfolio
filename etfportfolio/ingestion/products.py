@@ -1,11 +1,12 @@
-import asyncio
+import contextlib
 import logging
+from pathlib import Path
 from typing import Any
 
 import duckdb
 import httpx
 
-from etfportfolio.core.db import connect, current
+from etfportfolio.core.db import current
 from etfportfolio.ingestion.session import build_async_client
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ def upsert_products(conn: duckdb.DuckDBPyConnection, products: list[dict[str, An
 
     query = """
     INSERT INTO bronze.products (
-        product_id, type, symbol, exchange_id, local_symbol, name, under_conid,
+        product_id, product_type, symbol, exchange_id, local_symbol, name, under_conid,
         isin, cusip, currency, country, is_primary_exchange_id, is_new_product,
         assoc_entity_id, fc_conid, created_at, updated_at
     ) VALUES (
@@ -41,7 +42,7 @@ def upsert_products(conn: duckdb.DuckDBPyConnection, products: list[dict[str, An
         now(), now()
     )
     ON CONFLICT (product_id) DO UPDATE SET
-        type = EXCLUDED.type,
+        product_type = EXCLUDED.product_type,
         symbol = EXCLUDED.symbol,
         exchange_id = EXCLUDED.exchange_id,
         local_symbol = EXCLUDED.local_symbol,
@@ -66,11 +67,11 @@ def upsert_products(conn: duckdb.DuckDBPyConnection, products: list[dict[str, An
 
         params = [
             int(conid),
-            p.get("type"),
+            p.get("type"),  # maps to product_type
             p.get("symbol"),
             p.get("exchangeId"),
             p.get("localSymbol"),
-            p.get("description"),  # description maps to name
+            p.get("description"),  # maps to name
             str(p["underConid"]) if p.get("underConid") is not None else None,
             p.get("isin"),
             p.get("cusip"),
@@ -126,11 +127,7 @@ async def sync(
             products_list = data.get("products", [])
             logger.info("Received %d products on page %d", len(products_list), page_number)
 
-            if conn is not None:
-                upsert_products(conn, products_list)
-            else:
-                upsert_products(current(), products_list)
-
+            upsert_products(conn if conn is not None else current(), products_list)
             total_synced += len(products_list)
 
             # Terminate pagination when fewer than pageSize items are returned
@@ -146,12 +143,43 @@ async def sync(
     return total_synced
 
 
-class ProductsCLI:
-    def sync(self) -> None:
-        """Standalone product discovery crawl."""
-        with connect() as conn:
-            count = asyncio.run(sync(conn=conn))
-            print(f"Product sync complete. Total products synced: {count}")
+def _parse_product_ids_arg(product_ids_arg: str) -> list[int]:
+    path = Path(product_ids_arg)
+    if path.is_file():
+        content = path.read_text(encoding="utf-8")
+        ids: list[int] = []
+        for line in content.splitlines():
+            line = line.strip()
+            if line and not line.startswith("#"):
+                with contextlib.suppress(ValueError):
+                    ids.append(int(line))
+        return ids
+
+    # Comma-separated list
+    return [int(x.strip()) for x in product_ids_arg.split(",") if x.strip()]
 
 
-cli = ProductsCLI()
+def resolve_target_ids(
+    conn: duckdb.DuckDBPyConnection,
+    product_ids: str | None = None,
+    limit: int | None = None,
+) -> list[int]:
+    """Resolves the target product_id list for a per-product ingestion phase.
+
+    `product_ids` (a comma-separated list, or a path to a file with one id per
+    line, `#`-comments allowed) and `limit` are mutually exclusive. With
+    neither given, returns every product_id in bronze.products. Shared by
+    `ingest details` and the full `ingest` run so both select targets the
+    same way.
+    """
+    if product_ids is not None and limit is not None:
+        raise ValueError("product_ids and limit are mutually exclusive.")
+
+    if product_ids is not None:
+        return _parse_product_ids_arg(product_ids)
+
+    query = "SELECT product_id FROM bronze.products ORDER BY product_id"
+    if limit is not None and limit > 0:
+        query += f" LIMIT {int(limit)}"
+    rows = conn.execute(query).fetchall()
+    return [row[0] for row in rows]

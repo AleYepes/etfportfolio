@@ -1,10 +1,16 @@
+import logging
 import math
 from datetime import UTC, datetime
 from typing import Any
 
 import duckdb
+import httpx
 
+from etfportfolio.core import db
 from etfportfolio.core.utils import content_address, decompress_payload
+from etfportfolio.ingestion import endpoints, session
+
+logger = logging.getLogger(__name__)
 
 PRICE_PRESETS_DAYS = [
     ("1M", 30),
@@ -162,14 +168,7 @@ def store_series(
     """Stores a series payload blob and writes a lineage row to bronze.series."""
     digest, compressed = content_address(payload)
 
-    conn.execute(
-        """
-        INSERT INTO bronze.payload_blobs (hash, payload)
-        VALUES ($1, $2)
-        ON CONFLICT (hash) DO NOTHING
-        """,
-        [digest, compressed],
-    )
+    db.store_blob(conn, digest, compressed)
 
     conn.execute(
         """
@@ -180,3 +179,74 @@ def store_series(
     )
 
     return digest
+
+
+# --- Per-endpoint request-parameter builders --------------------------------
+# price and sentiment share identical fetch/overlap-check/refetch/store
+# orchestration (fetch_incremental, below) but take fundamentally different
+# query parameters — price wants a relative period ("1M".."MAX"), sentiment
+# wants an explicit date range. Isolating just that difference here keeps the
+# orchestration itself unified in one function instead of two parallel copies.
+
+
+def _incremental_params(endpoint_name: str, last_date: datetime | None) -> dict[str, Any]:
+    if endpoint_name == "price":
+        return {"period": determine_price_period(last_date)}
+    if endpoint_name == "sentiment":
+        from_date, to_date = determine_sentiment_dates(last_date)
+        return {"from_date": from_date, "to_date": to_date}
+    raise ValueError(f"No series parameter builder for endpoint '{endpoint_name}'.")
+
+
+def _full_refetch_params(endpoint_name: str) -> dict[str, Any]:
+    if endpoint_name == "price":
+        return {"period": "MAX"}
+    if endpoint_name == "sentiment":
+        _, to_date = determine_sentiment_dates(None)
+        return {"from_date": "2000-01-01", "to_date": to_date}
+    raise ValueError(f"No series parameter builder for endpoint '{endpoint_name}'.")
+
+
+async def fetch_incremental(
+    client: httpx.AsyncClient,
+    conn: duckdb.DuckDBPyConnection,
+    ep: endpoints.Endpoint,
+    product_id: int,
+) -> None:
+    """Fetches a series-shaped endpoint incrementally and stores the result.
+
+    Shared by both 'price' and 'sentiment': fetches just the gap since the
+    last stored point, validates that any overlapping points still agree with
+    what's already stored, and — if they don't — discards the incremental
+    fetch and refetches the full range instead.
+    """
+    last_date, prior_payload = get_last_series_info(conn, product_id, ep.url_prefix)
+
+    params = _incremental_params(ep.name, last_date)
+    url_prefix, url_slug, full_url = ep.resolve(product_id=product_id, **params)
+    _, payload = await session.fetch_with_retry(client, full_url)
+
+    date_range = extract_series_date_range(ep.name, payload)
+    if not date_range:
+        logger.warning("Empty %s series returned for product %d", ep.name, product_id)
+        return
+
+    first_date, last_fetched_date = date_range
+
+    if last_date is not None and prior_payload is not None and not validate_overlap(ep.name, payload, prior_payload):
+        logger.warning(
+            "%s series overlap mismatch for product %d. Discarding incremental fetch, refetching full range...",
+            ep.name,
+            product_id,
+        )
+        refetch_params = _full_refetch_params(ep.name)
+        url_prefix, url_slug, refetch_url = ep.resolve(product_id=product_id, **refetch_params)
+        _, refetch_payload = await session.fetch_with_retry(client, refetch_url)
+
+        refetch_range = extract_series_date_range(ep.name, refetch_payload)
+        if refetch_range:
+            r_first, r_last = refetch_range
+            store_series(conn, product_id, url_prefix, url_slug, r_first, r_last, refetch_payload)
+        return
+
+    store_series(conn, product_id, url_prefix, url_slug, first_date, last_fetched_date, payload)

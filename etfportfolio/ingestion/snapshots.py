@@ -2,8 +2,11 @@ from datetime import datetime
 from typing import Any
 
 import duckdb
+import httpx
 
+from etfportfolio.core import db
 from etfportfolio.core.utils import content_address
+from etfportfolio.ingestion import endpoints, session
 
 
 def store_snapshot(
@@ -20,17 +23,8 @@ def store_snapshot(
     """
     digest, compressed = content_address(payload)
 
-    # Insert into payload_blobs (idempotent on duplicate hash)
-    conn.execute(
-        """
-        INSERT INTO bronze.payload_blobs (hash, payload)
-        VALUES ($1, $2)
-        ON CONFLICT (hash) DO NOTHING
-        """,
-        [digest, compressed],
-    )
+    db.store_blob(conn, digest, compressed)
 
-    # Insert lineage row into bronze.snapshots
     conn.execute(
         """
         INSERT INTO bronze.snapshots (hash, product_id, url_prefix, url_slug, fetched_at)
@@ -40,3 +34,20 @@ def store_snapshot(
     )
 
     return digest
+
+
+async def fetch_snapshot(
+    client: httpx.AsyncClient,
+    conn: duckdb.DuckDBPyConnection,
+    ep: endpoints.Endpoint,
+    product_id: int,
+    account_id: str,
+) -> None:
+    """Fetches a single snapshot-shaped endpoint for a product and stores it.
+
+    Every snapshot endpoint (gated or not) resolves and stores identically —
+    there's no per-endpoint special-casing at this shape, unlike series.
+    """
+    url_prefix, url_slug, full_url = ep.resolve(product_id=product_id, account_id=account_id)
+    _, payload = await session.fetch_with_retry(client, full_url)
+    store_snapshot(conn, product_id, url_prefix, url_slug, payload)

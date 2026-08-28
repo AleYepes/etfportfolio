@@ -75,7 +75,7 @@ ENDPOINTS: list[Endpoint] = [
         gated=False,
     ),
     Endpoint(
-        name="themes",
+        name="theme_weights",
         url_prefix="/tws.proxy/knowledge-graph/ui/fund?conid=",
         slug_template="{product_id}&max=999999999&lang=en",
         shape="snapshot",

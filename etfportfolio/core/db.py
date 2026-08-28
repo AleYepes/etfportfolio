@@ -39,6 +39,24 @@ def current() -> duckdb.DuckDBPyConnection:
     return conn
 
 
+# --- Content-addressed blob storage -----------------------------------------
+# All bronze.payload_blobs read/write/GC logic lives here, alongside the rest
+# of the DB layer. snapshots.py, series.py, and landing.py all write blobs
+# through store_blob() rather than each carrying their own copy of the SQL.
+
+
+def store_blob(conn: duckdb.DuckDBPyConnection, digest: int, compressed: bytes) -> None:
+    """Ensures a content-addressed payload blob is stored (idempotent on duplicate hash)."""
+    conn.execute(
+        """
+        INSERT INTO bronze.payload_blobs (hash, payload)
+        VALUES ($1, $2)
+        ON CONFLICT (hash) DO NOTHING
+        """,
+        [digest, compressed],
+    )
+
+
 def gc_preview_blob(conn: duckdb.DuckDBPyConnection, old_hash: int | None) -> bool:
     """Garbage-collects an old payload blob if it is no longer referenced anywhere in bronze."""
     if old_hash is None:

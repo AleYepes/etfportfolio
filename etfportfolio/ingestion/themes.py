@@ -5,6 +5,7 @@ import duckdb
 import httpx
 
 from etfportfolio.core.db import current
+from etfportfolio.ingestion import session
 
 logger = logging.getLogger(__name__)
 
@@ -77,12 +78,8 @@ async def sync(
     """Fetches global theme taxonomy and updates bronze.themes."""
     logger.info("Syncing theme taxonomy from /tws.proxy/knowledge-graph/meta/themes...")
     url = "/tws.proxy/knowledge-graph/meta/themes"
-    resp = await client.get(url)
+    _, payload = await session.fetch_with_retry(client, url)
 
-    if not resp.is_success:
-        raise RuntimeError(f"Themes taxonomy sync failed with status {resp.status_code}: {resp.text}")
-
-    payload = resp.json()
     db_conn = conn if conn is not None else current()
     p_count, n_count = upsert_themes(db_conn, payload)
     logger.info("Theme taxonomy synced successfully: %d parents, %d child nodes.", p_count, n_count)

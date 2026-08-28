@@ -1,18 +1,20 @@
+import sys
+
 import fire
 
 from etfportfolio.core.logging import configure_logging
-from etfportfolio.ingestion import pipeline, products, session
+from etfportfolio.ingestion import pipeline
 
 
 def main() -> None:
-    configure_logging()
-    fire.Fire(
-        {
-            "products": products.cli,
-            "auth": session.cli,
-            "ingest": pipeline.cli,
-        }
-    )
+    argv = sys.argv[1:]
+    verbose = False
+    if "-v" in argv or "--verbose" in argv:
+        verbose = True
+        argv = [a for a in argv if a not in ("-v", "--verbose")]
+
+    configure_logging(verbose=verbose)
+    fire.Fire({"ingest": pipeline.cli}, command=argv)
 
 
 if __name__ == "__main__":

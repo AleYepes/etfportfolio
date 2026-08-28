@@ -13,8 +13,11 @@ from playwright.async_api import async_playwright
 from etfportfolio.core.config import settings
 
 logger = logging.getLogger(__name__)
-logging.getLogger("httpx").setLevel(logging.WARNING)
-logging.getLogger("httpcore").setLevel(logging.WARNING)
+
+
+class SessionInvalidError(Exception):
+    """Raised when IBKR returns the session-invalid signature."""
+
 
 _ACCOUNTS_ACESWS_PATH_RE = re.compile(r"/portal\.proxy/v1/portal/acesws/([^/?]+)")
 _ACCOUNTS_PORTFOLIO2_PATH_RE = re.compile(r"/portal\.proxy/v1/portal/portfolio2/([^/?]+)")
@@ -309,6 +312,79 @@ async def probe(client: httpx.AsyncClient) -> str:
     return account_id
 
 
+async def fetch_with_retry(
+    client: httpx.AsyncClient,
+    url: str,
+    max_retries: int = 3,
+    initial_backoff: float = 1.0,
+) -> tuple[int, Any]:
+    """Fetches URL with retry on non-2xx responses.
+
+    Bypasses retry immediately if the session-invalid signature is encountered,
+    raising SessionInvalidError instead. Used by every endpoint fetch (landing,
+    snapshot, and series) so retry and session-invalidation handling behave
+    identically everywhere.
+
+    Returns: (status_code, json_payload)
+    """
+    attempt = 0
+    backoff = initial_backoff
+
+    while attempt < max_retries:
+        attempt += 1
+        try:
+            resp = await client.get(url)
+            if resp.is_success:
+                return resp.status_code, resp.json()
+
+            if is_session_invalid(resp):
+                logger.error("Session invalid signature hit on %s", url)
+                raise SessionInvalidError("Session is invalid ('Invalid headers').")
+
+            logger.warning(
+                "Request to %s failed (status %d), attempt %d/%d",
+                url,
+                resp.status_code,
+                attempt,
+                max_retries,
+            )
+        except (httpx.RequestError, httpx.TimeoutException) as e:
+            logger.warning("Network error on %s: %s (attempt %d/%d)", url, e, attempt, max_retries)
+
+        if attempt < max_retries:
+            await asyncio.sleep(backoff)
+            backoff *= 2.0
+
+    raise RuntimeError(f"Request to {url} failed after {max_retries} attempts.")
+
+
+async def ensure_session() -> tuple[httpx.AsyncClient, str]:
+    """Ensures a valid, authenticated client and resolves the active account_id.
+
+    Tries a lightweight probe against the stored session first; only falls
+    back to an interactive browser login if that probe fails. This is the
+    single entry point every command that needs a session goes through
+    (`ingest session` itself, plus `themes`, `details`, and the full run) —
+    each is a single CLI invocation, not a manual chain of two commands.
+
+    Returns a fresh client, owned by the caller (the caller must close it).
+    """
+    client = build_async_client()
+    try:
+        account_id = await probe(client)
+        return client, account_id
+    except Exception as e:
+        logger.warning("Session probe failed (%s). Launching interactive login...", e)
+        await client.aclose()
+        await login()
+        client = build_async_client()
+        try:
+            account_id = await probe(client)
+            return client, account_id
+        except Exception as login_err:
+            raise RuntimeError(f"Session authentication failed after login: {login_err}") from login_err
+
+
 async def get_credentials() -> tuple[str, str]:
     """Retrieves IBKR username and password from settings/.env or prompts via questionary."""
     username = (settings.ibkr_username or "").strip()
@@ -561,12 +637,3 @@ async def login(timeout_s: float = 300.0) -> None:
 
         if not restart:
             break
-
-
-class SessionCLI:
-    def login(self) -> None:
-        """Launch interactive browser login to capture IBKR session state."""
-        asyncio.run(login())
-
-
-cli = SessionCLI()

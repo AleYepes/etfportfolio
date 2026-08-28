@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS bronze.payload_blobs (
 -- Upserted, no raw crawl-page preservation. Source of truth for the product universe.
 CREATE TABLE IF NOT EXISTS bronze.products (
     product_id              INTEGER PRIMARY KEY,
-    type                    VARCHAR,                -- "ETF" | "FUND" as returned
+    product_type            VARCHAR,                -- "ETF" | "FUND" as returned
     symbol                  VARCHAR,
     exchange_id              VARCHAR,
     local_symbol             VARCHAR,
@@ -53,8 +53,8 @@ CREATE TABLE IF NOT EXISTS bronze.series (
     series_id    INTEGER PRIMARY KEY DEFAULT nextval('bronze.series_id_seq'),
     hash         UBIGINT NOT NULL REFERENCES bronze.payload_blobs(hash),
     product_id   INTEGER NOT NULL REFERENCES bronze.products(product_id),
-    url_prefix   VARCHAR NOT NULL,
-    url_slug     VARCHAR,
+    url_prefix   VARCHAR NOT NULL,      -- All before the first dynamic substring
+    url_slug     VARCHAR,               -- All after and including the first dynamic substring
     first_date   TIMESTAMP NOT NULL,
     last_date    TIMESTAMP NOT NULL,
     fetched_at   TIMESTAMP NOT NULL
