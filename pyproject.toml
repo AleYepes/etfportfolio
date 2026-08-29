@@ -39,6 +39,9 @@ session_state_path = "data/session_state.json"
 log_dir = "data/logs"
 ibkr_base_url = "https://www.interactivebrokers.ie"
 endpoint_concurrency = 5
+ib_gateway_host = "127.0.0.1"
+ib_gateway_port = 4001
+ib_gateway_timeout = 60.0
 
 [tool.ruff]
 target-version = "py314"

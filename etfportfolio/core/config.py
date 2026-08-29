@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     ibkr_base_url: str = "https://www.interactivebrokers.ie"
     endpoint_concurrency: int = 5
 
+    # IB Gateway
+    ib_gateway_host: str = "127.0.0.1"
+    ib_gateway_port: int = 4001
+    ib_gateway_timeout: float = 60.0
+    # client IDs are hardcoded per phase (1 for contracts, 2 for prices)
+
     ibkr_username: str | None = None
     ibkr_password: str | None = None
     account_id: str | None = None

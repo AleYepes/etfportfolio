@@ -84,14 +84,7 @@ ENDPOINTS: list[Endpoint] = [
     Endpoint(
         name="sentiment",
         url_prefix="/tws.proxy/sma/request?type=search&conid=",
-        slug_template="{product_id}&from={from_date}&to={to_date}&bar_size=1D&lang=en",
-        shape="series",
-        gated=False,
-    ),
-    Endpoint(
-        name="price",
-        url_prefix="/tws.proxy/fundamentals/mf_performance_chart/",
-        slug_template="{product_id}?chart_period={period}&lang=en",
+        slug_template="{product_id}&from={from_date}%2000:00&to={to_date}%2000:00&bar_size=1D&lang=en",
         shape="series",
         gated=False,
     ),

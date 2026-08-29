@@ -168,7 +168,7 @@ def resolve_target_ids(
 
     `product_ids` (a comma-separated list, or a path to a file with one id per
     line, `#`-comments allowed) and `limit` are mutually exclusive. With
-    neither given, returns every product_id in bronze.products. Shared by
+    neither given, returns every product_id in silver.products. Shared by
     `ingest details` and the full `ingest` run so both select targets the
     same way.
     """
@@ -178,8 +178,12 @@ def resolve_target_ids(
     if product_ids is not None:
         return _parse_product_ids_arg(product_ids)
 
-    query = "SELECT product_id FROM bronze.products ORDER BY product_id"
+    query = "SELECT product_id FROM silver.products ORDER BY product_id"
     if limit is not None and limit > 0:
         query += f" LIMIT {int(limit)}"
     rows = conn.execute(query).fetchall()
+
+    if not rows:
+        raise RuntimeError("silver.products is empty. Run 'ingest contracts' first to qualify products.")
+
     return [row[0] for row in rows]

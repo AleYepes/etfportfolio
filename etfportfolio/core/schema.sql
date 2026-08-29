@@ -1,71 +1,193 @@
 CREATE SCHEMA IF NOT EXISTS bronze;
-CREATE SCHEMA IF NOT EXISTS silver;   -- reserved, empty for now
-CREATE SCHEMA IF NOT EXISTS gold;     -- reserved, empty for now
+CREATE SCHEMA IF NOT EXISTS silver;
+CREATE SCHEMA IF NOT EXISTS gold;   -- reserved
+CREATE SCHEMA IF NOT EXISTS cold_storage;
 
--- Content-addressed store. Shared by snapshots, series, and snapshot_previews.
+-- Content-addressed store (snapshots only)
 CREATE TABLE IF NOT EXISTS bronze.payload_blobs (
-    hash    UBIGINT PRIMARY KEY,     -- xxhash.xxh3_64_intdigest(bytes, seed=0) of canonical bytes
-    payload BLOB NOT NULL            -- zstd (level 3) compressed canonical bytes
+    hash    UBIGINT PRIMARY KEY,
+    payload BLOB NOT NULL
 );
 
--- Upserted, no raw crawl-page preservation. Source of truth for the product universe.
+-- Public portal product catalog
 CREATE TABLE IF NOT EXISTS bronze.products (
     product_id              INTEGER PRIMARY KEY,
-    product_type            VARCHAR,                -- "ETF" | "FUND" as returned
+    product_type            VARCHAR,
     symbol                  VARCHAR,
-    exchange_id              VARCHAR,
-    local_symbol             VARCHAR,
-    name                     VARCHAR,
-    under_conid              VARCHAR,
-    isin                     VARCHAR,
-    cusip                    VARCHAR,
-    currency                 VARCHAR,
-    country                  VARCHAR,
-    is_primary_exchange_id   BOOLEAN,                -- from "isPrimeExchId": "T"/"F"
-    is_new_product           BOOLEAN,                -- from "isNewPdt": "T"/"F"
-    assoc_entity_id           VARCHAR,
-    fc_conid                  VARCHAR,
-    created_at                TIMESTAMP NOT NULL,     -- set once, never overwritten
-    updated_at                TIMESTAMP NOT NULL      -- refreshed on every upsert
+    exchange_id             VARCHAR,
+    local_symbol            VARCHAR,
+    name                    VARCHAR,
+    under_conid             VARCHAR,
+    isin                    VARCHAR,
+    cusip                   VARCHAR,
+    currency                VARCHAR,
+    country                 VARCHAR,
+    is_primary_exchange_id  BOOLEAN,
+    is_new_product          BOOLEAN,
+    assoc_entity_id         VARCHAR,
+    fc_conid                VARCHAR,
+    created_at              TIMESTAMP NOT NULL,
+    updated_at              TIMESTAMP NOT NULL
 );
 
--- Upserted, one row per product_id. The one hash-referencing table that isn't insert-only.
+-- Official IB Gateway contract details
+CREATE TABLE IF NOT EXISTS bronze.contracts (
+    product_id              INTEGER PRIMARY KEY,
+    sec_type                VARCHAR,
+    symbol                  VARCHAR,
+    exchange_id             VARCHAR,
+    primary_exchange_id     VARCHAR,
+    currency                VARCHAR,
+    local_symbol            VARCHAR,
+    trading_class           VARCHAR,
+    market_name             VARCHAR,
+    min_tick                DOUBLE,
+    order_types             VARCHAR,
+    valid_exchanges         VARCHAR,
+    price_magnifier         DOUBLE,
+    under_conid             INTEGER,
+    name                    VARCHAR,  -- was long_name
+    contract_month          VARCHAR,
+    industry                VARCHAR,
+    category                VARCHAR,
+    subcategory             VARCHAR,
+    time_zone_id            VARCHAR,
+    trading_hours           VARCHAR,
+    liquid_hours            VARCHAR,
+    ev_rule                 VARCHAR,
+    ev_multiplier           DOUBLE,
+    md_size_multiplier      INTEGER,
+    agg_group               INTEGER,
+    under_symbol            VARCHAR,
+    under_sec_type          VARCHAR,
+    market_rule_ids         VARCHAR,
+    real_expiration_date    VARCHAR,
+    last_trade_time         VARCHAR,
+    stock_type              VARCHAR,
+    min_size                DOUBLE,
+    size_increment          DOUBLE,
+    suggested_size_increment DOUBLE,
+    cusip                   VARCHAR,
+    ratings                 VARCHAR,
+    desc_append             VARCHAR,
+    bond_type               VARCHAR,
+    coupon_type             VARCHAR,
+    callable                BOOLEAN,
+    putable                 BOOLEAN,
+    coupon                  DOUBLE,
+    convertible             BOOLEAN,
+    maturity                VARCHAR,
+    issue_date              VARCHAR,
+    next_option_date        VARCHAR,
+    next_option_type        VARCHAR,
+    next_option_partial     BOOLEAN,
+    notes                   VARCHAR,
+    isin                    VARCHAR,
+    created_at              TIMESTAMP NOT NULL,
+    updated_at              TIMESTAMP NOT NULL
+);
+
+-- Snapshot landing previews
 CREATE TABLE IF NOT EXISTS bronze.snapshot_previews (
     product_id   INTEGER PRIMARY KEY REFERENCES bronze.products(product_id),
     hash         UBIGINT NOT NULL REFERENCES bronze.payload_blobs(hash),
     updated_at   TIMESTAMP NOT NULL
 );
 
--- Insert-only. One row per discrete-date fetch of a snapshot-shaped endpoint.
+-- Snapshot lineage
 CREATE SEQUENCE IF NOT EXISTS bronze.snapshots_id_seq;
 CREATE TABLE IF NOT EXISTS bronze.snapshots (
     snapshot_id  INTEGER PRIMARY KEY DEFAULT nextval('bronze.snapshots_id_seq'),
     hash         UBIGINT NOT NULL REFERENCES bronze.payload_blobs(hash),
     product_id   INTEGER NOT NULL REFERENCES bronze.products(product_id),
-    url_prefix   VARCHAR NOT NULL,   -- literal, invariant portion of the request URL (identifies which endpoint)
-    url_slug     VARCHAR,             -- the fully-resolved remainder, exactly as fetched
+    url_prefix   VARCHAR NOT NULL,
+    url_slug     VARCHAR,
     fetched_at   TIMESTAMP NOT NULL
 );
 
--- Insert-only. One row per fetch of a series-shaped endpoint (incremental or full).
-CREATE SEQUENCE IF NOT EXISTS bronze.series_id_seq;
-CREATE TABLE IF NOT EXISTS bronze.series (
-    series_id    INTEGER PRIMARY KEY DEFAULT nextval('bronze.series_id_seq'),
-    hash         UBIGINT NOT NULL REFERENCES bronze.payload_blobs(hash),
+-- Historical daily prices (IB ADJUSTED_LAST)
+CREATE TABLE IF NOT EXISTS bronze.prices (
     product_id   INTEGER NOT NULL REFERENCES bronze.products(product_id),
-    url_prefix   VARCHAR NOT NULL,      -- All before the first dynamic substring
-    url_slug     VARCHAR,               -- All after and including the first dynamic substring
-    first_date   TIMESTAMP NOT NULL,
-    last_date    TIMESTAMP NOT NULL,
-    fetched_at   TIMESTAMP NOT NULL
+    date         TIMESTAMP NOT NULL,  -- UTC midnight
+    open         DOUBLE,
+    high         DOUBLE,
+    low          DOUBLE,
+    close        DOUBLE NOT NULL,
+    volume       DOUBLE,
+    average      DOUBLE,
+    bar_count    INTEGER,
+    updated_at   TIMESTAMP NOT NULL,
+    PRIMARY KEY (product_id, date)
 );
 
--- Upserted, no raw crawl-page preservation. Global theme taxonomy (definitions/hierarchy)
+-- Sentiment daily metrics
+CREATE TABLE IF NOT EXISTS bronze.sentiment (
+    product_id   INTEGER NOT NULL REFERENCES bronze.products(product_id),
+    date         TIMESTAMP NOT NULL,
+    svolatility  DOUBLE,
+    sdispersion  DOUBLE,
+    svscore      DOUBLE,
+    sbuzz        DOUBLE,
+    svolume      DOUBLE,
+    sdelta       DOUBLE,
+    sscore       DOUBLE,
+    smean        DOUBLE,
+    updated_at   TIMESTAMP NOT NULL,
+    PRIMARY KEY (product_id, date)
+);
+
+-- Cold storage archives
+CREATE TABLE cold_storage.prices (
+    product_id   INTEGER NOT NULL,
+    run_id       TIMESTAMP NOT NULL,
+    date         TIMESTAMP NOT NULL,
+    open         DOUBLE,
+    high         DOUBLE,
+    low          DOUBLE,
+    close        DOUBLE,
+    volume       DOUBLE,
+    average      DOUBLE,
+    bar_count    INTEGER,
+    PRIMARY KEY (product_id, run_id, date)
+);
+
+CREATE TABLE cold_storage.sentiment (
+    product_id   INTEGER NOT NULL,
+    run_id       TIMESTAMP NOT NULL,
+    date         TIMESTAMP NOT NULL,
+    svolatility  DOUBLE,
+    sdispersion  DOUBLE,
+    svscore      DOUBLE,
+    sbuzz        DOUBLE,
+    svolume      DOUBLE,
+    sdelta       DOUBLE,
+    sscore       DOUBLE,
+    smean        DOUBLE,
+    PRIMARY KEY (product_id, run_id, date)
+);
+
+-- Global theme taxonomy
 CREATE TABLE IF NOT EXISTS bronze.themes (
-    theme_id     VARCHAR PRIMARY KEY,     -- IBKR's "key" (UUID string)
-    num_id       INTEGER,                  -- IBKR's "numId"
+    theme_id     VARCHAR PRIMARY KEY,
+    num_id       INTEGER,
     name         VARCHAR,
-    parent_id    VARCHAR REFERENCES bronze.themes(theme_id),  -- NULL for root/"parents" entries
+    parent_id    VARCHAR REFERENCES bronze.themes(theme_id),
     created_at   TIMESTAMP NOT NULL,
     updated_at   TIMESTAMP NOT NULL
 );
+
+-- Verified ETF product universe view
+CREATE OR REPLACE VIEW silver.products AS
+SELECT
+    p.product_id,
+    COALESCE(c.name, p.name) AS name,
+    COALESCE(c.symbol, p.symbol) AS symbol,
+    COALESCE(c.local_symbol, p.local_symbol) AS local_symbol,
+    c.exchange_id,
+    c.primary_exchange_id,
+    COALESCE(c.currency, p.currency) AS currency,
+    COALESCE(c.isin, p.isin) AS isin,
+    COALESCE(c.created_at, p.created_at) AS created_at,
+    GREATEST(c.updated_at, p.updated_at) AS updated_at
+FROM bronze.products p
+JOIN bronze.contracts c ON p.product_id = c.product_id;

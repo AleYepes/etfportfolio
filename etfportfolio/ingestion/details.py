@@ -4,7 +4,7 @@ import logging
 import duckdb
 import httpx
 
-from etfportfolio.ingestion import endpoints, landing, series, session, snapshots
+from etfportfolio.ingestion import endpoints, landing, sentiment, session, snapshots
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ async def _fetch_one(
             if ep.shape == "snapshot":
                 await snapshots.fetch_snapshot(client, conn, ep, product_id, account_id)
             else:
-                await series.fetch_incremental(client, conn, ep, product_id)
+                await sentiment.fetch_incremental(client, conn, ep, product_id)
             return True
         except session.SessionInvalidError:
             raise
