@@ -1,0 +1,17 @@
+
+756733      SPY
+52197301    VT
+43645838    Bond
+132803402   Equity
+
+712851241   bond/equity
+386303801   bond/equity 2
+
+
+705912146   old bond
+75961307    CSSX5E
+89384980    SPYM
+96674418    Gold
+
+
+80553104    error

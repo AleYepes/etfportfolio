@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "unslop": {
+      "source": "poteto/noodle",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/unslop/SKILL.md",
+      "computedHash": "96ca1f318c41bd0e4adaffc1c881a85555a736b5824d1a9a6ee6139d5851774a"
+    }
+  }
+}
