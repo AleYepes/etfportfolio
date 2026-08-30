@@ -74,7 +74,7 @@ indent-style = "space"
 pythonVersion = "3.14"
 typeCheckingMode = "basic"
 reportMissingTypeStubs = false
-exclude = [
+extend-exclude = [
     "data",
     "docs",
     ".agents",
