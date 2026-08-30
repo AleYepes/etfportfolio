@@ -181,19 +181,11 @@ def _validate_overlap(
 async def _fetch_historical(
     ib: Any,
     product_id: int,
-    symbol: str,
-    exchange: str,
-    currency: str,
     duration: str,
     end_datetime: str,
 ) -> list[BarData]:
-    """Fetch historical bars for a single product."""
-    contract = Contract()
-    contract.conId = product_id
-    contract.symbol = symbol
-    contract.secType = "STK"
-    contract.exchange = exchange
-    contract.currency = currency
+    """Fetch historical bars for a single product using conId only."""
+    contract = Contract(conId=product_id)
 
     bars = await ib.reqHistoricalDataAsync(
         contract,
@@ -229,9 +221,6 @@ async def _fetch_and_store(
     conn: duckdb.DuckDBPyConnection,
     ib: Any,
     product_id: int,
-    symbol: str,
-    exchange: str,
-    currency: str,
     force: bool = False,
 ) -> bool:
     """Fetch and store prices for one product."""
@@ -243,7 +232,7 @@ async def _fetch_and_store(
     if force or last_date is None:
         # Full refetch
         duration = "30Y"
-        bars = await _fetch_historical(ib, product_id, symbol, exchange, currency, duration, end_datetime)
+        bars = await _fetch_historical(ib, product_id, duration, end_datetime)
         new_bars = _extract_bars(bars)
 
         if last_date is not None and not force:
@@ -304,7 +293,7 @@ async def _fetch_and_store(
     # Incremental fetch
     gap_days = (today - last_date).days
     duration = f"{gap_days + 7} D"
-    bars = await _fetch_historical(ib, product_id, symbol, exchange, currency, duration, end_datetime)
+    bars = await _fetch_historical(ib, product_id, duration, end_datetime)
     new_bars = _extract_bars(bars)
 
     # Validate overlap
@@ -314,7 +303,7 @@ async def _fetch_and_store(
     if not valid:
         logger.warning("Product %d: %s detected. Archiving and refetching full series...", product_id, mismatch_type)
         # Force full refetch
-        return await _fetch_and_store(conn, ib, product_id, symbol, exchange, currency, force=True)
+        return await _fetch_and_store(conn, ib, product_id, force=True)
 
     # Store incremental
     _upsert_prices(conn, product_id, bars)
@@ -327,7 +316,7 @@ async def _run_price_ingestion(conn: duckdb.DuckDBPyConnection, force: bool = Fa
     # Get all products from silver.products (which requires contracts)
     products = conn.execute(
         """
-        SELECT p.product_id, p.symbol, p.exchange_id, p.currency
+        SELECT p.product_id
         FROM silver.products p
         ORDER BY p.product_id
         """
@@ -343,14 +332,14 @@ async def _run_price_ingestion(conn: duckdb.DuckDBPyConnection, force: bool = Fa
 
     async with ib_connection(client_id=2) as ib:
 
-        async def process_one(product_id: int, symbol: str, exchange: str, currency: str):
+        async def process_one(product_id: int):
             async with semaphore:
                 try:
-                    await _fetch_and_store(conn, ib, product_id, symbol, exchange, currency, force)
+                    await _fetch_and_store(conn, ib, product_id, force)
                 except Exception as e:
                     logger.error("Failed to fetch prices for product %d: %s", product_id, e)
 
-        tasks = [process_one(pid, sym, exch, cur) for pid, sym, exch, cur in products]
+        tasks = [process_one(pid) for (pid,) in products]
         await asyncio.gather(*tasks)
 
     return len(products)

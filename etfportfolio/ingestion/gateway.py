@@ -13,12 +13,19 @@ from etfportfolio.core.config import settings
 logger = logging.getLogger(__name__)
 
 
+# def _configure_ib_logging() -> None:
+#     """Set ib_async loggers to WARNING to suppress noisy position/order logs."""
+#     for name in ["ib_async", "ib_async.wrapper", "ib_async.client", "ib_async.ib"]:
+#         logging.getLogger(name).setLevel(logging.WARNING)
+
+
 @asynccontextmanager
 async def ib_connection(client_id: int):
     """Connect to IB Gateway, yield the IB instance, then disconnect.
 
     Raises RuntimeError with clear instructions if the connection fails.
     """
+    # _configure_ib_logging()  # Suppress benign warnings/positions
     ib = IB()
     try:
         await ib.connectAsync(
