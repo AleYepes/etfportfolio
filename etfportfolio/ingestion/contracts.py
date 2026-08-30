@@ -11,7 +11,9 @@ from typing import Any
 import duckdb
 from ib_async import Contract, ContractDetails
 
-from etfportfolio.ingestion.gateway import ib_connection
+from etfportfolio.core.config import settings
+from etfportfolio.core.db import AsyncDbWorker
+from etfportfolio.ingestion.gateway import IBConnectionError, ib_connection
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,7 @@ CONTRACT_FIELDS = [
     "valid_exchanges",
     "price_magnifier",
     "under_conid",
-    "name",  # was long_name
+    "name",
     "contract_month",
     "industry",
     "category",
@@ -84,7 +86,7 @@ ATTR_MAP = {
     "validExchanges": "valid_exchanges",
     "priceMagnifier": "price_magnifier",
     "underConId": "under_conid",
-    "longName": "name",  # now maps to name
+    "longName": "name",
     "contractMonth": "contract_month",
     "industry": "industry",
     "category": "category",
@@ -150,7 +152,6 @@ def upsert_contract(
     data = _flatten_contract_details(cd)
     data["product_id"] = product_id
 
-    # Build INSERT statement dynamically
     columns = list(data.keys()) + ["created_at", "updated_at"]
     placeholders = ", ".join([f"${i + 1}" for i in range(len(columns))])
     values = list(data.values()) + [datetime.now(UTC), datetime.now(UTC)]
@@ -166,62 +167,71 @@ def upsert_contract(
     conn.execute(insert_sql, values)
 
 
+def _select_product_ids(conn: duckdb.DuckDBPyConnection) -> list[int]:
+    """Return all product IDs from bronze.products."""
+    rows = conn.execute("SELECT product_id FROM bronze.products ORDER BY product_id").fetchall()
+    return [row[0] for row in rows]
+
+
+def _contract_is_fresh(conn: duckdb.DuckDBPyConnection, product_id: int, cutoff: datetime) -> bool:
+    """Check if a contract's updated_at is newer than cutoff."""
+    row = conn.execute(
+        "SELECT updated_at FROM bronze.contracts WHERE product_id = $1",
+        [product_id],
+    ).fetchone()
+    return row is not None and row[0] >= cutoff
+
+
 async def _qualify_one(ib: Any, product_id: int) -> ContractDetails | None:
     """Qualify a single contract using conId only."""
     contract = Contract(conId=product_id)
-    try:
-        details = await ib.reqContractDetailsAsync(contract)
-        if details:
-            return details[0]
-        logger.warning("No contract details found for product %d", product_id)
-        return None
-    except Exception as e:
-        logger.error("Failed to qualify product %d: %s", product_id, e)
-        return None
+    details = await ib.reqContractDetailsAsync(contract)
+    if details:
+        return details[0]
+    logger.warning("No contract details found for product %d", product_id)
+    return None
 
 
-async def _run_contract_qualification(conn: duckdb.DuckDBPyConnection, force: bool = False) -> int:
+async def _run_contract_qualification(force: bool = False) -> int:
     """Run the contract qualification phase."""
-    # Get all products from bronze.products (just the IDs)
-    products = conn.execute("SELECT product_id FROM bronze.products ORDER BY product_id").fetchall()
+    async with AsyncDbWorker(settings.db_path) as worker:
+        product_ids = await worker.submit(_select_product_ids)
 
-    # Check freshness (skip if within 24h and not force)
-    now = datetime.now(UTC)
-    cutoff = now - timedelta(hours=24)
+        now = datetime.now(UTC)
+        cutoff = now - timedelta(hours=24)
 
-    to_process = []
-    for (product_id,) in products:
-        if not force:
-            row = conn.execute(
-                "SELECT updated_at FROM bronze.contracts WHERE product_id = $1",
-                [product_id],
-            ).fetchone()
-            if row and row[0] >= cutoff:
-                continue  # fresh enough
-        to_process.append(product_id)
+        to_process = []
+        for pid in product_ids:
+            if force:
+                to_process.append(pid)
+            else:
+                fresh = await worker.submit(_contract_is_fresh, pid, cutoff)
+                if not fresh:
+                    to_process.append(pid)
 
-    logger.info("Contract qualification: %d products to process", len(to_process))
+        logger.info("Contract qualification: %d products to process", len(to_process))
 
-    semaphore = asyncio.Semaphore(1)  # single-semaphore per handoff
+        semaphore = asyncio.Semaphore(1)
 
-    async with ib_connection(client_id=1) as ib:
+        async with ib_connection(client_id=1) as ib:
 
-        async def process_one(product_id: int):
-            async with semaphore:
-                cd = await _qualify_one(ib, product_id)
-                if cd:
-                    upsert_contract(conn, product_id, cd)
+            async def process_one(product_id: int):
+                async with semaphore:
+                    try:
+                        cd = await _qualify_one(ib, product_id)
+                        if cd:
+                            await worker.submit(upsert_contract, product_id, cd)
+                    except IBConnectionError:
+                        raise
+                    except Exception as e:
+                        logger.error("Failed to qualify product %d: %s", product_id, e)
 
-        tasks = [process_one(pid) for pid in to_process]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        failures = sum(1 for r in results if isinstance(r, Exception))
-        if failures:
-            logger.warning("%d contract qualifications failed (see log for details)", failures)
+            tasks = [process_one(pid) for pid in to_process]
+            await asyncio.gather(*tasks)
 
     return len(to_process)
 
 
-async def sync(conn: duckdb.DuckDBPyConnection, force: bool = False) -> int:
+async def sync(force: bool = False) -> int:
     """Public entry point for the contracts phase."""
-    return await _run_contract_qualification(conn, force=force)
+    return await _run_contract_qualification(force=force)

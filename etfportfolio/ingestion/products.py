@@ -6,7 +6,8 @@ from typing import Any
 import duckdb
 import httpx
 
-from etfportfolio.core.db import current
+from etfportfolio.core.config import settings
+from etfportfolio.core.db import AsyncDbWorker
 from etfportfolio.ingestion.session import build_async_client
 
 logger = logging.getLogger(__name__)
@@ -67,11 +68,11 @@ def upsert_products(conn: duckdb.DuckDBPyConnection, products: list[dict[str, An
 
         params = [
             int(conid),
-            p.get("type"),  # maps to product_type
+            p.get("type"),
             p.get("symbol"),
             p.get("exchangeId"),
             p.get("localSymbol"),
-            p.get("description"),  # maps to name
+            p.get("description"),
             str(p["underConid"]) if p.get("underConid") is not None else None,
             p.get("isin"),
             p.get("cusip"),
@@ -88,10 +89,7 @@ def upsert_products(conn: duckdb.DuckDBPyConnection, products: list[dict[str, An
     return count
 
 
-async def sync(
-    client: httpx.AsyncClient | None = None,
-    conn: duckdb.DuckDBPyConnection | None = None,
-) -> int:
+async def sync(client: httpx.AsyncClient | None = None) -> int:
     """Crawls webrest/search/products-by-filters endpoint and populates bronze.products."""
     page_number = 1
     total_synced = 0
@@ -102,40 +100,47 @@ async def sync(
         close_client = True
 
     try:
-        while True:
-            logger.info("Fetching products page %d (pageSize=%d)...", page_number, PAGE_SIZE)
-            url = "/webrest/search/products-by-filters"
-            payload = {
-                "domain": "ie",
-                "newProduct": "all",
-                "pageNumber": page_number,
-                "pageSize": PAGE_SIZE,
-                "productCountry": [],
-                "productSymbol": "",
-                "productType": ["ETF", "FUND"],
-                "sortDirection": "asc",
-                "sortField": "conid",
-            }
-            resp = await client.post(url, json=payload)
-            if not resp.is_success:
-                logger.error(
-                    "Products crawl failed at page %d with status %d: %s", page_number, resp.status_code, resp.text
-                )
-                break
+        async with AsyncDbWorker(settings.db_path) as worker:
+            while True:
+                logger.info("Fetching products page %d (pageSize=%d)...", page_number, PAGE_SIZE)
+                url = "/webrest/search/products-by-filters"
+                payload = {
+                    "domain": "ie",
+                    "newProduct": "all",
+                    "pageNumber": page_number,
+                    "pageSize": PAGE_SIZE,
+                    "productCountry": [],
+                    "productSymbol": "",
+                    "productType": ["ETF", "FUND"],
+                    "sortDirection": "asc",
+                    "sortField": "conid",
+                }
+                resp = await client.post(url, json=payload)
+                if not resp.is_success:
+                    logger.error(
+                        "Products crawl failed at page %d with status %d: %s",
+                        page_number,
+                        resp.status_code,
+                        resp.text,
+                    )
+                    break
 
-            data = resp.json()
-            products_list = data.get("products", [])
-            logger.info("Received %d products on page %d", len(products_list), page_number)
+                data = resp.json()
+                products_list = data.get("products", [])
+                logger.info("Received %d products on page %d", len(products_list), page_number)
 
-            upsert_products(conn if conn is not None else current(), products_list)
-            total_synced += len(products_list)
+                await worker.submit(upsert_products, products_list)
+                total_synced += len(products_list)
 
-            # Terminate pagination when fewer than pageSize items are returned
-            if len(products_list) < PAGE_SIZE:
-                logger.info("Pagination complete after %d pages. Total products: %d", page_number, total_synced)
-                break
+                if len(products_list) < PAGE_SIZE:
+                    logger.info(
+                        "Pagination complete after %d pages. Total products: %d",
+                        page_number,
+                        total_synced,
+                    )
+                    break
 
-            page_number += 1
+                page_number += 1
     finally:
         if close_client:
             await client.aclose()
@@ -155,7 +160,6 @@ def _parse_product_ids_arg(product_ids_arg: str) -> list[int]:
                     ids.append(int(line))
         return ids
 
-    # Comma-separated list
     return [int(x.strip()) for x in product_ids_arg.split(",") if x.strip()]
 
 
@@ -166,11 +170,7 @@ def resolve_target_ids(
 ) -> list[int]:
     """Resolves the target product_id list for a per-product ingestion phase.
 
-    `product_ids` (a comma-separated list, or a path to a file with one id per
-    line, `#`-comments allowed) and `limit` are mutually exclusive. With
-    neither given, returns every product_id in silver.products. Shared by
-    `ingest details` and the full `ingest` run so both select targets the
-    same way.
+    This function is synchronous and designed to be executed by a worker.
     """
     if product_ids is not None and limit is not None:
         raise ValueError("product_ids and limit are mutually exclusive.")

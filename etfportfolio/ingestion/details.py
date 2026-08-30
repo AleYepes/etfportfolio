@@ -1,7 +1,6 @@
 import asyncio
 import logging
 
-import duckdb
 import httpx
 
 from etfportfolio.ingestion import endpoints, landing, sentiment, session, snapshots
@@ -16,7 +15,7 @@ UNGATED_SNAPSHOT_ENDPOINTS = [ep for ep in SNAPSHOT_ENDPOINTS if not ep.gated]
 
 async def _fetch_one(
     client: httpx.AsyncClient,
-    conn: duckdb.DuckDBPyConnection,
+    worker,
     ep: endpoints.Endpoint,
     product_id: int,
     account_id: str,
@@ -26,9 +25,9 @@ async def _fetch_one(
     async with semaphore:
         try:
             if ep.shape == "snapshot":
-                await snapshots.fetch_snapshot(client, conn, ep, product_id, account_id)
+                await snapshots.fetch_snapshot(client, worker, ep, product_id, account_id)
             else:
-                await sentiment.fetch_incremental(client, conn, ep, product_id)
+                await sentiment.fetch_incremental(client, worker, ep, product_id)
             return True
         except session.SessionInvalidError:
             raise
@@ -39,7 +38,7 @@ async def _fetch_one(
 
 async def process_product(
     client: httpx.AsyncClient,
-    conn: duckdb.DuckDBPyConnection,
+    worker,
     product_id: int,
     account_id: str,
     semaphore: asyncio.Semaphore,
@@ -49,16 +48,14 @@ async def process_product(
 
     Always fetches the landing payload and gate-checks it against the stored
     preview. Fetches the gated snapshot endpoints only if landing changed (or
-    `force` is set, bypassing the gate check). Always fetches the ungated
-    snapshot endpoints and both series endpoints, regardless of gating — they
-    were never gated to begin with. Commits the new landing preview only if
-    every gated endpoint that was attempted succeeded; a preview must never
-    advance past gated data that wasn't actually confirmed fresh.
+    `force` is set). Always fetches the ungated snapshot endpoints and both
+    series endpoints. Commits the new landing preview only if every gated
+    endpoint that was attempted succeeded.
 
     Returns True if every fetched endpoint succeeded.
     """
     try:
-        changed, digest, compressed = await landing.fetch_and_gate(client, product_id, conn)
+        changed, digest, compressed = await landing.fetch_and_gate(client, product_id, worker)
     except session.SessionInvalidError:
         raise
     except Exception as e:
@@ -70,7 +67,7 @@ async def process_product(
     if fetch_gated:
         plan += GATED_ENDPOINTS
 
-    tasks = [_fetch_one(client, conn, ep, product_id, account_id, semaphore) for ep in plan]
+    tasks = [_fetch_one(client, worker, ep, product_id, account_id, semaphore) for ep in plan]
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     for r in results:
@@ -85,7 +82,7 @@ async def process_product(
                 break
 
     if fetch_gated and gated_success:
-        landing.commit_preview(conn, product_id, digest, compressed)
+        await landing.commit_preview(worker, product_id, digest, compressed)
     elif fetch_gated:
         logger.warning("Product %d: partial gated endpoint failure. Preview not updated.", product_id)
 

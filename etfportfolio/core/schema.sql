@@ -1,7 +1,6 @@
 CREATE SCHEMA IF NOT EXISTS bronze;
 CREATE SCHEMA IF NOT EXISTS silver;
 CREATE SCHEMA IF NOT EXISTS gold;   -- reserved
-CREATE SCHEMA IF NOT EXISTS cold_storage;
 
 -- Content-addressed store (snapshots only)
 CREATE TABLE IF NOT EXISTS bronze.payload_blobs (
@@ -46,7 +45,7 @@ CREATE TABLE IF NOT EXISTS bronze.contracts (
     valid_exchanges         VARCHAR,
     price_magnifier         DOUBLE,
     under_conid             INTEGER,
-    name                    VARCHAR,  -- was long_name
+    name                    VARCHAR,
     contract_month          VARCHAR,
     industry                VARCHAR,
     category                VARCHAR,
@@ -134,36 +133,6 @@ CREATE TABLE IF NOT EXISTS bronze.sentiment (
     smean        DOUBLE,
     updated_at   TIMESTAMP NOT NULL,
     PRIMARY KEY (product_id, date)
-);
-
--- Cold storage archives
-CREATE TABLE  IF NOT EXISTS cold_storage.prices (
-    product_id   INTEGER NOT NULL,
-    run_id       TIMESTAMP NOT NULL,
-    date         TIMESTAMP NOT NULL,
-    open         DOUBLE,
-    high         DOUBLE,
-    low          DOUBLE,
-    close        DOUBLE,
-    volume       DOUBLE,
-    average      DOUBLE,
-    bar_count    INTEGER,
-    PRIMARY KEY (product_id, run_id, date)
-);
-
-CREATE TABLE  IF NOT EXISTS cold_storage.sentiment (
-    product_id   INTEGER NOT NULL,
-    run_id       TIMESTAMP NOT NULL,
-    date         TIMESTAMP NOT NULL,
-    svolatility  DOUBLE,
-    sdispersion  DOUBLE,
-    svscore      DOUBLE,
-    sbuzz        DOUBLE,
-    svolume      DOUBLE,
-    sdelta       DOUBLE,
-    sscore       DOUBLE,
-    smean        DOUBLE,
-    PRIMARY KEY (product_id, run_id, date)
 );
 
 -- Global theme taxonomy
