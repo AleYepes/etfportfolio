@@ -137,7 +137,7 @@ CREATE TABLE IF NOT EXISTS bronze.sentiment (
 );
 
 -- Cold storage archives
-CREATE TABLE cold_storage.prices (
+CREATE TABLE  IF NOT EXISTS cold_storage.prices (
     product_id   INTEGER NOT NULL,
     run_id       TIMESTAMP NOT NULL,
     date         TIMESTAMP NOT NULL,
@@ -151,7 +151,7 @@ CREATE TABLE cold_storage.prices (
     PRIMARY KEY (product_id, run_id, date)
 );
 
-CREATE TABLE cold_storage.sentiment (
+CREATE TABLE  IF NOT EXISTS cold_storage.sentiment (
     product_id   INTEGER NOT NULL,
     run_id       TIMESTAMP NOT NULL,
     date         TIMESTAMP NOT NULL,
