@@ -6,9 +6,9 @@ from pathlib import Path
 
 import duckdb
 
-logger = logging.getLogger(__name__)
-
 _SCHEMA_PATH = Path(__file__).parent / "schema.sql"
+
+logger = logging.getLogger(__name__)
 
 
 def apply_schema(conn: duckdb.DuckDBPyConnection) -> None:
@@ -61,7 +61,6 @@ class AsyncDbWorker:
                 if future is not None:
                     self._loop.call_soon_threadsafe(future.set_exception, exc)
 
-        # close connection on exit
         if self._conn is not None:
             self._conn.close()
             self._conn = None
@@ -98,19 +97,26 @@ def store_blob(conn: duckdb.DuckDBPyConnection, digest: int, compressed: bytes) 
 
 
 def gc_preview_blob(conn: duckdb.DuckDBPyConnection, old_hash: int | None) -> bool:
-    """Garbage-collects an old payload blob if it is no longer referenced in bronze."""
+    """Garbage-collects an old preview blob if it is no longer referenced anywhere.
+
+    Uses a UNION ALL query to make DuckDB's reference counting explicit and
+    reliable across all tables that reference payload_blobs.
+    """
     if old_hash is None:
         return False
 
-    query = """
-    SELECT
-        (SELECT COUNT(*) FROM bronze.snapshots WHERE hash = $1) +
-        (SELECT COUNT(*) FROM bronze.snapshot_previews WHERE hash = $1) AS ref_count
-    """
-    res = conn.execute(query, [old_hash]).fetchone()
-    ref_count = res[0] if res else 0
+    referenced = conn.execute(
+        """
+        SELECT COUNT(*) FROM (
+            SELECT hash FROM bronze.snapshots WHERE hash = $1
+            UNION ALL
+            SELECT hash FROM bronze.snapshot_previews WHERE hash = $1
+        ) AS refs
+        """,
+        [old_hash],
+    ).fetchone()[0]
 
-    if ref_count == 0:
+    if referenced == 0:
         conn.execute("DELETE FROM bronze.payload_blobs WHERE hash = $1", [old_hash])
         return True
     return False

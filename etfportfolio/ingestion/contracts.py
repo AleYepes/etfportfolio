@@ -17,7 +17,6 @@ from etfportfolio.ingestion.gateway import IBConnectionError, ib_connection
 
 logger = logging.getLogger(__name__)
 
-# Columns to extract from ContractDetails (flattened)
 CONTRACT_FIELDS = [
     "sec_type",
     "symbol",
@@ -71,7 +70,6 @@ CONTRACT_FIELDS = [
     "isin",
 ]
 
-# Map ContractDetails attribute names to our column names
 ATTR_MAP = {
     "secType": "sec_type",
     "symbol": "symbol",
@@ -160,8 +158,7 @@ def upsert_contract(
     INSERT INTO bronze.contracts ({", ".join(columns)})
     VALUES ({placeholders})
     ON CONFLICT (product_id) DO UPDATE SET
-        {", ".join([f"{col} = EXCLUDED.{col}" for col in columns if col != "product_id" and col != "created_at"])},
-        updated_at = now()
+        {", ".join([f"{col} = EXCLUDED.{col}" for col in columns if col not in ("product_id", "created_at")])}
     """
 
     conn.execute(insert_sql, values)

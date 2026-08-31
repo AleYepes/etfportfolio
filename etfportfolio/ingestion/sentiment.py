@@ -202,6 +202,7 @@ async def _fetch_and_store(
         logger.info("Product %d: full sentiment refetch complete (%d points)", product_id, len(new_points))
         return
 
+    # Incremental fetch
     from_date = (last_date - timedelta(days=7)).strftime("%Y-%m-%d")
     to_date = yesterday.strftime("%Y-%m-%d")
     url_prefix, url_slug, full_url = ep.resolve(
@@ -224,8 +225,18 @@ async def _fetch_and_store(
         await _fetch_and_store(client, worker, ep, product_id, force=True)
         return
 
-    await worker.submit(_upsert_sentiment, product_id, new_points)
-    logger.info("Product %d: incremental sentiment update complete (%d points)", product_id, len(new_points))
+    # Only persist points strictly newer than the existing latest date.
+    points_to_store = {date: point for date, point in new_points.items() if date > last_date}
+
+    if points_to_store:
+        await worker.submit(_upsert_sentiment, product_id, points_to_store)
+        logger.info(
+            "Product %d: incremental sentiment update complete (%d new points)",
+            product_id,
+            len(points_to_store),
+        )
+    else:
+        logger.info("Product %d: no new sentiment points to store", product_id)
 
 
 async def fetch_incremental(

@@ -31,12 +31,10 @@ def _commit_preview(
     digest: int,
     compressed: bytes,
 ) -> None:
-    row = conn.execute(
-        "SELECT hash FROM bronze.snapshot_previews WHERE product_id = $1",
-        [product_id],
-    ).fetchone()
-    old_hash = row[0] if row else None
+    """Commits the preview upsert transaction, then attempts garbage collection."""
+    old_hash = _select_preview_hash(conn, product_id)
 
+    # Store blob and upsert preview atomically
     conn.execute("BEGIN TRANSACTION")
     try:
         db.store_blob(conn, digest, compressed)
@@ -51,14 +49,14 @@ def _commit_preview(
             """,
             [product_id, digest],
         )
-
-        if old_hash is not None and old_hash != digest:
-            db.gc_preview_blob(conn, old_hash)
-
         conn.execute("COMMIT")
     except Exception:
         conn.execute("ROLLBACK")
         raise
+
+    # Run GC after commit; failure here must not roll back the preview update
+    if old_hash is not None and old_hash != digest:
+        db.gc_preview_blob(conn, old_hash)
 
 
 async def fetch_and_gate(
