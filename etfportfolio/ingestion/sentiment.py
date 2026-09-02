@@ -196,7 +196,7 @@ async def _fetch_and_store(
             from_date=from_date,
             to_date=to_date,
         )
-        _, payload = await session.fetch_with_retry(client, full_url)
+        _, payload = await session.fetch_with_retry(client, full_url, delay_before_request=ep.delay_before_request)
         new_points = _extract_sentiment_points(payload)
         await worker.submit(_replace_sentiment, product_id, new_points)
         logger.info("Product %d: full sentiment refetch complete (%d points)", product_id, len(new_points))
@@ -210,7 +210,7 @@ async def _fetch_and_store(
         from_date=from_date,
         to_date=to_date,
     )
-    _, payload = await session.fetch_with_retry(client, full_url)
+    _, payload = await session.fetch_with_retry(client, full_url, delay_before_request=ep.delay_before_request)
     new_points = _extract_sentiment_points(payload)
 
     overlap_start = last_date - timedelta(days=7)

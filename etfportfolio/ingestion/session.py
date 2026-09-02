@@ -312,20 +312,25 @@ async def probe(client: httpx.AsyncClient) -> str:
     return account_id
 
 
+NON_RETRYABLE_STATUS_CODES = {404}
+
+
 async def fetch_with_retry(
     client: httpx.AsyncClient,
     url: str,
     max_retries: int = 3,
     initial_backoff: float = 1.0,
+    delay_before_request: float = 0.0,
 ) -> tuple[int, Any]:
     """Fetches URL with retry on non-2xx responses.
 
     Bypasses retry immediately if the session-invalid signature is encountered,
-    raising SessionInvalidError instead. Used by every endpoint fetch (landing,
-    snapshot, and series) so retry and session-invalidation handling behave
-    identically everywhere.
+    raising SessionInvalidError instead. Also bypasses retries for status codes
+    in NON_RETRYABLE_STATUS_CODES, which are deterministic client/server errors
+    that will not succeed on a subsequent attempt.
 
-    Returns: (status_code, json_payload)
+    If `delay_before_request` is > 0, sleeps before each attempt. This is
+    useful for endpoints with stricter rate limits (e.g., sentiment).
     """
     attempt = 0
     backoff = initial_backoff
@@ -333,6 +338,9 @@ async def fetch_with_retry(
     while attempt < max_retries:
         attempt += 1
         try:
+            if delay_before_request > 0:
+                await asyncio.sleep(delay_before_request)
+
             resp = await client.get(url)
             if resp.is_success:
                 return resp.status_code, resp.json()
@@ -340,6 +348,9 @@ async def fetch_with_retry(
             if is_session_invalid(resp):
                 logger.error("Session invalid signature hit on %s", url)
                 raise SessionInvalidError("Session is invalid ('Invalid headers').")
+
+            if resp.status_code in NON_RETRYABLE_STATUS_CODES:
+                raise RuntimeError(f"Request to {url} failed with non-retryable status {resp.status_code}")
 
             logger.warning(
                 "Request to %s failed (status %d), attempt %d/%d",

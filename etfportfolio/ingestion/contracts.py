@@ -128,7 +128,7 @@ def _get_contract_details_attr(cd: ContractDetails, attr: str) -> Any:
     """Safely get an attribute from ContractDetails, handling missing keys."""
     try:
         return getattr(cd, attr)
-    except AttributeError, KeyError:
+    except (AttributeError, KeyError):
         return None
 
 

@@ -10,7 +10,7 @@ from etfportfolio.ingestion import session
 
 logger = logging.getLogger(__name__)
 
-LANDING_URL_TEMPLATE = "/tws.proxy/fundamentals/landing/{product_id}?widgets=objective,keyProfile,lipper_ratings,holdings,mf_key_ratios,ownership,mstar&lang=en"
+LANDING_URL_TEMPLATE = "/tws.proxy/fundamentals/landing/{product_id}?widgets=objective,keyProfile,lipper_ratings,holdings,mf_key_ratios,mstar&lang=en"
 
 
 def _content_address(conn: duckdb.DuckDBPyConnection, payload: dict) -> tuple[int, bytes]:
