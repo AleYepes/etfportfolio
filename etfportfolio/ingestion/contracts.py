@@ -125,11 +125,23 @@ ATTR_MAP = {
 
 
 def _get_contract_details_attr(cd: ContractDetails, attr: str) -> Any:
-    """Safely get an attribute from ContractDetails, handling missing keys."""
+    """Safely get an attribute from ContractDetails or nested Contract, handling missing keys."""
     try:
-        return getattr(cd, attr)
+        val = getattr(cd, attr, None)
+        if val is not None:
+            return val
     except (AttributeError, KeyError):
-        return None
+        pass
+
+    if getattr(cd, "contract", None) is not None:
+        try:
+            val = getattr(cd.contract, attr, None)
+            if val is not None:
+                return val
+        except (AttributeError, KeyError):
+            pass
+
+    return None
 
 
 def _flatten_contract_details(cd: ContractDetails) -> dict[str, Any]:
@@ -138,6 +150,13 @@ def _flatten_contract_details(cd: ContractDetails) -> dict[str, Any]:
     for attr, col in ATTR_MAP.items():
         val = _get_contract_details_attr(cd, attr)
         result[col] = val
+
+    if not result.get("isin") and getattr(cd, "secIdList", None):
+        for tv in cd.secIdList:
+            if getattr(tv, "tag", None) == "ISIN":
+                result["isin"] = getattr(tv, "value", None)
+                break
+
     return result
 
 
@@ -164,9 +183,23 @@ def upsert_contract(
     conn.execute(insert_sql, values)
 
 
-def _select_product_ids(conn: duckdb.DuckDBPyConnection) -> list[int]:
-    """Return all product IDs from bronze.products."""
-    rows = conn.execute("SELECT product_id FROM bronze.products ORDER BY product_id").fetchall()
+def _select_target_product_ids(
+    conn: duckdb.DuckDBPyConnection,
+    product_ids: str | None = None,
+    limit: int | None = None,
+) -> list[int]:
+    """Return target product IDs from bronze.products."""
+    if product_ids is not None and limit is not None:
+        raise ValueError("product_ids and limit are mutually exclusive.")
+
+    if product_ids is not None:
+        from etfportfolio.ingestion.products import _parse_product_ids_arg
+        return _parse_product_ids_arg(product_ids)
+
+    query = "SELECT product_id FROM bronze.products ORDER BY product_id"
+    if limit is not None and limit > 0:
+        query += f" LIMIT {int(limit)}"
+    rows = conn.execute(query).fetchall()
     return [row[0] for row in rows]
 
 
@@ -189,16 +222,20 @@ async def _qualify_one(ib: Any, product_id: int) -> ContractDetails | None:
     return None
 
 
-async def _run_contract_qualification(force: bool = False) -> int:
+async def _run_contract_qualification(
+    product_ids: str | None = None,
+    limit: int | None = None,
+    force: bool = False,
+) -> int:
     """Run the contract qualification phase."""
     async with AsyncDbWorker(settings.db_path) as worker:
-        product_ids = await worker.submit(_select_product_ids)
+        target_ids = await worker.submit(_select_target_product_ids, product_ids, limit)
 
         now = datetime.now(UTC)
         cutoff = now - timedelta(hours=24)
 
         to_process = []
-        for pid in product_ids:
+        for pid in target_ids:
             if force:
                 to_process.append(pid)
             else:
@@ -214,6 +251,8 @@ async def _run_contract_qualification(force: bool = False) -> int:
 
             async def process_one(product_id: int):
                 async with semaphore:
+                    if not ib.isConnected():
+                        raise IBConnectionError("IB Gateway connection was lost during contract qualification.")
                     try:
                         cd = await _qualify_one(ib, product_id)
                         if cd:
@@ -229,6 +268,10 @@ async def _run_contract_qualification(force: bool = False) -> int:
     return len(to_process)
 
 
-async def sync(force: bool = False) -> int:
+async def sync(
+    product_ids: str | None = None,
+    limit: int | None = None,
+    force: bool = False,
+) -> int:
     """Public entry point for the contracts phase."""
-    return await _run_contract_qualification(force=force)
+    return await _run_contract_qualification(product_ids=product_ids, limit=limit, force=force)

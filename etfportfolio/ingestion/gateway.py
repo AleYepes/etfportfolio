@@ -30,6 +30,7 @@ async def ib_connection(client_id: int):
             port=settings.ib_gateway_port,
             clientId=client_id,
             timeout=settings.ib_gateway_timeout,
+            readonly=True,
         )
         logger.info("Connected to IB Gateway with clientId=%d", client_id)
         yield ib

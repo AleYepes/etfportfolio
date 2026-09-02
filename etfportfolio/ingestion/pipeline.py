@@ -77,7 +77,7 @@ async def _run_full(product_ids: str | None, limit: int | None, force: bool) -> 
 
     console.info("=== Phase 2: Contract qualification ===")
     try:
-        count = await contracts.sync(force=force)
+        count = await contracts.sync(product_ids=product_ids, limit=limit, force=force)
         console.info(f"Contract qualification complete. {count} products processed.")
     except Exception as e:
         logger.error("Contract qualification failed: %s", e)
@@ -85,7 +85,7 @@ async def _run_full(product_ids: str | None, limit: int | None, force: bool) -> 
 
     console.info("=== Phase 3: Price series ===")
     try:
-        count = await prices.sync(force=force)
+        count = await prices.sync(product_ids=product_ids, limit=limit, force=force)
         console.info(f"Price series complete. {count} products processed.")
     except Exception as e:
         logger.error("Price series failed: %s", e)
@@ -127,12 +127,12 @@ class Ingest:
         count = asyncio.run(products.sync())
         console.info(f"Product sync complete. Total products synced: {count}")
 
-    def contracts(self, force: bool = False) -> None:
-        count = asyncio.run(contracts.sync(force=force))
+    def contracts(self, product_ids: str | None = None, limit: int | None = None, force: bool = False) -> None:
+        count = asyncio.run(contracts.sync(product_ids=product_ids, limit=limit, force=force))
         console.info(f"Contract qualification complete. {count} products processed.")
 
-    def prices(self, force: bool = False) -> None:
-        count = asyncio.run(prices.sync(force=force))
+    def prices(self, product_ids: str | None = None, limit: int | None = None, force: bool = False) -> None:
+        count = asyncio.run(prices.sync(product_ids=product_ids, limit=limit, force=force))
         console.info(f"Price series complete. {count} products processed.")
 
     def themes(self) -> None:
