@@ -68,3 +68,16 @@ def test_extract_sentiment_points_valid():
     assert "price" not in point
     assert point["svolatility"] == 0.12
     assert point["sscore"] == 0.8
+
+
+def test_reconcile_account_id(tmp_path):
+    from etfportfolio.core.config import settings
+    from etfportfolio.ingestion.session import reconcile_account_id
+
+    env_file = tmp_path / ".env"
+    env_file.write_text("ACCOUNT_ID=U123456\n", encoding="utf-8")
+    settings.account_id = "U123456"
+
+    # Same account ID: returns True, does not rewrite
+    assert reconcile_account_id("U123456", env_path=env_file) is True
+    assert env_file.read_text(encoding="utf-8") == "ACCOUNT_ID=U123456\n"

@@ -39,6 +39,10 @@ def test_is_fresh():
     naive_stale = (now - timedelta(hours=25)).replace(tzinfo=None)
     assert not is_fresh(naive_stale, 24.0)
 
+    # Future-skewed timestamp clamped to 0.0 delta
+    future = now + timedelta(minutes=10)
+    assert is_fresh(future, 24.0)
+
 
 def test_content_addressing_determinism():
     payload_1 = {"b": 2, "a": 1, "nested": {"z": 9, "y": 8}, "list": [3, 1, 2]}
