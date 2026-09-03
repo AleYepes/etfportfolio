@@ -12,6 +12,27 @@ from etfportfolio.ingestion import contracts, details, prices, products, sentime
 logger = logging.getLogger(__name__)
 
 
+def _is_product_fully_fresh(
+    product_id: int,
+    landing_cache: dict,
+    endpoint_cache: dict,
+) -> bool:
+    """True if a product's landing and all ungated endpoints are fresh.
+
+    When landing is fresh, gated endpoints won't fire (they require a landing
+    change), so we only need to check ungated endpoints.
+    """
+    from etfportfolio.ingestion import endpoints as ep_mod
+    from etfportfolio.ingestion.utils import is_fresh
+
+    if not is_fresh(landing_cache.get(product_id), settings.freshness_window_hours):
+        return False
+    for ep in ep_mod.UNGATED_ENDPOINTS:
+        if not is_fresh(endpoint_cache.get((product_id, ep.url_prefix)), settings.freshness_window_hours):
+            return False
+    return True
+
+
 async def _run_details_phase(
     worker: AsyncDbWorker,
     client: httpx.AsyncClient,
@@ -20,17 +41,37 @@ async def _run_details_phase(
     force: bool,
 ) -> None:
     """Runs the details phase across a resolved list of target products."""
-    console.info(f"Processing {len(target_ids)} product(s)...")
     semaphore = asyncio.Semaphore(settings.details_concurrency)
-    failures = 0
-    skipped_prods = 0
-    skipped_eps = 0
 
     landing_cache = await worker.submit(details.load_landing_freshness_cache)
     endpoint_cache = await worker.submit(details.load_endpoint_freshness_cache)
 
-    with progress_bar(len(target_ids), desc="Details") as bar:
-        for product_id in target_ids:
+    if force:
+        to_process = target_ids
+    else:
+        to_process = [
+            pid for pid in target_ids
+            if not _is_product_fully_fresh(pid, landing_cache, endpoint_cache)
+        ]
+
+    skipped_prods = len(target_ids) - len(to_process)
+    if skipped_prods:
+        console.info(
+            f"{skipped_prods}/{len(target_ids)} products fresh, "
+            f"{len(to_process)} to process."
+        )
+    else:
+        console.info(f"Processing {len(target_ids)} product(s)...")
+
+    if not to_process:
+        console.info("Done. All products are fresh.")
+        return
+
+    failures = 0
+    skipped_eps = 0
+
+    with progress_bar(len(to_process), desc="Details") as bar:
+        for product_id in to_process:
             bar.set_postfix_str(str(product_id))
             try:
                 res = await details.process_product(
@@ -51,23 +92,19 @@ async def _run_details_phase(
 
             if not res.ok:
                 failures += 1
-            if res.product_skipped_fresh:
-                skipped_prods += 1
-            else:
-                skipped_eps += res.endpoints_skipped_fresh
+            skipped_eps += res.endpoints_skipped_fresh
 
-    processed_prods = len(target_ids) - skipped_prods
     console.info(
-        f"details: {skipped_prods}/{len(target_ids)} products skipped (fresh), "
-        f"{processed_prods} processed; {skipped_eps} endpoint requests skipped (fresh) among processed products."
+        f"details: {len(to_process)} products processed; "
+        f"{skipped_eps} endpoint requests skipped (fresh) among them."
     )
     if failures:
         console.info(
-            f"Done. {len(target_ids) - failures}/{len(target_ids)} products fully succeeded, "
+            f"Done. {len(to_process) - failures}/{len(to_process)} products fully succeeded, "
             f"{failures} had failures — see log for detail."
         )
     else:
-        console.info(f"Done. All {len(target_ids)} products fully succeeded.")
+        console.info(f"Done. All {len(to_process)} products fully succeeded.")
 
 
 async def _run_session() -> str:
