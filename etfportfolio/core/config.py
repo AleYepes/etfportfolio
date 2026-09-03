@@ -18,7 +18,9 @@ class Settings(BaseSettings):
     session_state_path: str = "data/session_state.json"
     log_dir: str = "data/logs"
     ibkr_base_url: str = "https://www.interactivebrokers.ie"
-    endpoint_concurrency: int = 10
+    details_concurrency: int = 10
+    sentiment_concurrency: int = 1
+    freshness_window_hours: float = 24.0
 
     # IB Gateway
     ib_gateway_host: str = "127.0.0.1"

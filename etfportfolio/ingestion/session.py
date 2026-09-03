@@ -312,25 +312,18 @@ async def probe(client: httpx.AsyncClient) -> str:
     return account_id
 
 
-NON_RETRYABLE_STATUS_CODES = {404}
-
-
 async def fetch_with_retry(
     client: httpx.AsyncClient,
     url: str,
     max_retries: int = 3,
     initial_backoff: float = 1.0,
-    delay_before_request: float = 0.0,
 ) -> tuple[int, Any]:
     """Fetches URL with retry on non-2xx responses.
 
-    Bypasses retry immediately if the session-invalid signature is encountered,
-    raising SessionInvalidError instead. Also bypasses retries for status codes
-    in NON_RETRYABLE_STATUS_CODES, which are deterministic client/server errors
-    that will not succeed on a subsequent attempt.
-
-    If `delay_before_request` is > 0, sleeps before each attempt. This is
-    useful for endpoints with stricter rate limits (e.g., sentiment).
+    404 is a normal, non-exceptional outcome: returned immediately as
+    ``(404, None)`` with no retry. Session-invalid signatures raise
+    ``SessionInvalidError`` without retry. Every other non-2xx retries
+    with exponential backoff.
     """
     attempt = 0
     backoff = initial_backoff
@@ -338,19 +331,16 @@ async def fetch_with_retry(
     while attempt < max_retries:
         attempt += 1
         try:
-            if delay_before_request > 0:
-                await asyncio.sleep(delay_before_request)
-
             resp = await client.get(url)
             if resp.is_success:
                 return resp.status_code, resp.json()
 
+            if resp.status_code == 404:
+                return 404, None
+
             if is_session_invalid(resp):
                 logger.error("Session invalid signature hit on %s", url)
                 raise SessionInvalidError("Session is invalid ('Invalid headers').")
-
-            if resp.status_code in NON_RETRYABLE_STATUS_CODES:
-                raise RuntimeError(f"Request to {url} failed with non-retryable status {resp.status_code}")
 
             logger.warning(
                 "Request to %s failed (status %d), attempt %d/%d",
@@ -605,11 +595,12 @@ async def login(timeout_s: float = 300.0) -> None:
                         logger.warning("Login failed: %s", msg)
                         username, password = await _prompt_credentials()
 
-                    state = await context.storage_state()
+                    raw_state = await context.storage_state()
+                    state: dict[str, Any] = dict(raw_state)
                     cookies = {
-                        c["name"]: c["value"]
+                        str(c["name"]): str(c["value"])
                         for c in state.get("cookies", [])
-                        if c.get("name") and c.get("value") is not None
+                        if "name" in c and "value" in c and c["value"] is not None
                     }
 
                     async with httpx.AsyncClient(

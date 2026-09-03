@@ -1,4 +1,5 @@
 import logging
+from datetime import UTC, datetime
 from typing import Any
 
 import duckdb
@@ -6,9 +7,24 @@ import httpx
 
 from etfportfolio.core.config import settings
 from etfportfolio.core.db import AsyncDbWorker
+from etfportfolio.core.logging import console
 from etfportfolio.ingestion import session
+from etfportfolio.ingestion.utils import is_fresh
 
 logger = logging.getLogger(__name__)
+
+
+def _check_themes_freshness(conn: duckdb.DuckDBPyConnection) -> datetime | None:
+    row = conn.execute("SELECT MAX(last_checked_at) FROM bronze.themes").fetchone()
+    return row[0] if row else None
+
+
+def _count_themes(conn: duckdb.DuckDBPyConnection) -> tuple[int, int]:
+    row_p = conn.execute("SELECT COUNT(*) FROM bronze.themes WHERE parent_id IS NULL").fetchone()
+    row_n = conn.execute("SELECT COUNT(*) FROM bronze.themes WHERE parent_id IS NOT NULL").fetchone()
+    parents = int(row_p[0]) if row_p else 0
+    nodes = int(row_n[0]) if row_n else 0
+    return parents, nodes
 
 
 def upsert_themes(conn: duckdb.DuckDBPyConnection, payload: dict[str, Any]) -> tuple[int, int]:
@@ -69,6 +85,7 @@ def upsert_themes(conn: duckdb.DuckDBPyConnection, payload: dict[str, Any]) -> t
                 existing_ids.add(theme_id)
             n_count += 1
 
+        conn.execute("UPDATE bronze.themes SET last_checked_at = now()")
         conn.execute("COMMIT")
     except Exception:
         conn.execute("ROLLBACK")
@@ -77,13 +94,22 @@ def upsert_themes(conn: duckdb.DuckDBPyConnection, payload: dict[str, Any]) -> t
     return p_count, n_count
 
 
-async def sync(client: httpx.AsyncClient) -> tuple[int, int]:
+async def sync(client: httpx.AsyncClient, force: bool = False) -> tuple[int, int]:
     """Fetches global theme taxonomy and updates bronze.themes."""
-    logger.info("Syncing theme taxonomy from /tws.proxy/knowledge-graph/meta/themes...")
-    url = "/tws.proxy/knowledge-graph/meta/themes"
-    _, payload = await session.fetch_with_retry(client, url)
-
     async with AsyncDbWorker(settings.db_path) as worker:
+        if not force:
+            last_checked = await worker.submit(_check_themes_freshness)
+            if last_checked and is_fresh(last_checked, settings.freshness_window_hours):
+                now = datetime.now(UTC)
+                if last_checked.tzinfo is None:
+                    last_checked = last_checked.replace(tzinfo=UTC)
+                hours = round((now - last_checked).total_seconds() / 3600.0, 1)
+                console.info(f"Themes sync skipped (checked {hours}h ago; use --force to refresh).")
+                return await worker.submit(_count_themes)
+
+        logger.info("Syncing theme taxonomy from /tws.proxy/knowledge-graph/meta/themes...")
+        url = "/tws.proxy/knowledge-graph/meta/themes"
+        _, payload = await session.fetch_with_retry(client, url)
         p_count, n_count = await worker.submit(upsert_themes, payload)
 
     logger.info("Theme taxonomy synced successfully: %d parents, %d child nodes.", p_count, n_count)

@@ -5,10 +5,9 @@ from typing import Any
 import duckdb
 import httpx
 
-from etfportfolio.core import db
 from etfportfolio.core.db import AsyncDbWorker
-from etfportfolio.core.utils import content_address
 from etfportfolio.ingestion import endpoints, session
+from etfportfolio.ingestion.utils import content_address, store_blob
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ def store_snapshot(
 
     conn.execute("BEGIN TRANSACTION")
     try:
-        db.store_blob(conn, digest, compressed)
+        store_blob(conn, digest, compressed)
 
         conn.execute(
             """
@@ -51,8 +50,12 @@ async def fetch_snapshot(
     product_id: int,
     account_id: str,
 ) -> None:
-    """Fetches a single snapshot-shaped endpoint for a product and stores it."""
+    """Fetches a single snapshot endpoint for a product and stores it.
+
+    404 is persisted as ``{}`` so ``fetched_at`` is written and the freshness
+    cache can skip the endpoint on the next run.
+    """
     url_prefix, url_slug, full_url = ep.resolve(product_id=product_id, account_id=account_id)
     _, payload = await session.fetch_with_retry(client, full_url)
-    await worker.submit(store_snapshot, product_id, url_prefix, url_slug, payload)
+    await worker.submit(store_snapshot, product_id, url_prefix, url_slug, payload or {})
     logger.info("Product %d: snapshot %s stored", product_id, ep.name)

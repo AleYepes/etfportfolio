@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from etfportfolio.core.config import settings
+from etfportfolio.core.progress import TqdmLoggingHandler
 
 NOISY_LOGGERS = ["httpx", "httpcore", "urllib3", "asyncio", "playwright"]
 
@@ -24,7 +25,8 @@ def configure_logging(
 
     - File Handler: full structured DEBUG context, stored in a timestamped run log.
     - Stderr Handler: diagnostic logs (INFO, or DEBUG with `verbose`) — request
-      attempts, retries, warnings, errors. Noisy third-party loggers (httpx,
+      attempts, retries, warnings, errors. Routed through tqdm.write so an
+      active progress bar is not corrupted. Noisy third-party loggers (httpx,
       playwright, etc.) are suppressed to WARNING unless `verbose` is set.
     - Stdout Handler (`etfportfolio.core.logging.console`): plain, human-facing
       narrative — phase banners, progress, results. Not affected by `verbose`
@@ -56,7 +58,7 @@ def configure_logging(
     file_handler.setFormatter(formatter)
     root_logger.addHandler(file_handler)
 
-    stderr_handler = logging.StreamHandler(sys.stderr)
+    stderr_handler = TqdmLoggingHandler(sys.stderr)
     stderr_handler.setLevel(logging.DEBUG if verbose else logging.INFO)
     stderr_handler.setFormatter(formatter)
     root_logger.addHandler(stderr_handler)
@@ -70,7 +72,7 @@ def configure_logging(
     console.propagate = False
     for handler in list(console.handlers):
         console.removeHandler(handler)
-    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler = TqdmLoggingHandler(sys.stdout)
     stdout_handler.setLevel(logging.INFO)
     stdout_handler.setFormatter(logging.Formatter("%(message)s"))
     console.addHandler(stdout_handler)

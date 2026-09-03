@@ -63,7 +63,9 @@ indent-style = "space"
 pythonVersion = "3.14"
 typeCheckingMode = "basic"
 reportMissingTypeStubs = false
-extend-exclude = [
+venvPath = "."
+venv = ".venv"
+exclude = [
     "data",
     "docs",
     ".agents",
@@ -77,7 +79,9 @@ data_dir = "data"
 session_state_path = "data/session_state.json"
 log_dir = "data/logs"
 ibkr_base_url = "https://www.interactivebrokers.ie"
-endpoint_concurrency = 10
+details_concurrency = 10
+sentiment_concurrency = 1
+freshness_window_hours = 24.0
 ib_gateway_host = "127.0.0.1"
 ib_gateway_port = 4001
 ib_gateway_timeout = 60.0

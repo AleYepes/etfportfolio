@@ -1,5 +1,6 @@
 import contextlib
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -8,7 +9,9 @@ import httpx
 
 from etfportfolio.core.config import settings
 from etfportfolio.core.db import AsyncDbWorker
+from etfportfolio.core.logging import console
 from etfportfolio.ingestion.session import build_async_client
+from etfportfolio.ingestion.utils import is_fresh
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +29,20 @@ def _parse_bool(val: Any) -> bool | None:
         if val.upper() in ("F", "FALSE", "0", "N", "NO"):
             return False
     return bool(val)
+
+
+def _check_products_freshness(conn: duckdb.DuckDBPyConnection) -> datetime | None:
+    row = conn.execute("SELECT MAX(last_checked_at) FROM bronze.products").fetchone()
+    return row[0] if row else None
+
+
+def _count_products(conn: duckdb.DuckDBPyConnection) -> int:
+    row = conn.execute("SELECT COUNT(*) FROM bronze.products").fetchone()
+    return row[0] if row else 0
+
+
+def _stamp_products_last_checked(conn: duckdb.DuckDBPyConnection) -> None:
+    conn.execute("UPDATE bronze.products SET last_checked_at = now()")
 
 
 def upsert_products(conn: duckdb.DuckDBPyConnection, products: list[dict[str, Any]]) -> int:
@@ -89,18 +106,30 @@ def upsert_products(conn: duckdb.DuckDBPyConnection, products: list[dict[str, An
     return count
 
 
-async def sync(client: httpx.AsyncClient | None = None) -> int:
+async def sync(client: httpx.AsyncClient | None = None, force: bool = False) -> int:
     """Crawls webrest/search/products-by-filters endpoint and populates bronze.products."""
     page_number = 1
     total_synced = 0
     close_client = False
+    clean_complete = False
 
     if client is None:
         client = build_async_client()
         close_client = True
+    assert client is not None
 
     try:
         async with AsyncDbWorker(settings.db_path) as worker:
+            if not force:
+                last_checked = await worker.submit(_check_products_freshness)
+                if last_checked and is_fresh(last_checked, settings.freshness_window_hours):
+                    now = datetime.now(UTC)
+                    if last_checked.tzinfo is None:
+                        last_checked = last_checked.replace(tzinfo=UTC)
+                    hours = round((now - last_checked).total_seconds() / 3600.0, 1)
+                    console.info(f"Products sync skipped (checked {hours}h ago; use --force to refresh).")
+                    return await worker.submit(_count_products)
+
             while True:
                 logger.info("Fetching products page %d (pageSize=%d)...", page_number, PAGE_SIZE)
                 url = "/webrest/search/products-by-filters"
@@ -138,9 +167,13 @@ async def sync(client: httpx.AsyncClient | None = None) -> int:
                         page_number,
                         total_synced,
                     )
+                    clean_complete = True
                     break
 
                 page_number += 1
+
+            if clean_complete:
+                await worker.submit(_stamp_products_last_checked)
     finally:
         if close_client:
             await client.aclose()

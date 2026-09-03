@@ -1,6 +1,7 @@
 CREATE SCHEMA IF NOT EXISTS bronze;
 CREATE SCHEMA IF NOT EXISTS silver;
-CREATE SCHEMA IF NOT EXISTS gold;   -- reserved
+CREATE SCHEMA IF NOT EXISTS gold;
+CREATE SCHEMA IF NOT EXISTS cold_storage;
 
 -- Content-addressed store (snapshots only)
 CREATE TABLE IF NOT EXISTS bronze.payload_blobs (
@@ -26,7 +27,8 @@ CREATE TABLE IF NOT EXISTS bronze.products (
     assoc_entity_id         VARCHAR,
     fc_conid                VARCHAR,
     created_at              TIMESTAMP NOT NULL,
-    updated_at              TIMESTAMP NOT NULL
+    updated_at              TIMESTAMP NOT NULL,
+    last_checked_at         TIMESTAMP
 );
 
 -- Official IB Gateway contract details
@@ -90,7 +92,8 @@ CREATE TABLE IF NOT EXISTS bronze.contracts (
 CREATE TABLE IF NOT EXISTS bronze.snapshot_previews (
     product_id   INTEGER PRIMARY KEY REFERENCES bronze.products(product_id),
     hash         UBIGINT NOT NULL REFERENCES bronze.payload_blobs(hash),
-    updated_at   TIMESTAMP NOT NULL
+    updated_at   TIMESTAMP NOT NULL,
+    last_checked_at TIMESTAMP
 );
 
 -- Snapshot lineage
@@ -135,6 +138,38 @@ CREATE TABLE IF NOT EXISTS bronze.sentiment (
     PRIMARY KEY (product_id, date)
 );
 
+-- Cold storage archives
+CREATE TABLE  IF NOT EXISTS cold_storage.prices (
+    product_id   INTEGER NOT NULL,
+    run_id       TIMESTAMP NOT NULL,
+    date         TIMESTAMP NOT NULL,
+    open         DOUBLE,
+    high         DOUBLE,
+    low          DOUBLE,
+    close        DOUBLE,
+    volume       DOUBLE,
+    average      DOUBLE,
+    bar_count    INTEGER,
+    reason       VARCHAR,
+    PRIMARY KEY (product_id, run_id, date)
+);
+
+CREATE TABLE  IF NOT EXISTS cold_storage.sentiment (
+    product_id   INTEGER NOT NULL,
+    run_id       TIMESTAMP NOT NULL,
+    date         TIMESTAMP NOT NULL,
+    svolatility  DOUBLE,
+    sdispersion  DOUBLE,
+    svscore      DOUBLE,
+    sbuzz        DOUBLE,
+    svolume      DOUBLE,
+    sdelta       DOUBLE,
+    sscore       DOUBLE,
+    smean        DOUBLE,
+    reason       VARCHAR,
+    PRIMARY KEY (product_id, run_id, date)
+);
+
 -- Global theme taxonomy
 CREATE TABLE IF NOT EXISTS bronze.themes (
     theme_id     VARCHAR PRIMARY KEY,
@@ -142,7 +177,8 @@ CREATE TABLE IF NOT EXISTS bronze.themes (
     name         VARCHAR,
     parent_id    VARCHAR REFERENCES bronze.themes(theme_id),
     created_at   TIMESTAMP NOT NULL,
-    updated_at   TIMESTAMP NOT NULL
+    updated_at   TIMESTAMP NOT NULL,
+    last_checked_at TIMESTAMP
 );
 
 -- Verified ETF product universe view

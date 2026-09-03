@@ -3,9 +3,8 @@ Contract qualification via IB Gateway (clientId=1).
 Fetches ContractDetails for all bronze.products and upserts into bronze.contracts.
 """
 
-import asyncio
 import logging
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
 
 import duckdb
@@ -13,7 +12,9 @@ from ib_async import Contract, ContractDetails
 
 from etfportfolio.core.config import settings
 from etfportfolio.core.db import AsyncDbWorker
+from etfportfolio.core.progress import progress_bar
 from etfportfolio.ingestion.gateway import IBConnectionError, ib_connection
+from etfportfolio.ingestion.utils import is_fresh
 
 logger = logging.getLogger(__name__)
 
@@ -203,13 +204,15 @@ def _select_target_product_ids(
     return [row[0] for row in rows]
 
 
-def _contract_is_fresh(conn: duckdb.DuckDBPyConnection, product_id: int, cutoff: datetime) -> bool:
-    """Check if a contract's updated_at is newer than cutoff."""
+def _contract_is_fresh(conn: duckdb.DuckDBPyConnection, product_id: int) -> bool:
+    """Check if a contract's updated_at is within freshness_window_hours."""
     row = conn.execute(
         "SELECT updated_at FROM bronze.contracts WHERE product_id = $1",
         [product_id],
     ).fetchone()
-    return row is not None and row[0] >= cutoff
+    if not row or not row[0]:
+        return False
+    return is_fresh(row[0], settings.freshness_window_hours)
 
 
 async def _qualify_one(ib: Any, product_id: int) -> ContractDetails | None:
@@ -231,39 +234,36 @@ async def _run_contract_qualification(
     async with AsyncDbWorker(settings.db_path) as worker:
         target_ids = await worker.submit(_select_target_product_ids, product_ids, limit)
 
-        now = datetime.now(UTC)
-        cutoff = now - timedelta(hours=24)
-
         to_process = []
         for pid in target_ids:
             if force:
                 to_process.append(pid)
             else:
-                fresh = await worker.submit(_contract_is_fresh, pid, cutoff)
+                fresh = await worker.submit(_contract_is_fresh, pid)
                 if not fresh:
                     to_process.append(pid)
 
         logger.info("Contract qualification: %d products to process", len(to_process))
 
-        semaphore = asyncio.Semaphore(1)
+        if not to_process:
+            return 0
 
         async with ib_connection(client_id=1) as ib:
-
-            async def process_one(product_id: int):
-                async with semaphore:
+            with progress_bar(len(to_process), desc="Contracts") as bar:
+                for pid in to_process:
+                    bar.set_postfix_str(str(pid))
                     if not ib.isConnected():
                         raise IBConnectionError("IB Gateway connection was lost during contract qualification.")
                     try:
-                        cd = await _qualify_one(ib, product_id)
+                        cd = await _qualify_one(ib, pid)
                         if cd:
-                            await worker.submit(upsert_contract, product_id, cd)
+                            await worker.submit(upsert_contract, pid, cd)
                     except IBConnectionError:
                         raise
                     except Exception as e:
-                        logger.error("Failed to qualify product %d: %s", product_id, e)
-
-            tasks = [process_one(pid) for pid in to_process]
-            await asyncio.gather(*tasks)
+                        logger.error("Failed to qualify product %d: %s", pid, e)
+                    finally:
+                        bar.update(1)
 
     return len(to_process)
 
