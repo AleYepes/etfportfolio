@@ -125,20 +125,30 @@ ATTR_MAP = {
 }
 
 
+def _clean_val(val: Any) -> Any:
+    """Normalize attribute value: strip strings and convert empty strings to None."""
+    if isinstance(val, str):
+        val = val.strip()
+        return val if val else None
+    return val
+
+
 def _get_contract_details_attr(cd: ContractDetails, attr: str) -> Any:
     """Safely get an attribute from ContractDetails or nested Contract, handling missing keys."""
     try:
         val = getattr(cd, attr, None)
-        if val is not None:
-            return val
+        cleaned = _clean_val(val)
+        if cleaned is not None:
+            return cleaned
     except (AttributeError, KeyError):
         pass
 
     if getattr(cd, "contract", None) is not None:
         try:
             val = getattr(cd.contract, attr, None)
-            if val is not None:
-                return val
+            cleaned = _clean_val(val)
+            if cleaned is not None:
+                return cleaned
         except (AttributeError, KeyError):
             pass
 
@@ -155,8 +165,13 @@ def _flatten_contract_details(cd: ContractDetails) -> dict[str, Any]:
     if not result.get("isin") and getattr(cd, "secIdList", None):
         for tv in cd.secIdList:
             if getattr(tv, "tag", None) == "ISIN":
-                result["isin"] = getattr(tv, "value", None)
-                break
+                val = _clean_val(getattr(tv, "value", None))
+                if val is not None:
+                    result["isin"] = val
+                    break
+
+    for col, val in result.items():
+        result[col] = _clean_val(val)
 
     return result
 

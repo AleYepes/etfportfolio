@@ -84,4 +84,4 @@ sentiment_concurrency = 1
 freshness_window_hours = 24.0
 ib_gateway_host = "127.0.0.1"
 ib_gateway_port = 4001
-ib_gateway_timeout = 60.0
+ib_gateway_timeout = 90.0
