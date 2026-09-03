@@ -11,8 +11,8 @@ uv run playwright install chromium
 
 ## Usage
 
-### 1. Run Ingestion Pipeline
-Executes the full pipeline (Product Discovery → Session Probe → Theme Taxonomy Sync → Per-product Concurrent Fetch):
+### Ingestion Pipeline
+Executes the full pipeline (Phase 1: Products → Phase 2: Contracts → Phase 3: Prices → Phase 4: Session → Phase 5: Themes → Phase 6: Details → Phase 7: Sentiment):
 
 ```bash
 # Ingest all phases
@@ -21,21 +21,28 @@ uv run python main.py ingest
 # Ingest individual phases
 uv run python main.py ingest session
 uv run python main.py ingest products
+uv run python main.py ingest contracts
+uv run python main.py ingest prices
 uv run python main.py ingest themes
 uv run python main.py ingest details
+uv run python main.py ingest sentiment
 
-# Ingest a limited number of products
+# Limit number of products
 uv run python main.py ingest --limit 10
 
-# Ingest specific product IDs (comma-separated or path to a file)
+# Specific product IDs (comma-separated string or path to a text file)
 uv run python main.py ingest --product-ids "756733,8335"
 uv run python main.py ingest --product-ids docs/sample_product_ids.txt
+
+# Force refresh (bypass freshness windows and landing gates)
+uv run python main.py ingest --force
 ```
 
 ## Development & Testing
 
 ```bash
 uv run pytest
-uv run ruff check -- fix
+uv run ruff check --fix
 uv run ruff format
+uv run pyright
 ```
