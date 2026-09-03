@@ -49,17 +49,11 @@ async def _run_details_phase(
     if force:
         to_process = target_ids
     else:
-        to_process = [
-            pid for pid in target_ids
-            if not _is_product_fully_fresh(pid, landing_cache, endpoint_cache)
-        ]
+        to_process = [pid for pid in target_ids if not _is_product_fully_fresh(pid, landing_cache, endpoint_cache)]
 
     skipped_prods = len(target_ids) - len(to_process)
     if skipped_prods:
-        console.info(
-            f"{skipped_prods}/{len(target_ids)} products fresh, "
-            f"{len(to_process)} to process."
-        )
+        console.info(f"{skipped_prods}/{len(target_ids)} products fresh, {len(to_process)} to process.")
     else:
         console.info(f"Processing {len(target_ids)} product(s)...")
 
@@ -95,8 +89,7 @@ async def _run_details_phase(
             skipped_eps += res.endpoints_skipped_fresh
 
     console.info(
-        f"details: {len(to_process)} products processed; "
-        f"{skipped_eps} endpoint requests skipped (fresh) among them."
+        f"details: {len(to_process)} products processed; {skipped_eps} endpoint requests skipped (fresh) among them."
     )
     if failures:
         console.info(
@@ -227,4 +220,3 @@ class Ingest:
 
 
 cli = Ingest()
-

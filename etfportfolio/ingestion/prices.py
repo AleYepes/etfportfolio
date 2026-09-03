@@ -199,9 +199,7 @@ async def _fetch_and_store(
         logger.info("Product %d: no price bars returned for incremental update", product.product_id)
         return
 
-    valid, mismatch_type = await worker.submit(
-        validate_overlap, PRICES_SPEC, product.product_id, new_bars, last_date
-    )
+    valid, mismatch_type = await worker.submit(validate_overlap, PRICES_SPEC, product.product_id, new_bars, last_date)
 
     if not valid:
         logger.warning(
@@ -288,4 +286,3 @@ async def sync(
 ) -> int:
     """Public entry point for the price phase."""
     return await _run_price_ingestion(product_ids=product_ids, limit=limit, force=force)
-

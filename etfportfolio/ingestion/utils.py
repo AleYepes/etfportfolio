@@ -161,11 +161,7 @@ def validate_overlap(
         old_vals = existing_vals[d]
         for key in spec.value_columns:
             v1, v2 = old_vals.get(key), new_vals.get(key)
-            if (
-                v1 is not None
-                and v2 is not None
-                and not math.isclose(float(v1), float(v2), rel_tol=1e-4, abs_tol=1e-4)
-            ):
+            if v1 is not None and v2 is not None and not math.isclose(float(v1), float(v2), rel_tol=1e-4, abs_tol=1e-4):
                 return False, "value_mismatch"
 
     return True, None

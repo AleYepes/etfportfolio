@@ -140,7 +140,7 @@ def _get_contract_details_attr(cd: ContractDetails, attr: str) -> Any:
         cleaned = _clean_val(val)
         if cleaned is not None:
             return cleaned
-    except (AttributeError, KeyError):
+    except AttributeError, KeyError:
         pass
 
     if getattr(cd, "contract", None) is not None:
@@ -149,7 +149,7 @@ def _get_contract_details_attr(cd: ContractDetails, attr: str) -> Any:
             cleaned = _clean_val(val)
             if cleaned is not None:
                 return cleaned
-        except (AttributeError, KeyError):
+        except AttributeError, KeyError:
             pass
 
     return None
@@ -210,6 +210,7 @@ def _select_target_product_ids(
 
     if product_ids is not None:
         from etfportfolio.ingestion.products import _parse_product_ids_arg
+
         return _parse_product_ids_arg(product_ids)
 
     query = "SELECT product_id FROM bronze.products ORDER BY product_id"

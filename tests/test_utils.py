@@ -142,13 +142,29 @@ def test_validate_overlap_prices(db_conn):
     # 1. Exact match in window W + new points after last_date + margin points before W
     new_points = {}
     # Margin before W (date < 2026-08-23) - even if different or missing, should be ignored
-    new_points[last_date - timedelta(days=12)] = {"open": 999.0, "high": 999.0, "low": 999.0, "close": 999.0, "volume": 1.0, "average": 999.0, "bar_count": 1}
+    new_points[last_date - timedelta(days=12)] = {
+        "open": 999.0,
+        "high": 999.0,
+        "low": 999.0,
+        "close": 999.0,
+        "volume": 1.0,
+        "average": 999.0,
+        "bar_count": 1,
+    }
     # Within W: identical
     for i in range(OVERLAP_CALENDAR_DAYS + 1):
         d = last_date - timedelta(days=i)
         new_points[d] = dict(existing_points[d])
     # Beyond last_date (incremental tail)
-    new_points[last_date + timedelta(days=1)] = {"open": 200.0, "high": 205.0, "low": 195.0, "close": 202.0, "volume": 1500.0, "average": 201.0, "bar_count": 60}
+    new_points[last_date + timedelta(days=1)] = {
+        "open": 200.0,
+        "high": 205.0,
+        "low": 195.0,
+        "close": 202.0,
+        "volume": 1500.0,
+        "average": 201.0,
+        "bar_count": 60,
+    }
 
     valid, reason = validate_overlap(db_conn, PRICES_SPEC, 1001, new_points, last_date)
     assert valid is True
@@ -180,8 +196,24 @@ def test_validate_overlap_prices(db_conn):
 
 def test_replace_series_with_archive(db_conn):
     old_points = {
-        datetime(2026, 8, 1, 0, 0): {"open": 10.0, "high": 11.0, "low": 9.0, "close": 10.5, "volume": 100.0, "average": 10.2, "bar_count": 10},
-        datetime(2026, 8, 2, 0, 0): {"open": 11.0, "high": 12.0, "low": 10.0, "close": 11.5, "volume": 100.0, "average": 11.2, "bar_count": 10},
+        datetime(2026, 8, 1, 0, 0): {
+            "open": 10.0,
+            "high": 11.0,
+            "low": 9.0,
+            "close": 10.5,
+            "volume": 100.0,
+            "average": 10.2,
+            "bar_count": 10,
+        },
+        datetime(2026, 8, 2, 0, 0): {
+            "open": 11.0,
+            "high": 12.0,
+            "low": 10.0,
+            "close": 11.5,
+            "volume": 100.0,
+            "average": 11.2,
+            "bar_count": 10,
+        },
     }
     replace_series(db_conn, PRICES_SPEC, 1001, old_points, archive=False)
 
@@ -190,7 +222,15 @@ def test_replace_series_with_archive(db_conn):
 
     # Mismatch-triggered replace with archive=True
     new_points = {
-        datetime(2026, 8, 1, 0, 0): {"open": 10.0, "high": 11.0, "low": 9.0, "close": 10.8, "volume": 100.0, "average": 10.5, "bar_count": 10},
+        datetime(2026, 8, 1, 0, 0): {
+            "open": 10.0,
+            "high": 11.0,
+            "low": 9.0,
+            "close": 10.8,
+            "volume": 100.0,
+            "average": 10.5,
+            "bar_count": 10,
+        },
     }
     replace_series(db_conn, PRICES_SPEC, 1001, new_points, archive=True, reason="value_mismatch")
 
@@ -212,15 +252,39 @@ def test_replace_series_with_archive(db_conn):
 
 def test_upsert_series(db_conn):
     initial_points = {
-        datetime(2026, 8, 1, 0, 0): {"open": 10.0, "high": 11.0, "low": 9.0, "close": 10.5, "volume": 100.0, "average": 10.2, "bar_count": 10},
+        datetime(2026, 8, 1, 0, 0): {
+            "open": 10.0,
+            "high": 11.0,
+            "low": 9.0,
+            "close": 10.5,
+            "volume": 100.0,
+            "average": 10.2,
+            "bar_count": 10,
+        },
     }
     upsert_series(db_conn, PRICES_SPEC, 1001, initial_points)
     assert db_conn.execute("SELECT COUNT(*) FROM bronze.prices WHERE product_id = 1001").fetchone()[0] == 1
 
     # Incremental update with 1 updated point and 1 new point
     incremental_points = {
-        datetime(2026, 8, 1, 0, 0): {"open": 10.0, "high": 11.0, "low": 9.0, "close": 12.0, "volume": 100.0, "average": 10.2, "bar_count": 10},
-        datetime(2026, 8, 2, 0, 0): {"open": 12.0, "high": 13.0, "low": 11.0, "close": 12.5, "volume": 200.0, "average": 12.2, "bar_count": 20},
+        datetime(2026, 8, 1, 0, 0): {
+            "open": 10.0,
+            "high": 11.0,
+            "low": 9.0,
+            "close": 12.0,
+            "volume": 100.0,
+            "average": 10.2,
+            "bar_count": 10,
+        },
+        datetime(2026, 8, 2, 0, 0): {
+            "open": 12.0,
+            "high": 13.0,
+            "low": 11.0,
+            "close": 12.5,
+            "volume": 200.0,
+            "average": 12.2,
+            "bar_count": 20,
+        },
     }
     upsert_series(db_conn, PRICES_SPEC, 1001, incremental_points)
 
@@ -263,6 +327,7 @@ def test_sentiment_fixture_overlap_and_archive(db_conn):
 
     # Replace with archive
     replace_series(db_conn, SENTIMENT_SPEC, 1001, mismatched, archive=True, reason=reason)
-    cold_rows = db_conn.execute("SELECT COUNT(*) FROM cold_storage.sentiment WHERE product_id = 1001 AND reason = 'value_mismatch'").fetchone()[0]
+    cold_rows = db_conn.execute(
+        "SELECT COUNT(*) FROM cold_storage.sentiment WHERE product_id = 1001 AND reason = 'value_mismatch'"
+    ).fetchone()[0]
     assert cold_rows == len(points)
-

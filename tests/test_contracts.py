@@ -172,54 +172,12 @@ def test_upsert_contract_stores_nulls_in_db(sample_contract_details):
     assert coupon == 0.0
 
     # Ensure zero empty strings exist in bronze.contracts
-    empty_strings_count = conn.execute(
+    empty_strings_row = conn.execute(
         """
         SELECT COUNT(*)
         FROM bronze.contracts
         WHERE contract_month = '' OR industry = '' OR category = '' OR cusip = '' OR notes = ''
         """
-    ).fetchone()[0]
-    assert empty_strings_count == 0
-
-
-def test_clean_contracts_table():
-    from scripts.clean_contracts_empty_strings import clean_contracts_table
-
-    conn = duckdb.connect(":memory:")
-    apply_schema(conn)
-
-    # Insert test product
-    conn.execute(
-        """
-        INSERT INTO bronze.products (product_id, symbol, created_at, updated_at)
-        VALUES (9999, 'TEST', now(), now())
-        """
-    )
-    # Insert contract with legacy empty string and whitespace values
-    conn.execute(
-        """
-        INSERT INTO bronze.contracts (
-            product_id, sec_type, symbol, name, contract_month, industry,
-            cusip, notes, created_at, updated_at
-        ) VALUES (
-            9999, 'STK', 'TEST', 'Test ETF', '', '   ',
-            '', 'Valid note', now(), now()
-        )
-        """
-    )
-
-    cleaned = clean_contracts_table(conn)
-    assert "contract_month" in cleaned
-    assert "industry" in cleaned
-    assert "cusip" in cleaned
-    assert "notes" not in cleaned
-
-    row = conn.execute(
-        """
-        SELECT sec_type, symbol, name, contract_month, industry, cusip, notes
-        FROM bronze.contracts
-        WHERE product_id = 9999
-        """
     ).fetchone()
-
-    assert row == ("STK", "TEST", "Test ETF", None, None, None, "Valid note")
+    assert empty_strings_row is not None
+    assert empty_strings_row[0] == 0

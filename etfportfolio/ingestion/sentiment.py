@@ -110,9 +110,7 @@ async def _fetch_and_store(
         logger.info("Product %d: no sentiment points returned for incremental update", product_id)
         return
 
-    valid, mismatch_type = await worker.submit(
-        validate_overlap, SENTIMENT_SPEC, product_id, new_points, last_date
-    )
+    valid, mismatch_type = await worker.submit(validate_overlap, SENTIMENT_SPEC, product_id, new_points, last_date)
 
     if not valid:
         logger.warning(
