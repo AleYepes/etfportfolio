@@ -250,6 +250,10 @@ def _write_account_id(account_id: str, target_env: Path) -> None:
     if target_env.exists():
         with contextlib.suppress(Exception):
             lines = target_env.read_text(encoding="utf-8").splitlines()
+
+    if settings.account_id == account_id and f"ACCOUNT_ID={account_id}" in lines:
+        return
+
     found = False
     new_lines: list[str] = []
     for line in lines:

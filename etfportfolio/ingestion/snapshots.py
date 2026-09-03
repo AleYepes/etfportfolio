@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime
 from typing import Any
 
@@ -8,8 +7,6 @@ import httpx
 from etfportfolio.core.db import AsyncDbWorker
 from etfportfolio.ingestion import endpoints, session
 from etfportfolio.ingestion.utils import content_address, store_blob
-
-logger = logging.getLogger(__name__)
 
 
 def store_snapshot(
@@ -58,4 +55,3 @@ async def fetch_snapshot(
     url_prefix, url_slug, full_url = ep.resolve(product_id=product_id, account_id=account_id)
     _, payload = await session.fetch_with_retry(client, full_url)
     await worker.submit(store_snapshot, product_id, url_prefix, url_slug, payload or {})
-    logger.info("Product %d: snapshot %s stored", product_id, ep.name)

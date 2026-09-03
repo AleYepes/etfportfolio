@@ -270,4 +270,5 @@ def is_fresh(last_seen: datetime | None, hours: float) -> bool:
     now = datetime.now(UTC)
     if last_seen.tzinfo is None:
         last_seen = last_seen.replace(tzinfo=UTC)
-    return (now - last_seen) <= timedelta(hours=hours)
+    delta = max(0.0, (now - last_seen).total_seconds())
+    return delta <= (hours * 3600.0)

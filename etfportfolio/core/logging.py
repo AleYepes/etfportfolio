@@ -6,7 +6,7 @@ from pathlib import Path
 from etfportfolio.core.config import settings
 from etfportfolio.core.progress import TqdmLoggingHandler
 
-NOISY_LOGGERS = ["httpx", "httpcore", "urllib3", "asyncio", "playwright"]
+NOISY_LOGGERS = ["httpx", "httpcore", "urllib3", "asyncio", "playwright", "ib_async", "ib_async.wrapper"]
 
 # Dedicated logger namespace for user-facing narrative output: phase banners,
 # per-product progress, and final summaries. Kept separate from the standard
@@ -24,7 +24,7 @@ def configure_logging(
     """Configures centralized logging for the application, on two channels.
 
     - File Handler: full structured DEBUG context, stored in a timestamped run log.
-    - Stderr Handler: diagnostic logs (INFO, or DEBUG with `verbose`) — request
+    - Stderr Handler: diagnostic logs (INFO with `verbose`, WARNING by default) — request
       attempts, retries, warnings, errors. Routed through tqdm.write so an
       active progress bar is not corrupted. Noisy third-party loggers (httpx,
       playwright, etc.) are suppressed to WARNING unless `verbose` is set.
@@ -59,7 +59,7 @@ def configure_logging(
     root_logger.addHandler(file_handler)
 
     stderr_handler = TqdmLoggingHandler(sys.stderr)
-    stderr_handler.setLevel(logging.DEBUG if verbose else logging.INFO)
+    stderr_handler.setLevel(logging.INFO if verbose else logging.WARNING)
     stderr_handler.setFormatter(formatter)
     root_logger.addHandler(stderr_handler)
 

@@ -249,7 +249,7 @@ async def _run_contract_qualification(
             return 0
 
         async with ib_connection(client_id=1) as ib:
-            with progress_bar(len(to_process), desc="Contracts") as bar:
+            with progress_bar(len(to_process), desc="Contracts", unit="contract") as bar:
                 for pid in to_process:
                     bar.set_postfix_str(str(pid))
                     if not ib.isConnected():

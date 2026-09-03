@@ -37,12 +37,12 @@ def iter_progress[T](items: Iterable[T], *, desc: str) -> Iterator[T]:
     )
 
 
-def progress_bar(total: int, *, desc: str) -> tqdm:
-    """Manual bar for concurrent loops — call ``bar.update(1)`` per completion."""
+def progress_bar(total: int | None = None, *, desc: str, unit: str = "product") -> tqdm:
+    """Manual bar for loops — call ``bar.update(...)`` per completion."""
     return tqdm(
         total=total,
         desc=desc,
-        unit="product",
+        unit=unit,
         disable=bars_disabled(),
         file=sys.stderr,
         dynamic_ncols=True,

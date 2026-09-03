@@ -38,15 +38,15 @@ def _commit_preview(
         conn.execute(
             """
             INSERT INTO bronze.snapshot_previews (product_id, hash, updated_at, last_checked_at)
-            VALUES ($1, $2, now(), now())
+            VALUES ($1, $2, (now() AT TIME ZONE 'UTC'), (now() AT TIME ZONE 'UTC'))
             ON CONFLICT (product_id) DO UPDATE SET
                 hash = EXCLUDED.hash,
                 updated_at = CASE
                     WHEN bronze.snapshot_previews.hash IS DISTINCT FROM EXCLUDED.hash
-                    THEN now()
+                    THEN (now() AT TIME ZONE 'UTC')
                     ELSE bronze.snapshot_previews.updated_at
                 END,
-                last_checked_at = now()
+                last_checked_at = (now() AT TIME ZONE 'UTC')
             """,
             [product_id, digest],
         )
@@ -64,7 +64,7 @@ def _stamp_last_checked(conn: duckdb.DuckDBPyConnection, product_id: int) -> Non
     conn.execute(
         """
         UPDATE bronze.snapshot_previews
-        SET last_checked_at = now()
+        SET last_checked_at = (now() AT TIME ZONE 'UTC')
         WHERE product_id = $1
         """,
         [product_id],

@@ -39,18 +39,18 @@ def upsert_themes(conn: duckdb.DuckDBPyConnection, payload: dict[str, Any]) -> t
 
     insert_query = """
     INSERT INTO bronze.themes (theme_id, num_id, name, parent_id, created_at, updated_at)
-    VALUES ($1, $2, $3, $4, now(), now())
+    VALUES ($1, $2, $3, $4, (now() AT TIME ZONE 'UTC'), (now() AT TIME ZONE 'UTC'))
     """
 
     update_parent_query = """
     UPDATE bronze.themes
-    SET num_id = $1, name = $2, updated_at = now()
+    SET num_id = $1, name = $2, updated_at = (now() AT TIME ZONE 'UTC')
     WHERE theme_id = $3
     """
 
     update_node_query = """
     UPDATE bronze.themes
-    SET num_id = $1, name = $2, parent_id = $3, updated_at = now()
+    SET num_id = $1, name = $2, parent_id = $3, updated_at = (now() AT TIME ZONE 'UTC')
     WHERE theme_id = $4
     """
 
@@ -85,7 +85,7 @@ def upsert_themes(conn: duckdb.DuckDBPyConnection, payload: dict[str, Any]) -> t
                 existing_ids.add(theme_id)
             n_count += 1
 
-        conn.execute("UPDATE bronze.themes SET last_checked_at = now()")
+        conn.execute("UPDATE bronze.themes SET last_checked_at = (now() AT TIME ZONE 'UTC')")
         conn.execute("COMMIT")
     except Exception:
         conn.execute("ROLLBACK")
@@ -103,7 +103,8 @@ async def sync(client: httpx.AsyncClient, force: bool = False) -> tuple[int, int
                 now = datetime.now(UTC)
                 if last_checked.tzinfo is None:
                     last_checked = last_checked.replace(tzinfo=UTC)
-                hours = round((now - last_checked).total_seconds() / 3600.0, 1)
+                seconds = max(0.0, (now - last_checked).total_seconds())
+                hours = round(seconds / 3600.0, 1)
                 console.info(f"Themes sync skipped (checked {hours}h ago; use --force to refresh).")
                 return await worker.submit(_count_themes)
 

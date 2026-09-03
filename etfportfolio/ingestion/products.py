@@ -10,6 +10,7 @@ import httpx
 from etfportfolio.core.config import settings
 from etfportfolio.core.db import AsyncDbWorker
 from etfportfolio.core.logging import console
+from etfportfolio.core.progress import progress_bar
 from etfportfolio.ingestion.session import build_async_client
 from etfportfolio.ingestion.utils import is_fresh
 
@@ -42,7 +43,7 @@ def _count_products(conn: duckdb.DuckDBPyConnection) -> int:
 
 
 def _stamp_products_last_checked(conn: duckdb.DuckDBPyConnection) -> None:
-    conn.execute("UPDATE bronze.products SET last_checked_at = now()")
+    conn.execute("UPDATE bronze.products SET last_checked_at = (now() AT TIME ZONE 'UTC')")
 
 
 def upsert_products(conn: duckdb.DuckDBPyConnection, products: list[dict[str, Any]]) -> int:
@@ -57,7 +58,7 @@ def upsert_products(conn: duckdb.DuckDBPyConnection, products: list[dict[str, An
         assoc_entity_id, fc_conid, created_at, updated_at
     ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-        now(), now()
+        (now() AT TIME ZONE 'UTC'), (now() AT TIME ZONE 'UTC')
     )
     ON CONFLICT (product_id) DO UPDATE SET
         product_type = EXCLUDED.product_type,
@@ -74,7 +75,7 @@ def upsert_products(conn: duckdb.DuckDBPyConnection, products: list[dict[str, An
         is_new_product = EXCLUDED.is_new_product,
         assoc_entity_id = EXCLUDED.assoc_entity_id,
         fc_conid = EXCLUDED.fc_conid,
-        updated_at = now()
+        updated_at = (now() AT TIME ZONE 'UTC')
     """
 
     count = 0
@@ -126,51 +127,62 @@ async def sync(client: httpx.AsyncClient | None = None, force: bool = False) -> 
                     now = datetime.now(UTC)
                     if last_checked.tzinfo is None:
                         last_checked = last_checked.replace(tzinfo=UTC)
-                    hours = round((now - last_checked).total_seconds() / 3600.0, 1)
+                    seconds = max(0.0, (now - last_checked).total_seconds())
+                    hours = round(seconds / 3600.0, 1)
                     console.info(f"Products sync skipped (checked {hours}h ago; use --force to refresh).")
                     return await worker.submit(_count_products)
 
-            while True:
-                logger.info("Fetching products page %d (pageSize=%d)...", page_number, PAGE_SIZE)
-                url = "/webrest/search/products-by-filters"
-                payload = {
-                    "domain": "ie",
-                    "newProduct": "all",
-                    "pageNumber": page_number,
-                    "pageSize": PAGE_SIZE,
-                    "productCountry": [],
-                    "productSymbol": "",
-                    "productType": ["ETF", "FUND"],
-                    "sortDirection": "asc",
-                    "sortField": "conid",
-                }
-                resp = await client.post(url, json=payload)
-                if not resp.is_success:
-                    logger.error(
-                        "Products crawl failed at page %d with status %d: %s",
-                        page_number,
-                        resp.status_code,
-                        resp.text,
-                    )
-                    break
+            existing_count = await worker.submit(_count_products)
+            initial_total = existing_count if existing_count > 0 else None
 
-                data = resp.json()
-                products_list = data.get("products", [])
-                logger.info("Received %d products on page %d", len(products_list), page_number)
+            with progress_bar(initial_total, desc="Products", unit="product") as bar:
+                while True:
+                    bar.set_postfix_str(f"page {page_number}")
+                    logger.debug("Fetching products page %d (pageSize=%d)...", page_number, PAGE_SIZE)
+                    url = "/webrest/search/products-by-filters"
+                    payload = {
+                        "domain": "ie",
+                        "newProduct": "all",
+                        "pageNumber": page_number,
+                        "pageSize": PAGE_SIZE,
+                        "productCountry": [],
+                        "productSymbol": "",
+                        "productType": ["ETF", "FUND"],
+                        "sortDirection": "asc",
+                        "sortField": "conid",
+                    }
+                    resp = await client.post(url, json=payload)
+                    if not resp.is_success:
+                        logger.error(
+                            "Products crawl failed at page %d with status %d: %s",
+                            page_number,
+                            resp.status_code,
+                            resp.text,
+                        )
+                        break
 
-                await worker.submit(upsert_products, products_list)
-                total_synced += len(products_list)
+                    data = resp.json()
+                    products_list = data.get("products", [])
+                    logger.debug("Received %d products on page %d", len(products_list), page_number)
 
-                if len(products_list) < PAGE_SIZE:
-                    logger.info(
-                        "Pagination complete after %d pages. Total products: %d",
-                        page_number,
-                        total_synced,
-                    )
-                    clean_complete = True
-                    break
+                    if products_list:
+                        await worker.submit(upsert_products, products_list)
+                        total_synced += len(products_list)
+                        bar.update(len(products_list))
 
-                page_number += 1
+                    if len(products_list) < PAGE_SIZE:
+                        logger.debug(
+                            "Pagination complete after %d pages. Total products: %d",
+                            page_number,
+                            total_synced,
+                        )
+                        clean_complete = True
+                        if bar.total and total_synced != bar.total:
+                            bar.total = total_synced
+                            bar.refresh()
+                        break
+
+                    page_number += 1
 
             if clean_complete:
                 await worker.submit(_stamp_products_last_checked)
