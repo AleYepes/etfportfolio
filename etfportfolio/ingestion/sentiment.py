@@ -13,10 +13,13 @@ import httpx
 
 from etfportfolio.core.config import settings
 from etfportfolio.core.db import AsyncDbWorker
+from etfportfolio.core.logging import console
 from etfportfolio.core.progress import progress_bar
 from etfportfolio.ingestion import endpoints, session
 from etfportfolio.ingestion.utils import (
     SENTIMENT_SPEC,
+    is_series_fresh,
+    overlap_start_for,
     replace_series,
     upsert_series,
     validate_overlap,
@@ -34,6 +37,20 @@ def _get_last_date(conn: duckdb.DuckDBPyConnection, product_id: int) -> datetime
         [product_id],
     ).fetchone()
     return row[0] if row and row[0] else None
+
+
+def _load_sentiment_series_status(
+    conn: duckdb.DuckDBPyConnection,
+) -> dict[int, tuple[datetime | None, datetime | None]]:
+    """Load product_id -> (MAX(date), MAX(updated_at)) from bronze.sentiment."""
+    rows = conn.execute(
+        """
+        SELECT product_id, MAX(date), MAX(updated_at)
+        FROM bronze.sentiment
+        GROUP BY product_id
+        """
+    ).fetchall()
+    return {row[0]: (row[1], row[2]) for row in rows}
 
 
 def _extract_sentiment_points(payload: dict[str, Any] | None) -> dict[datetime, dict[str, Any]]:
@@ -92,7 +109,7 @@ async def _fetch_and_store(
         return
 
     # Incremental fetch
-    overlap_start = last_date - timedelta(days=7)
+    overlap_start = overlap_start_for(last_date)
     from_date = (overlap_start - timedelta(days=2)).strftime("%Y-%m-%d")
     to_date = yesterday.strftime("%Y-%m-%d")
     _, _, full_url = ep.resolve(
@@ -149,18 +166,14 @@ async def _fetch_and_store(
         )
         return
 
-    # Only persist points strictly newer than the existing latest date.
-    points_to_store = {date: point for date, point in new_points.items() if date > last_date}
-
-    if points_to_store:
-        await worker.submit(upsert_series, SENTIMENT_SPEC, product_id, points_to_store)
-        logger.info(
-            "Product %d: incremental sentiment update complete (%d new points)",
-            product_id,
-            len(points_to_store),
-        )
-    else:
-        logger.info("Product %d: no new sentiment points to store", product_id)
+    # Overlap validated: persist validated overlap window and new tail (trim unvetted fetch margin)
+    points_to_store = {date: point for date, point in new_points.items() if date >= overlap_start}
+    await worker.submit(upsert_series, SENTIMENT_SPEC, product_id, points_to_store)
+    logger.info(
+        "Product %d: incremental sentiment update complete (%d points)",
+        product_id,
+        len(points_to_store),
+    )
 
 
 async def _run_sentiment_ingestion(
@@ -178,11 +191,33 @@ async def _run_sentiment_ingestion(
         if not target_ids:
             return 0
 
-        logger.info("Sentiment ingestion: %d products to process", len(target_ids))
+        if force:
+            to_process = target_ids
+        else:
+            status_cache = await worker.submit(_load_sentiment_series_status)
+            today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+            yesterday = today - timedelta(days=1)
+            to_process = [
+                pid
+                for pid in target_ids
+                if not is_series_fresh(status_cache.get(pid), yesterday, settings.freshness_window_hours)
+            ]
+
+        skipped = len(target_ids) - len(to_process)
+        if skipped:
+            console.info(f"{skipped}/{len(target_ids)} products up to date, {len(to_process)} to process.")
+        else:
+            console.info(f"Processing {len(target_ids)} product(s)...")
+
+        if not to_process:
+            console.info("Done. All products are up to date.")
+            return 0
+
+        logger.info("Sentiment ingestion: %d products to process", len(to_process))
         ep = endpoints.ENDPOINTS_BY_NAME["sentiment"]
         semaphore = asyncio.Semaphore(settings.sentiment_concurrency)
 
-        with progress_bar(len(target_ids), desc="Sentiment") as bar:
+        with progress_bar(len(to_process), desc="Sentiment") as bar:
 
             async def process_one(product_id: int):
                 async with semaphore:
@@ -197,10 +232,10 @@ async def _run_sentiment_ingestion(
                     finally:
                         bar.update(1)
 
-            tasks = [process_one(pid) for pid in target_ids]
+            tasks = [process_one(pid) for pid in to_process]
             await asyncio.gather(*tasks)
 
-    return len(target_ids)
+        return len(to_process)
 
 
 async def sync(

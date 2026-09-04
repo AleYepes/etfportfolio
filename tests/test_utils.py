@@ -13,6 +13,8 @@ from etfportfolio.ingestion.utils import (
     content_address,
     gc_preview_blob,
     is_fresh,
+    is_series_fresh,
+    overlap_start_for,
     replace_series,
     store_blob,
     upsert_series,
@@ -331,3 +333,86 @@ def test_sentiment_fixture_overlap_and_archive(db_conn):
         "SELECT COUNT(*) FROM cold_storage.sentiment WHERE product_id = 1001 AND reason = 'value_mismatch'"
     ).fetchone()[0]
     assert cold_rows == len(points)
+
+
+def test_is_series_fresh():
+    now = datetime.now(UTC)
+    yesterday = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+
+    # 1. None or empty status is never fresh
+    assert is_series_fresh(None, yesterday, 24.0) is False
+    assert is_series_fresh((None, None), yesterday, 24.0) is False
+
+    # 2. Fresh by date (date >= yesterday), even if updated_at is stale or None
+    assert is_series_fresh((yesterday, None), yesterday, 24.0) is True
+    assert is_series_fresh((yesterday + timedelta(days=1), None), yesterday, 24.0) is True
+    stale_updated = (now - timedelta(hours=48)).replace(tzinfo=None)
+    assert is_series_fresh((yesterday, stale_updated), yesterday, 24.0) is True
+
+    # 3. Fresh by updated_at (date < yesterday, but updated_at within 24h)
+    old_date = yesterday - timedelta(days=3)
+    recent_updated = (now - timedelta(hours=2)).replace(tzinfo=None)
+    assert is_series_fresh((old_date, recent_updated), yesterday, 24.0) is True
+
+    # 4. Stale: date < yesterday AND updated_at > 24h ago
+    assert is_series_fresh((old_date, stale_updated), yesterday, 24.0) is False
+
+
+def test_upsert_series_updates_updated_at_on_overlap(db_conn):
+    old_time = datetime(2026, 8, 1, 10, 0, 0)
+    bar_date = datetime(2026, 8, 1, 0, 0, 0)
+
+    # Insert an initial bar directly with old_time
+    db_conn.execute(
+        """
+        INSERT INTO bronze.prices (product_id, date, close, updated_at)
+        VALUES (1001, $1, 100.0, $2)
+        """,
+        [bar_date, old_time],
+    )
+
+    row = db_conn.execute("SELECT updated_at FROM bronze.prices WHERE product_id = 1001").fetchone()
+    assert row[0] == old_time
+
+    # Upsert with identical bar data on overlapping date
+    overlap_points = {
+        bar_date: {
+            "open": 99.0,
+            "high": 101.0,
+            "low": 98.0,
+            "close": 100.0,
+            "volume": 1000.0,
+            "average": 100.0,
+            "bar_count": 50,
+        }
+    }
+    upsert_series(db_conn, PRICES_SPEC, 1001, overlap_points)
+
+    row = db_conn.execute("SELECT updated_at, close FROM bronze.prices WHERE product_id = 1001").fetchone()
+    assert row[0] > old_time
+    assert row[1] == 100.0
+
+    # Ensure no duplicate row was created
+    count = db_conn.execute("SELECT COUNT(*) FROM bronze.prices WHERE product_id = 1001").fetchone()[0]
+    assert count == 1
+
+
+def test_overlap_start_for_margin_trimming():
+    last_date = datetime(2026, 8, 10, 0, 0)
+    start = overlap_start_for(last_date)
+    assert start == datetime(2026, 8, 3, 0, 0)  # exactly 7 days prior
+
+    # Simulating margin: dates 9 days prior (fetch margin) vs 7 days prior (W) vs tail
+    incoming_dates = [
+        datetime(2026, 8, 1, 0, 0),  # 9 days prior (margin, should be trimmed)
+        datetime(2026, 8, 2, 0, 0),  # 8 days prior (margin, should be trimmed)
+        datetime(2026, 8, 3, 0, 0),  # 7 days prior (start of W, kept)
+        datetime(2026, 8, 10, 0, 0),  # last_date (end of W, kept)
+        datetime(2026, 8, 11, 0, 0),  # tail (kept)
+    ]
+    trimmed = [d for d in incoming_dates if d >= start]
+    assert trimmed == [
+        datetime(2026, 8, 3, 0, 0),
+        datetime(2026, 8, 10, 0, 0),
+        datetime(2026, 8, 11, 0, 0),
+    ]

@@ -268,3 +268,17 @@ def is_fresh(last_seen: datetime | None, hours: float) -> bool:
         last_seen = last_seen.replace(tzinfo=UTC)
     delta = max(0.0, (now - last_seen).total_seconds())
     return delta <= (hours * 3600.0)
+
+
+def is_series_fresh(
+    status: tuple[datetime | None, datetime | None] | None,
+    target_date: datetime,
+    hours: float,
+) -> bool:
+    """True iff series has points >= target_date OR last_updated is within hours."""
+    if not status:
+        return False
+    last_date, last_updated = status
+    if last_date is not None and last_date >= target_date:
+        return True
+    return is_fresh(last_updated, hours)

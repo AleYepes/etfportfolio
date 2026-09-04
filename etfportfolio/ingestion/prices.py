@@ -13,10 +13,13 @@ from ib_async import BarData, Contract
 
 from etfportfolio.core.config import settings
 from etfportfolio.core.db import AsyncDbWorker
+from etfportfolio.core.logging import console
 from etfportfolio.core.progress import progress_bar
 from etfportfolio.ingestion.gateway import IBConnectionError, ib_connection
 from etfportfolio.ingestion.utils import (
     PRICES_SPEC,
+    is_series_fresh,
+    overlap_start_for,
     replace_series,
     upsert_series,
     validate_overlap,
@@ -98,6 +101,18 @@ def _get_last_date(conn: duckdb.DuckDBPyConnection, product_id: int) -> datetime
         [product_id],
     ).fetchone()
     return row[0] if row and row[0] else None
+
+
+def _load_price_series_status(conn: duckdb.DuckDBPyConnection) -> dict[int, tuple[datetime | None, datetime | None]]:
+    """Load product_id -> (MAX(date), MAX(updated_at)) from bronze.prices."""
+    rows = conn.execute(
+        """
+        SELECT product_id, MAX(date), MAX(updated_at)
+        FROM bronze.prices
+        GROUP BY product_id
+        """
+    ).fetchall()
+    return {row[0]: (row[1], row[2]) for row in rows}
 
 
 def _extract_bars(
@@ -230,18 +245,15 @@ async def _fetch_and_store(
             )
         return
 
-    # Only persist points strictly newer than the existing latest date
-    points_to_store = {date: point for date, point in new_bars.items() if date > last_date}
-
-    if points_to_store:
-        await worker.submit(upsert_series, PRICES_SPEC, product.product_id, points_to_store)
-        logger.info(
-            "Product %d: incremental price update complete (%d new bars)",
-            product.product_id,
-            len(points_to_store),
-        )
-    else:
-        logger.info("Product %d: no new price bars to store", product.product_id)
+    # Overlap validated: persist validated overlap window and new tail (trim unvetted fetch margin)
+    overlap_start = overlap_start_for(last_date)
+    points_to_store = {date: point for date, point in new_bars.items() if date >= overlap_start}
+    await worker.submit(upsert_series, PRICES_SPEC, product.product_id, points_to_store)
+    logger.info(
+        "Product %d: incremental price update complete (%d bars)",
+        product.product_id,
+        len(points_to_store),
+    )
 
 
 async def _run_price_ingestion(
@@ -259,11 +271,33 @@ async def _run_price_ingestion(
                 return 0
             raise RuntimeError("silver.products is empty. Run contracts phase first.")
 
-        logger.info("Price ingestion: %d products to process", len(products))
+        if force:
+            to_process = products
+        else:
+            status_cache = await worker.submit(_load_price_series_status)
+            today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+            yesterday = today - timedelta(days=1)
+            to_process = [
+                p
+                for p in products
+                if not is_series_fresh(status_cache.get(p.product_id), yesterday, settings.freshness_window_hours)
+            ]
+
+        skipped = len(products) - len(to_process)
+        if skipped:
+            console.info(f"{skipped}/{len(products)} products up to date, {len(to_process)} to process.")
+        else:
+            console.info(f"Processing {len(products)} product(s)...")
+
+        if not to_process:
+            console.info("Done. All products are up to date.")
+            return 0
+
+        logger.info("Price ingestion: %d products to process", len(to_process))
 
         async with ib_connection(client_id=2) as ib:
-            with progress_bar(len(products), desc="Prices") as bar:
-                for product in products:
+            with progress_bar(len(to_process), desc="Prices") as bar:
+                for product in to_process:
                     bar.set_postfix_str(str(product.product_id))
                     if not ib.isConnected():
                         raise IBConnectionError("IB Gateway connection was lost during price ingestion.")
@@ -276,7 +310,7 @@ async def _run_price_ingestion(
                     finally:
                         bar.update(1)
 
-        return len(products)
+        return len(to_process)
 
 
 async def sync(
