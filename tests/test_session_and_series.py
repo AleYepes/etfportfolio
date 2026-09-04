@@ -2,7 +2,6 @@ import httpx
 import pytest
 import respx
 
-from etfportfolio.ingestion.sentiment import _extract_sentiment_points
 from etfportfolio.ingestion.session import fetch_with_retry
 
 
@@ -39,37 +38,6 @@ async def test_fetch_with_retry_200_success():
         assert payload == {"result": "ok"}
 
 
-def test_extract_sentiment_points_empty():
-    assert _extract_sentiment_points(None) == {}
-    assert _extract_sentiment_points({}) == {}
-    assert _extract_sentiment_points({"sentiment": []}) == {}
-
-
-def test_extract_sentiment_points_valid():
-    payload = {
-        "sentiment": [
-            {
-                "datetime": 1725000000000,
-                "svolatility": 0.12,
-                "sdispersion": 0.34,
-                "svscore": 0.56,
-                "sbuzz": 10.0,
-                "svolume": 20.0,
-                "sdelta": 0.05,
-                "sscore": 0.8,
-                "smean": 0.75,
-                "price": 999.0,  # Should be stripped
-            }
-        ]
-    }
-    extracted = _extract_sentiment_points(payload)
-    assert len(extracted) == 1
-    point = list(extracted.values())[0]
-    assert "price" not in point
-    assert point["svolatility"] == 0.12
-    assert point["sscore"] == 0.8
-
-
 def test_reconcile_account_id(tmp_path):
     from etfportfolio.core.config import settings
     from etfportfolio.ingestion.session import reconcile_account_id
@@ -90,14 +58,12 @@ def test_load_series_status():
 
     from etfportfolio.core.db import apply_schema
     from etfportfolio.ingestion.prices import _load_price_series_status
-    from etfportfolio.ingestion.sentiment import _load_sentiment_series_status
 
     conn = duckdb.connect(":memory:")
     apply_schema(conn)
 
     # Empty tables return empty dicts
     assert _load_price_series_status(conn) == {}
-    assert _load_sentiment_series_status(conn) == {}
 
     # Insert test product into bronze.products
     conn.execute(
@@ -129,17 +95,3 @@ def test_load_series_status():
     price_status = _load_price_series_status(conn)
     assert price_status[1001] == (d2, u2)
     assert price_status[1002] == (d1, u1)
-
-    # Populate bronze.sentiment
-    conn.execute(
-        "INSERT INTO bronze.sentiment (product_id, date, sscore, updated_at) VALUES (1001, $1, 0.5, $2)",
-        [d1, u1],
-    )
-    conn.execute(
-        "INSERT INTO bronze.sentiment (product_id, date, sscore, updated_at) VALUES (1001, $1, 0.8, $2)",
-        [d2, u2],
-    )
-
-    sentiment_status = _load_sentiment_series_status(conn)
-    assert sentiment_status[1001] == (d2, u2)
-    assert 1002 not in sentiment_status

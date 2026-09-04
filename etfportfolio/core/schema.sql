@@ -122,22 +122,6 @@ CREATE TABLE IF NOT EXISTS bronze.prices (
     PRIMARY KEY (product_id, date)
 );
 
--- Sentiment daily metrics
-CREATE TABLE IF NOT EXISTS bronze.sentiment (
-    product_id   INTEGER NOT NULL REFERENCES bronze.products(product_id),
-    date         TIMESTAMP NOT NULL,
-    svolatility  DOUBLE,
-    sdispersion  DOUBLE,
-    svscore      DOUBLE,
-    sbuzz        DOUBLE,
-    svolume      DOUBLE,
-    sdelta       DOUBLE,
-    sscore       DOUBLE,
-    smean        DOUBLE,
-    updated_at   TIMESTAMP NOT NULL,
-    PRIMARY KEY (product_id, date)
-);
-
 -- Cold storage archives
 CREATE TABLE  IF NOT EXISTS cold_storage.prices (
     product_id   INTEGER NOT NULL,
@@ -150,22 +134,6 @@ CREATE TABLE  IF NOT EXISTS cold_storage.prices (
     volume       DOUBLE,
     average      DOUBLE,
     bar_count    INTEGER,
-    reason       VARCHAR,
-    PRIMARY KEY (product_id, run_id, date)
-);
-
-CREATE TABLE  IF NOT EXISTS cold_storage.sentiment (
-    product_id   INTEGER NOT NULL,
-    run_id       TIMESTAMP NOT NULL,
-    date         TIMESTAMP NOT NULL,
-    svolatility  DOUBLE,
-    sdispersion  DOUBLE,
-    svscore      DOUBLE,
-    sbuzz        DOUBLE,
-    svolume      DOUBLE,
-    sdelta       DOUBLE,
-    sscore       DOUBLE,
-    smean        DOUBLE,
     reason       VARCHAR,
     PRIMARY KEY (product_id, run_id, date)
 );

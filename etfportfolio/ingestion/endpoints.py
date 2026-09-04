@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
 
-_DETAILS_EXCLUDED = frozenset({"landing", "sentiment"})
+_DETAILS_EXCLUDED = frozenset({"landing"})
 
 
 @dataclass(frozen=True)
@@ -70,17 +70,11 @@ ENDPOINTS: list[Endpoint] = [
         slug_template="{product_id}&max=999999999&lang=en",
         gated=False,
     ),
-    Endpoint(
-        name="sentiment",
-        url_prefix="/tws.proxy/sma/request?type=search&conid=",
-        slug_template="{product_id}&from={from_date}%2000:00&to={to_date}%2000:00&bar_size=1D&lang=en",
-        gated=False,
-    ),
 ]
 
 ENDPOINTS_BY_NAME: dict[str, Endpoint] = {ep.name: ep for ep in ENDPOINTS}
 
-# Snapshot endpoints the details phase actually fetches (excludes landing + sentiment).
+# Snapshot endpoints the details phase actually fetches (excludes landing).
 DETAILS_ENDPOINTS: list[Endpoint] = [ep for ep in ENDPOINTS if ep.name not in _DETAILS_EXCLUDED]
 GATED_ENDPOINTS: list[Endpoint] = [ep for ep in DETAILS_ENDPOINTS if ep.gated]
 UNGATED_ENDPOINTS: list[Endpoint] = [ep for ep in DETAILS_ENDPOINTS if not ep.gated]

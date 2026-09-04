@@ -12,7 +12,7 @@ uv run playwright install chromium
 ## Usage
 
 ### Ingestion Pipeline
-Executes the full pipeline (Phase 1: Products → Phase 2: Contracts → Phase 3: Prices → Phase 4: Session → Phase 5: Themes → Phase 6: Details → Phase 7: Sentiment):
+Executes the full pipeline (Phase 1: Products → Phase 2: Contracts → Phase 3: Prices → Phase 4: Session → Phase 5: Themes → Phase 6: Details):
 
 ```bash
 # Ingest all phases
@@ -25,7 +25,6 @@ uv run python main.py ingest contracts
 uv run python main.py ingest prices
 uv run python main.py ingest themes
 uv run python main.py ingest details
-uv run python main.py ingest sentiment
 
 # Limit number of products
 uv run python main.py ingest --limit 10

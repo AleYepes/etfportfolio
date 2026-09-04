@@ -1,6 +1,6 @@
 """Ingestion-shared helpers
 
-Content-addressing, snapshot blob store, and the prices/sentiment timeseries
+Content-addressing, snapshot blob store, and the prices timeseries
 overlap-validate / replace / upsert path (including mismatch-triggered
 cold_storage archives).
 """
@@ -104,13 +104,6 @@ PRICES_SPEC = SeriesSpec(
     cold_table="cold_storage.prices",
     columns=("open", "high", "low", "close", "volume", "average", "bar_count"),
     value_columns=("open", "high", "low", "close", "volume", "average"),
-)
-
-SENTIMENT_SPEC = SeriesSpec(
-    bronze_table="bronze.sentiment",
-    cold_table="cold_storage.sentiment",
-    columns=("svolatility", "sdispersion", "svscore", "sbuzz", "svolume", "sdelta", "sscore", "smean"),
-    value_columns=("svolatility", "sdispersion", "svscore", "sbuzz", "svolume", "sdelta", "sscore", "smean"),
 )
 
 

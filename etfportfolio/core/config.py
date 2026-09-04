@@ -19,7 +19,6 @@ class Settings(BaseSettings):
     log_dir: str = "data/logs"
     ibkr_base_url: str = "https://www.interactivebrokers.ie"
     details_concurrency: int = 10
-    sentiment_concurrency: int = 1
     freshness_window_hours: float = 24.0
 
     # IB Gateway

@@ -7,7 +7,7 @@ from etfportfolio.core.config import settings
 from etfportfolio.core.db import AsyncDbWorker
 from etfportfolio.core.logging import console
 from etfportfolio.core.progress import progress_bar
-from etfportfolio.ingestion import contracts, details, prices, products, sentiment, session, themes
+from etfportfolio.ingestion import contracts, details, prices, products, session, themes
 
 logger = logging.getLogger(__name__)
 
@@ -165,20 +165,6 @@ async def _run_full(product_ids: str | None, limit: int | None, force: bool) -> 
         async with AsyncDbWorker(settings.db_path) as worker:
             target_ids = await worker.submit(products.resolve_target_ids, product_ids, limit)
             await _run_details_phase(worker, client, account_id, target_ids, force)
-
-        console.info("=== Phase 7: Sentiment series ===")
-        try:
-            s_count = await sentiment.sync(
-                client=client,
-                account_id=account_id,
-                product_ids=product_ids,
-                limit=limit,
-                force=force,
-            )
-            console.info(f"Sentiment series complete. {s_count} products processed.")
-        except Exception as e:
-            logger.error("Sentiment series failed: %s", e)
-            raise
     finally:
         await client.aclose()
 
@@ -213,10 +199,6 @@ class Ingest:
 
     def details(self, product_ids: str | None = None, limit: int | None = None, force: bool = False) -> None:
         asyncio.run(_run_details_only(product_ids, limit, force))
-
-    def sentiment(self, product_ids: str | None = None, limit: int | None = None, force: bool = False) -> None:
-        count = asyncio.run(sentiment.sync(product_ids=product_ids, limit=limit, force=force))
-        console.info(f"Sentiment series complete. {count} products processed.")
 
 
 cli = Ingest()

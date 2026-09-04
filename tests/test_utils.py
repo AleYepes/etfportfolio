@@ -8,7 +8,6 @@ from etfportfolio.core.utils import decompress_payload
 from etfportfolio.ingestion.utils import (
     OVERLAP_CALENDAR_DAYS,
     PRICES_SPEC,
-    SENTIMENT_SPEC,
     canonical_bytes,
     content_address,
     gc_preview_blob,
@@ -294,45 +293,6 @@ def test_upsert_series(db_conn):
     assert len(rows) == 2
     assert rows[0][1] == 12.0
     assert rows[1][1] == 12.5
-
-
-def test_sentiment_fixture_overlap_and_archive(db_conn):
-    import json
-    from pathlib import Path
-
-    from etfportfolio.ingestion.sentiment import _extract_sentiment_points
-
-    fixture_path = Path("tests/fixtures/sentiment_incremental.json")
-    raw = json.loads(fixture_path.read_text())
-    points = _extract_sentiment_points(raw)
-    assert len(points) > 0
-
-    sorted_dates = sorted(points.keys())
-    last_date = sorted_dates[-1]
-
-    # Populate bronze.sentiment with all points
-    replace_series(db_conn, SENTIMENT_SPEC, 1001, points, archive=False)
-    assert db_conn.execute("SELECT COUNT(*) FROM bronze.sentiment WHERE product_id = 1001").fetchone()[0] == len(points)
-
-    # Validate overlap passes on exact match
-    valid, reason = validate_overlap(db_conn, SENTIMENT_SPEC, 1001, points, last_date)
-    assert valid is True
-    assert reason is None
-
-    # Test archive to cold_storage.sentiment on mismatch
-    mismatched = dict(points)
-    mismatched[last_date] = dict(mismatched[last_date])
-    mismatched[last_date]["sscore"] = 999.99
-    valid, reason = validate_overlap(db_conn, SENTIMENT_SPEC, 1001, mismatched, last_date)
-    assert valid is False
-    assert reason == "value_mismatch"
-
-    # Replace with archive
-    replace_series(db_conn, SENTIMENT_SPEC, 1001, mismatched, archive=True, reason=reason)
-    cold_rows = db_conn.execute(
-        "SELECT COUNT(*) FROM cold_storage.sentiment WHERE product_id = 1001 AND reason = 'value_mismatch'"
-    ).fetchone()[0]
-    assert cold_rows == len(points)
 
 
 def test_is_series_fresh():
