@@ -4,38 +4,46 @@ ETF factor analysis pipeline to calculate efficient frontier portfolios.
 
 ## Setup
 
+### 1. Open and Setup an [IBKR](https://www.interactivebrokers.ie/en/home.php) account 
+
+### 2. Set up the venv
+
 ```bash
 uv sync
 uv run playwright install chromium
 ```
 
-## Usage
+## Usage (WIP)
 
-### Ingestion Pipeline
-Executes the full pipeline (Phase 1: Products → Phase 2: Contracts → Phase 3: Prices → Phase 4: Session → Phase 5: Themes → Phase 6: Details):
+### 1. Ingestion
+
+#### Full Ingestion Run
+
+Products → Contracts → Prices → Themes → Details
 
 ```bash
-# Ingest all phases
-uv run python main.py ingest
-
-# Ingest individual phases
-uv run python main.py ingest session
-uv run python main.py ingest products
-uv run python main.py ingest contracts
-uv run python main.py ingest prices
-uv run python main.py ingest themes
-uv run python main.py ingest details
-
-# Limit number of products
-uv run python main.py ingest --limit 10
-
-# Specific product IDs (comma-separated string or path to a text file)
-uv run python main.py ingest --product-ids "756733,8335"
-uv run python main.py ingest --product-ids docs/sample_product_ids.txt
-
-# Force refresh (bypass freshness windows and landing gates)
-uv run python main.py ingest --force
+uv run python main.py ingest                                # Can take 24h+ the first time
 ```
+
+#### Partial Ingestion Run
+
+```bash
+uv run python main.py ingest products                       # Unofficial IBKR product universe
+uv run python main.py ingest contracts                      # Official IBKR product contracts
+uv run python main.py ingest prices                         # Official contract price series
+uv run python main.py ingest themes                         # Unofficial investment themes
+uv run python main.py ingest details                        # Unofficial fundamental data
+```
+
+#### Optional Ingestion **Flags**
+
+```bash
+uv run python main.py ingest --limit 10
+uv run python main.py ingest --product-ids "756733,8335"    # Comma-separated string
+uv run python main.py ingest --force                        # Force refresh; bypass freshness windows
+```
+
+### 2. Panel creation for downstream analysis - *coming soon to a repo near you*
 
 ## Development & Testing
 

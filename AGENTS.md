@@ -19,3 +19,5 @@ This project runs factor-series analyses on ETF data. At a high level, it must:
   - Shared across multiple scripts within a single directory (e.g., `ingestion/`, future `panel/`) → that directory's `utils.py`.
   - Shared across multiple directories under `etfportfolio/` → `core/`.
 - **Replacement Over Deprecation**: Prefer replacing old functionality cleanly rather than accumulating deprecated alternatives.
+
+> FYI: This repo uses `uv`
