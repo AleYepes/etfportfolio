@@ -1,0 +1,362 @@
+{
+  "expenses_allocation": [
+    {
+      "name": "Management Expenses",
+      "ratio": 1.0,
+      "value": "100%"
+    },
+    {
+      "name": "Non-Management Expenses",
+      "ratio": -0.0,
+      "value": "0%"
+    }
+  ],
+  "fund_and_profile": [
+    {
+      "name": "Asset Type",
+      "name_tag": "Asset_Type",
+      "value": "Equity"
+    },
+    {
+      "name": "Classification",
+      "name_tag": "Classification",
+      "value": "Real Estate Funds"
+    },
+    {
+      "name": "Distribution Details",
+      "name_tag": "Distribution_Details",
+      "value": "Paid",
+      "value_tag": "paid_tag"
+    },
+    {
+      "name": "Domicile",
+      "name_tag": "Domicile",
+      "value": "USA"
+    },
+    {
+      "name": "Fiscal Date",
+      "name_tag": "Fiscal_Date",
+      "value": "4/30"
+    },
+    {
+      "name": "Fund Category",
+      "name_tag": "Fund_Category",
+      "value": "Open-End Funds"
+    },
+    {
+      "name": "Fund Management Company",
+      "name_tag": "Fund_Management_Company",
+      "value": "BlackRock Fund Advisors"
+    },
+    {
+      "name": "Fund Manager Benchmark",
+      "name_tag": "Fund_Manager_Benchmark",
+      "value": "Cohen and Steers Majors Realty Index"
+    },
+    {
+      "name": "Fund Market Cap Focus",
+      "name_tag": "Fund_Market_Cap_Focus",
+      "value": "Broad Market"
+    },
+    {
+      "name": "Geographical Focus",
+      "name_tag": "Geographical_Focus",
+      "value": "United States of America"
+    },
+    {
+      "name": "Inception Date",
+      "name_tag": "Inception_Date",
+      "value": "2001/01/29"
+    },
+    {
+      "name": "Launch Opening Price",
+      "name_tag": "Launch_Opening_Price",
+      "value": "2001-01-29"
+    },
+    {
+      "name": "Management Approach",
+      "name_tag": "Management_Approach",
+      "value": "Passive"
+    },
+    {
+      "name": "Management Expenses",
+      "name_tag": "management_expenses",
+      "value": "100%"
+    },
+    {
+      "name": "Manager Tenure",
+      "name_tag": "Manager_Tenure",
+      "value": "2012/01/01"
+    },
+    {
+      "name": "Objective Type",
+      "name_tag": "Objective_Type",
+      "value": "Real Estate Funds"
+    },
+    {
+      "name": "Portfolio Manager",
+      "name_tag": "Portfolio_Manager",
+      "value": "Team Managed"
+    },
+    {
+      "name": "Scheme",
+      "name_tag": "Scheme",
+      "value": "US Mutual Fund Classification"
+    },
+    {
+      "name": "Total Expense Ratio",
+      "name_tag": "Total_Expense_Ratio",
+      "value": "0.32%"
+    },
+    {
+      "name": "Total Net Assets (Month End)",
+      "name_tag": "Total_Net_Assets_Month_End",
+      "value": "$2.1B (2026/07/31)"
+    },
+    {
+      "name": "Redemption Charge Max",
+      "name_tag": "Redemption_Charge_Max",
+      "value": "5%"
+    },
+    {
+      "name": "Redemption Charge Actual",
+      "name_tag": "Redemption_Charge_Actual",
+      "value": "0%"
+    },
+    {
+      "name": "Japanese ITA Broad Category",
+      "name_tag": "Japanese ITA Broad Category",
+      "value": "Equity Fund - Open"
+    },
+    {
+      "name": "NISA category",
+      "name_tag": "NISA_category",
+      "value": "Growth & Tsumitate NISA"
+    },
+    {
+      "name": "Maturity Date",
+      "name_tag": "Maturity_Date",
+      "value": "2029-09-30"
+    }
+  ],
+  "jap_fund_warning": false,
+  "mstar": {
+    "hist": [],
+    "name": "International Large-Cap Core",
+    "selected": [],
+    "x_axis": [
+      "Core",
+      "Growth",
+      "Value"
+    ],
+    "x_axis_tag": [
+      "core",
+      "growth",
+      "value"
+    ],
+    "y_axis": [
+      "Large",
+      "Mid",
+      "Multi",
+      "Small"
+    ],
+    "y_axis_tag": [
+      "large",
+      "mid",
+      "multi",
+      "small"
+    ]
+  },
+  "objective": "The Fund seeks to match performance, before fees and expenses, of the Cohen & Steers Realty Majors Index. The benchmark index seeks to represent large and liquid REIT's that may benefit from future consolidation and securitization of the US real estate industry. REIT's must meet capitalization/liquidity criteria.",
+  "reports": [
+    {
+      "as_of_date": 1756440000000,
+      "fields": [
+        {
+          "name": "Prospectus Gross Expense Ratio",
+          "value": "0.32%"
+        },
+        {
+          "name": "Prospectus Gross Management Fee Ratio",
+          "value": "0.32%"
+        },
+        {
+          "name": "Prospectus Net Expense Ratio",
+          "value": "0.32%"
+        },
+        {
+          "name": "Prospectus Net Management Fee Ratio",
+          "value": "0.32%"
+        },
+        {
+          "name": "Prospectus Gross Other Expense Ratio",
+          "value": "0.0453%"
+        },
+        {
+          "name": "Prospectus Net Other Expense Ratio",
+          "value": "0.0453%"
+        },
+        {
+          "name": "Prospectus Gross 12b-1 Fee",
+          "value": "0.02%"
+        },
+        {
+          "name": "Prospectus Gross Acquired Fund Expense Ratio",
+          "value": "0.01%"
+        },
+        {
+          "name": "Prospectus Net 12b-1 Fee Ratio",
+          "value": "0.01%"
+        },
+        {
+          "name": "Prospectus Net Acquired Fund Expense Ratio",
+          "value": "0.01%"
+        },
+        {
+          "name": "Prospectus Fee Waiver Ratio",
+          "value": "0.05%"
+        }
+      ],
+      "name": "Prospectus Report"
+    },
+    {
+      "as_of_date": 1777521600000,
+      "fields": [
+        {
+          "is_summary": true,
+          "name": "Management Fees",
+          "value": "0.3167%"
+        },
+        {
+          "is_summary": true,
+          "name": "Non-Management Expenses",
+          "value": "0%"
+        },
+        {
+          "is_summary": true,
+          "name": "Total Expense",
+          "value": "0.3167%"
+        },
+        {
+          "is_summary": true,
+          "name": "Total Gross Expense",
+          "value": "0.3167%"
+        },
+        {
+          "is_summary": true,
+          "name": "Total Net Expense",
+          "value": "0.3167%"
+        },
+        {
+          "name": "Advisor Expenses",
+          "value": "0.3167%"
+        },
+        {
+          "name": "Other Expense",
+          "value": "0%"
+        },
+        {
+          "name": "Audit and Legal Expenses",
+          "value": "0%"
+        },
+        {
+          "name": "Misc. Expenses",
+          "value": "0.0424%"
+        },
+        {
+          "name": "Registration Expenses",
+          "value": "0.0007%"
+        },
+        {
+          "name": "Other Non-Management Fees",
+          "value": "0%"
+        },
+        {
+          "name": "Administrator Expenses",
+          "value": "0.0069%"
+        },
+        {
+          "name": "Director Expense",
+          "value": "0.0008%"
+        },
+        {
+          "name": "Postage and Printing Expenses",
+          "value": "0.0039%"
+        },
+        {
+          "name": "Other Management Fees",
+          "value": "0%"
+        },
+        {
+          "name": "Audit Expenses",
+          "value": "0%"
+        },
+        {
+          "name": "Custodian Expenses",
+          "value": "0.0001%"
+        },
+        {
+          "name": "Sub-Advisor Expenses",
+          "value": "0.0405%"
+        },
+        {
+          "name": "Advisor Reimbursements",
+          "value": "0.0023%"
+        },
+        {
+          "name": "Legal Expenses",
+          "value": "0.0026%"
+        },
+        {
+          "name": "Transfer Agent Expenses",
+          "value": "0.005%"
+        },
+        {
+          "name": "Administrator Reimbursements",
+          "value": "0.1%"
+        },
+        {
+          "name": "Accounting Services Expenses",
+          "value": "0.0455%"
+        },
+        {
+          "name": "Co-Advisor Expenses",
+          "value": "0.49%"
+        },
+        {
+          "name": "Sub-Advisor Reimbursements",
+          "value": "0.2809%"
+        },
+        {
+          "name": "Transfer Agent Expense Reimbursement",
+          "value": "0.1334%"
+        },
+        {
+          "name": "Co-Advisor Reimbursements",
+          "value": "1.4475%"
+        },
+        {
+          "name": "Non 12b-1 Expense",
+          "value": "0.0183%"
+        }
+      ],
+      "name": "Annual Report"
+    },
+    {
+      "as_of_date": 0
+    }
+  ],
+  "symbol": "ICF",
+  "themes": [
+    "Index Tracking",
+    "Ethical",
+    "Islamic",
+    "Bond Domestic Issued",
+    "Social Criteria",
+    "Leveraged",
+    "Actively Managed Etfs",
+    "Hedged",
+    "Green",
+    "Water"
+  ]
+}

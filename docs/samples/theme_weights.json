@@ -1,0 +1,40 @@
+{
+  "assetType": "STK",
+  "conid": 8335,
+  "coverage": 0.99762,
+  "exchange": "SMART",
+  "name": "ISHARES SELECT U.S. REIT ETF",
+  "symbol": "ICF",
+  "themes": [
+    {
+      "key": "006a0c27-4a9a-4766-8988-0d8acc6ede8b",
+      "name": "Discount Retail",
+      "rank_adjusted_weight": 0.009465853333333333,
+      "weight": 0.084085
+    },
+    {
+      "key": "00c23a97-6299-462b-bec4-4dfec9639ed9",
+      "name": "Last-mile Logistics",
+      "rank_adjusted_weight": 0.0806942,
+      "weight": 0.09479699999999999
+    },
+    {
+      "key": "00d0d758-0aa9-4aa6-9891-ddf03f7dbaac",
+      "name": "AI Infrastructure",
+      "rank_adjusted_weight": 0.08454973333333332,
+      "weight": 0.116982
+    },
+    {
+      "key": "030b1ecf-fdf7-4fda-8d68-0fdefe2febab",
+      "name": "Global Logistics",
+      "rank_adjusted_weight": 0.05651990666666666,
+      "weight": 0.079981
+    },
+    {
+      "key": "032b5b3b-c8ec-4b12-8c8f-8a03f0b0cbb2",
+      "name": "Accelerated Computing",
+      "rank_adjusted_weight": 0.0005801066666666667,
+      "weight": 0.043508
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "asOfDate": "20260822",
+  "content": [
+    {
+      "children": [
+        {
+          "name": "TRESGCGBDS",
+          "value": 7
+        },
+        {
+          "name": "TRESGCGSRS",
+          "value": 6
+        },
+        {
+          "name": "TRESGCGVSS",
+          "value": 7
+        }
+      ],
+      "name": "TRESGCGS",
+      "value": 7
+    },
+    {
+      "children": [
+        {
+          "name": "TRESGENERS",
+          "value": 7
+        },
+        {
+          "name": "TRESGENPIS",
+          "value": 5
+        },
+        {
+          "name": "TRESGENRRS",
+          "value": 7
+        }
+      ],
+      "name": "TRESGENS",
+      "value": 6
+    },
+    {
+      "children": [
+        {
+          "name": "TRESGSOCOS",
+          "value": 7
+        },
+        {
+          "name": "TRESGSOHRS",
+          "value": 5
+        },
+        {
+          "name": "TRESGSOPRS",
+          "value": 5
+        },
+        {
+          "name": "TRESGSOWOS",
+          "value": 6
+        }
+      ],
+      "name": "TRESGSOS",
+      "value": 6
+    },
+    {
+      "name": "TRESGCCS",
+      "value": 9
+    },
+    {
+      "name": "TRESGCS",
+      "value": 6
+    },
+    {
+      "name": "TRESGS",
+      "value": 6
+    }
+  ],
+  "coverage": 0.99762,
+  "no_settings": true,
+  "source": "CALCULATED",
+  "symbol": "ICF",
+  "title": "ESG"
+}

@@ -1,0 +1,347 @@
+{
+  "allocation_self": [
+    {
+      "formatted_weight": "-0%",
+      "name": "Other",
+      "rank": 4,
+      "vs": -1.2584902912621363,
+      "weight": -0.0022
+    },
+    {
+      "formatted_weight": "0.1%",
+      "name": "Fixed Income",
+      "rank": 3,
+      "vs": 6.554571844660198,
+      "weight": 0.0951
+    },
+    {
+      "formatted_weight": "0.15%",
+      "name": "Cash",
+      "rank": 2,
+      "vs": 0.37678640776699046,
+      "weight": 0.1452
+    },
+    {
+      "formatted_weight": "99.76%",
+      "name": "Equity",
+      "rank": 1,
+      "vs": 99.18148349514567,
+      "weight": 99.762
+    },
+    {
+      "formatted_weight": "0.04%",
+      "name": "Other",
+      "rank": 3,
+      "vs": -14.97985416666667,
+      "weight": 0.0363
+    }
+  ],
+  "as_of_date": 1785470400000,
+  "currency": [
+    {
+      "code": "CAD",
+      "formatted_weight": "0%",
+      "name": "Canadian Dollar",
+      "rank": 3,
+      "vs": 0.23672038834951456,
+      "weight": 0.0001
+    },
+    {
+      "code": "USD",
+      "formatted_weight": "99.88%",
+      "name": "US Dollar",
+      "rank": 1,
+      "vs": 103.00000097087381,
+      "weight": 99.8773
+    },
+    {
+      "formatted_weight": "0.12%",
+      "name": "<No Currency>",
+      "rank": 2,
+      "vs": -0.5720077669902922,
+      "weight": 0.1227
+    },
+    {
+      "code": "USD",
+      "formatted_weight": "99.96%",
+      "name": "US Dollar",
+      "rank": 1,
+      "vs": 121.47934583333334,
+      "weight": 99.9637
+    },
+    {
+      "formatted_weight": "0.04%",
+      "name": "<No Currency>",
+      "rank": 2,
+      "vs": -15.231831249999997,
+      "weight": 0.0363
+    }
+  ],
+  "debt_type": [
+    {
+      "formatted_weight": "0.15%",
+      "name": "Bond",
+      "rank": 10,
+      "vs": 2.0613051724137943,
+      "weight": 0.1501
+    },
+    {
+      "formatted_weight": "0.34%",
+      "name": "Sovereign Bond",
+      "rank": 9,
+      "vs": 8.980765517241382,
+      "weight": 0.3394
+    },
+    {
+      "formatted_weight": "0.36%",
+      "name": "Subordinated Note",
+      "rank": 8,
+      "vs": 0.2891836206896552,
+      "weight": 0.3613
+    },
+    {
+      "formatted_weight": "0.53%",
+      "name": "Senior Debenture",
+      "rank": 7,
+      "vs": 0.5256827586206896,
+      "weight": 0.5262
+    },
+    {
+      "formatted_weight": "0.54%",
+      "name": "Fixed Income",
+      "rank": 6,
+      "vs": 1.245696551724138,
+      "weight": 0.5404
+    }
+  ],
+  "debtor": [
+    {
+      "formatted_weight": "0.19%",
+      "name": "% Quality Not Available",
+      "rank": 6,
+      "vs": 5.071736206896552,
+      "weight": 0.1922
+    },
+    {
+      "formatted_weight": "0.41%",
+      "name": "% Quality/BB",
+      "rank": 5,
+      "vs": 3.687802586206898,
+      "weight": 0.4089
+    },
+    {
+      "formatted_weight": "0.95%",
+      "name": "% Quality/AAA",
+      "rank": 4,
+      "vs": 3.1161577586206892,
+      "weight": 0.9463
+    },
+    {
+      "formatted_weight": "11.66%",
+      "name": "% Quality/AA",
+      "rank": 3,
+      "vs": 18.393898275862067,
+      "weight": 11.6628
+    },
+    {
+      "formatted_weight": "41.21%",
+      "name": "% Quality/A",
+      "rank": 2,
+      "vs": 26.68237500000001,
+      "weight": 41.2105
+    }
+  ],
+  "geographic": {
+    "asia": "0.3%",
+    "em_asia": "1.46%",
+    "em_eu": "0.61%",
+    "eu": "1.69%",
+    "jpn": "9.22%",
+    "latam": "99.51%",
+    "mena": "4.8%",
+    "na": "0.1%",
+    "nafr": "2.64%",
+    "others": "0.12%",
+    "uk": "0.43%",
+    "us": "99.88%"
+  },
+  "industry": [
+    {
+      "formatted_weight": "0.23%",
+      "name": "Not Classified - Non Equity",
+      "rank": 2,
+      "vs": 1.954033980582524,
+      "weight": 0.2312
+    },
+    {
+      "formatted_weight": "99.76%",
+      "name": "Real Estate",
+      "rank": 1,
+      "vs": 93.58511456310679,
+      "weight": 99.7619
+    },
+    {
+      "formatted_weight": "1.77%",
+      "name": "Basic Materials",
+      "rank": 10,
+      "vs": 2.2508541666666666,
+      "weight": 1.7704
+    },
+    {
+      "formatted_weight": "1.86%",
+      "name": "Real Estate",
+      "rank": 9,
+      "vs": 2.255610416666667,
+      "weight": 1.8647
+    },
+    {
+      "formatted_weight": "10.54%",
+      "name": "Consumer Cyclicals",
+      "rank": 2,
+      "vs": 12.925277083333329,
+      "weight": 10.54
+    }
+  ],
+  "investor_country": [
+    {
+      "country_code": "US",
+      "formatted_weight": "99.88%",
+      "name": "United States",
+      "rank": 1,
+      "vs": 100.23877572815536,
+      "weight": 99.8773
+    },
+    {
+      "formatted_weight": "0.12%",
+      "name": "Unidentified",
+      "rank": 2,
+      "vs": 1.116514563106796,
+      "weight": 0.1228
+    },
+    {
+      "country_code": "BM",
+      "formatted_weight": "0.08%",
+      "name": "Bermuda",
+      "rank": 7,
+      "vs": 0.09611875000000002,
+      "weight": 0.0773
+    },
+    {
+      "country_code": "CA",
+      "formatted_weight": "0.02%",
+      "name": "Canada",
+      "rank": 9,
+      "vs": 0.02657083333333334,
+      "weight": 0.0193
+    },
+    {
+      "country_code": "CH",
+      "formatted_weight": "0.32%",
+      "name": "Switzerland",
+      "rank": 4,
+      "vs": 0.3800166666666666,
+      "weight": 0.3215
+    }
+  ],
+  "maturity": [
+    {
+      "formatted_weight": "0.07%",
+      "name": "% Maturity 1 to 3 Years",
+      "rank": 7,
+      "vs": 11.553993103448274,
+      "weight": 0.0653
+    },
+    {
+      "formatted_weight": "0.27%",
+      "name": "% Maturity Less than 1 Year",
+      "rank": 6,
+      "vs": 2.491310344827586,
+      "weight": 0.2749
+    },
+    {
+      "formatted_weight": "16.67%",
+      "name": "% Maturity 10 to 20 Years",
+      "rank": 4,
+      "vs": 15.429897413793109,
+      "weight": 16.6653
+    },
+    {
+      "formatted_weight": "20.24%",
+      "name": "% Maturity 3 to 5 Years",
+      "rank": 3,
+      "vs": 15.410818103448275,
+      "weight": 20.2383
+    },
+    {
+      "formatted_weight": "20.34%",
+      "name": "% Maturity 20 to 30 Years",
+      "rank": 2,
+      "vs": 22.492445689655167,
+      "weight": 20.3403
+    }
+  ],
+  "top_10": [
+    {
+      "assets_pct": "3.59%",
+      "conids": [
+        180350771,
+        180350774
+      ],
+      "name": "IRON MOUNTAIN INCORPORATED",
+      "rank": 10,
+      "ticker": "IRM"
+    },
+    {
+      "assets_pct": "4.34%",
+      "conids": [
+        177121500,
+        4044062
+      ],
+      "name": "VENTAS, INC.",
+      "rank": 9,
+      "ticker": "VTR"
+    },
+    {
+      "assets_pct": "4.35%",
+      "conids": [
+        31832526,
+        418893221
+      ],
+      "name": "DIGITAL REALTY TRUST, INC.",
+      "rank": 8,
+      "ticker": "DLR"
+    },
+    {
+      "assets_pct": "4.4%",
+      "conids": [
+        10672,
+        265846504
+      ],
+      "name": "REALTY INCOME CORPORATION",
+      "rank": 7,
+      "ticker": "O"
+    },
+    {
+      "assets_pct": "5.23%",
+      "conids": [
+        12002,
+        421347538
+      ],
+      "name": "PUBLIC STORAGE.",
+      "rank": 6,
+      "ticker": "PSA"
+    },
+    {
+      "assets_pct": "2.77%",
+      "conids": [
+        599900800,
+        600685516,
+        600685522,
+        600685527
+      ],
+      "name": "Brookfield Corporation",
+      "rank": 9
+    }
+  ],
+  "top_10_weight": "59.04%"
+}
