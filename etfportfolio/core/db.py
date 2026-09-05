@@ -2,9 +2,13 @@ import asyncio
 import logging
 import queue
 import threading
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import duckdb
+
+from etfportfolio.core.config import settings
 
 _SCHEMA_PATH = Path(__file__).parent / "schema.sql"
 
@@ -15,6 +19,23 @@ def apply_schema(conn: duckdb.DuckDBPyConnection) -> None:
     """Applies schema.sql idempotently to the database connection."""
     schema_sql = _SCHEMA_PATH.read_text(encoding="utf-8")
     conn.execute(schema_sql)
+
+
+@contextmanager
+def db_connection(db_path: str | None = None) -> Iterator[duckdb.DuckDBPyConnection]:
+    """Context manager yielding a DuckDB connection with schema applied.
+
+    Used by synchronous post-ingestion pipelines (observations, panel, factors).
+    Transactions must be explicitly controlled by the caller.
+    """
+    target_path = db_path or settings.db_path
+    Path(target_path).parent.mkdir(parents=True, exist_ok=True)
+    conn = duckdb.connect(target_path)
+    apply_schema(conn)
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 class AsyncDbWorker:

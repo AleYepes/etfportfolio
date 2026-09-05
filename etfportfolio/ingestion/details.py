@@ -30,10 +30,10 @@ def load_landing_freshness_cache(conn: duckdb.DuckDBPyConnection) -> dict[int, d
 
 
 def load_endpoint_freshness_cache(conn: duckdb.DuckDBPyConnection) -> dict[tuple[int, str], datetime]:
-    """Load (product_id, url_prefix) -> MAX(fetched_at) from bronze.snapshots."""
+    """Load (product_id, url_prefix) -> MAX(last_checked_at) from bronze.snapshots."""
     rows = conn.execute(
         """
-        SELECT product_id, url_prefix, MAX(fetched_at)
+        SELECT product_id, url_prefix, MAX(last_checked_at)
         FROM bronze.snapshots
         GROUP BY product_id, url_prefix
         """

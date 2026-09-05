@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import copy
 import shutil
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -148,9 +147,7 @@ def merge_lists(
             if is_metric_list:
                 if item_id and item_id in target_by_id:
                     # Merge properties into existing item
-                    target_by_id[item_id] = merge_dicts(
-                        target_by_id[item_id], item, list_name, seen_signatures_by_list
-                    )
+                    target_by_id[item_id] = merge_dicts(target_by_id[item_id], item, list_name, seen_signatures_by_list)
                     seen_sigs.add(frozenset(target_by_id[item_id].keys()))
                 elif item_id:
                     # Metric item not yet seen: preserve full union

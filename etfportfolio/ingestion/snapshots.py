@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import duckdb
@@ -17,20 +17,45 @@ def store_snapshot(
     payload: Any,
     fetched_at: datetime | None = None,
 ) -> int:
-    """Content-addresses a snapshot payload, stores the blob, and writes a lineage row."""
+    """Content-addresses a snapshot payload, stores the blob, and updates or appends to the changelog."""
     digest, compressed = content_address(payload)
+    timestamp = fetched_at or datetime.now(UTC).replace(tzinfo=None)
 
     conn.execute("BEGIN TRANSACTION")
     try:
         store_blob(conn, digest, compressed)
 
-        conn.execute(
+        # Check latest snapshot for this product and endpoint
+        row = conn.execute(
             """
-            INSERT INTO bronze.snapshots (hash, product_id, url_prefix, url_slug, fetched_at)
-            VALUES ($1, $2, $3, $4, COALESCE($5, CURRENT_TIMESTAMP))
+            SELECT snapshot_id, hash
+            FROM bronze.snapshots
+            WHERE product_id = $1 AND url_prefix = $2
+            ORDER BY snapshot_id DESC
+            LIMIT 1
             """,
-            [digest, product_id, url_prefix, url_slug, fetched_at],
-        )
+            [product_id, url_prefix],
+        ).fetchone()
+
+        if row and row[1] == digest:
+            # Hash unchanged: bump last_checked_at
+            conn.execute(
+                """
+                UPDATE bronze.snapshots
+                SET last_checked_at = $1
+                WHERE snapshot_id = $2
+                """,
+                [timestamp, row[0]],
+            )
+        else:
+            # New or changed payload: insert new changelog record
+            conn.execute(
+                """
+                INSERT INTO bronze.snapshots (hash, product_id, url_prefix, url_slug, created_at, last_checked_at)
+                VALUES ($1, $2, $3, $4, $5, $5)
+                """,
+                [digest, product_id, url_prefix, url_slug, timestamp],
+            )
 
         conn.execute("COMMIT")
     except Exception:

@@ -3,6 +3,7 @@ CREATE SCHEMA IF NOT EXISTS silver;
 CREATE SCHEMA IF NOT EXISTS gold;
 CREATE SCHEMA IF NOT EXISTS cold_storage;
 
+
 -- Content-addressed store (snapshots only)
 CREATE TABLE IF NOT EXISTS bronze.payload_blobs (
     hash    UBIGINT PRIMARY KEY,
@@ -88,28 +89,29 @@ CREATE TABLE IF NOT EXISTS bronze.contracts (
     updated_at              TIMESTAMP NOT NULL
 );
 
--- Snapshot landing previews
+-- Snapshot landing previews (FK constraints relaxed)
 CREATE TABLE IF NOT EXISTS bronze.snapshot_previews (
-    product_id   INTEGER PRIMARY KEY REFERENCES bronze.products(product_id),
-    hash         UBIGINT NOT NULL REFERENCES bronze.payload_blobs(hash),
-    updated_at   TIMESTAMP NOT NULL,
+    product_id      INTEGER PRIMARY KEY,
+    hash            UBIGINT NOT NULL,
+    updated_at      TIMESTAMP NOT NULL,
     last_checked_at TIMESTAMP
 );
 
--- Snapshot lineage
+-- Snapshot state changelog (FK constraints relaxed; state-transition intervals)
 CREATE SEQUENCE IF NOT EXISTS bronze.snapshots_id_seq;
 CREATE TABLE IF NOT EXISTS bronze.snapshots (
-    snapshot_id  INTEGER PRIMARY KEY DEFAULT nextval('bronze.snapshots_id_seq'),
-    hash         UBIGINT NOT NULL REFERENCES bronze.payload_blobs(hash),
-    product_id   INTEGER NOT NULL REFERENCES bronze.products(product_id),
-    url_prefix   VARCHAR NOT NULL,
-    url_slug     VARCHAR,
-    fetched_at   TIMESTAMP NOT NULL
+    snapshot_id     INTEGER PRIMARY KEY DEFAULT nextval('bronze.snapshots_id_seq'),
+    hash            UBIGINT NOT NULL,
+    product_id      INTEGER NOT NULL,
+    url_prefix      VARCHAR NOT NULL,
+    url_slug        VARCHAR,
+    created_at      TIMESTAMP NOT NULL,
+    last_checked_at TIMESTAMP NOT NULL
 );
 
--- Historical daily prices (IB ADJUSTED_LAST)
+-- Historical daily prices (FK dropped; compound PK retained for ON CONFLICT upsert)
 CREATE TABLE IF NOT EXISTS bronze.prices (
-    product_id   INTEGER NOT NULL REFERENCES bronze.products(product_id),
+    product_id   INTEGER NOT NULL,
     date         TIMESTAMP NOT NULL,  -- UTC midnight
     open         DOUBLE,
     high         DOUBLE,
@@ -123,7 +125,7 @@ CREATE TABLE IF NOT EXISTS bronze.prices (
 );
 
 -- Cold storage archives
-CREATE TABLE  IF NOT EXISTS cold_storage.prices (
+CREATE TABLE IF NOT EXISTS cold_storage.prices (
     product_id   INTEGER NOT NULL,
     run_id       TIMESTAMP NOT NULL,
     date         TIMESTAMP NOT NULL,
@@ -143,11 +145,13 @@ CREATE TABLE IF NOT EXISTS bronze.themes (
     theme_id     VARCHAR PRIMARY KEY,
     num_id       INTEGER,
     name         VARCHAR,
-    parent_id    VARCHAR REFERENCES bronze.themes(theme_id),
+    parent_id    VARCHAR,
     created_at   TIMESTAMP NOT NULL,
     updated_at   TIMESTAMP NOT NULL,
     last_checked_at TIMESTAMP
 );
+
+
 
 -- Verified ETF product universe view
 CREATE OR REPLACE VIEW silver.products AS
@@ -171,3 +175,43 @@ SELECT
     GREATEST(c.updated_at, p.updated_at) AS updated_at
 FROM bronze.products p
 JOIN bronze.contracts c ON p.product_id = c.product_id;
+
+-- 1. Fund-level scalar metrics (ratios, fees, ESG scores, numeric ratings)
+CREATE TABLE IF NOT EXISTS silver.metric_observations (
+    product_id     INTEGER NOT NULL,
+    source         VARCHAR NOT NULL,  -- 'ratios', 'mstar', 'esg', 'profile', 'lipper'
+    metric_id      VARCHAR NOT NULL,  -- e.g. 'price_earnings', 'total_expense_ratio', 'total_return_3yr'
+    effective_date DATE NOT NULL,
+    fetched_at     TIMESTAMP NOT NULL,
+    value          DOUBLE NOT NULL,
+    PRIMARY KEY (product_id, source, metric_id, effective_date)
+);
+
+-- 2. Portfolio allocation distributions (from holdings)
+CREATE TABLE IF NOT EXISTS silver.portfolio_allocations (
+    product_id      INTEGER NOT NULL,
+    breakdown_type  VARCHAR NOT NULL,  -- 'asset_class', 'currency', 'country', 'industry', 'maturity', 'credit_rating'
+    item_name       VARCHAR NOT NULL,  -- e.g. 'United States', 'Real Estate', 'USD', 'AAA', 'Not Rated'
+    item_code       VARCHAR,           -- ISO code when available ('US', 'USD'), or same as item_name for credit ratings
+    effective_date  DATE NOT NULL,
+    fetched_at      TIMESTAMP NOT NULL,
+    weight          DOUBLE NOT NULL,   -- Standardized decimal (e.g. 0.9976)
+    PRIMARY KEY (product_id, breakdown_type, item_name, effective_date)
+);
+
+-- 3. Thematic factor exposures (from theme_weights)
+CREATE TABLE IF NOT EXISTS silver.theme_exposures (
+    product_id           INTEGER NOT NULL,
+    theme_id             VARCHAR NOT NULL,  -- Canonical UUID matching bronze.themes(theme_id)
+    effective_date       DATE NOT NULL,
+    fetched_at           TIMESTAMP NOT NULL,
+    weight               DOUBLE NOT NULL,   -- Standardized decimal (e.g. 0.0841)
+    rank_adjusted_weight DOUBLE NOT NULL,   -- Standardized decimal
+    PRIMARY KEY (product_id, theme_id, effective_date)
+);
+
+-- 4. Observations processing watermark
+CREATE TABLE IF NOT EXISTS silver.processed_snapshots (
+    snapshot_id  INTEGER PRIMARY KEY,
+    processed_at TIMESTAMP NOT NULL
+);
