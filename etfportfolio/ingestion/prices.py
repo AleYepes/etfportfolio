@@ -160,11 +160,12 @@ async def _fetch_historical(
 ) -> list[BarData]:
     """Fetch historical bars for a single product using complete contract declaration."""
     sec_type = "STK" if product.sec_type in (None, "ETF", "FUND", "STK") else product.sec_type
+    exchange = product.exchange_id or "SMART"
     contract = Contract(
         conId=product.product_id,
         symbol=product.symbol or "",
         secType=sec_type,
-        exchange="SMART",
+        exchange=exchange,
         primaryExchange=product.primary_exchange_id or "",
         currency=product.currency or "",
         localSymbol=product.local_symbol or "",
