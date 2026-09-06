@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS bronze.snapshots (
 -- Historical daily prices (FK dropped; compound PK retained for ON CONFLICT upsert)
 CREATE TABLE IF NOT EXISTS bronze.prices (
     product_id   INTEGER NOT NULL,
-    date         TIMESTAMP NOT NULL,  -- UTC midnight
+    date         TIMESTAMP NOT NULL,
     open         DOUBLE,
     high         DOUBLE,
     low          DOUBLE,

@@ -96,6 +96,9 @@ def migrate(db_path: str | None = None) -> None:
         max_id = max_row[0] if max_row else 1
         conn.execute("DROP SEQUENCE IF EXISTS bronze.snapshots_id_seq")
         conn.execute(f"CREATE SEQUENCE bronze.snapshots_id_seq START {max_id}")
+        conn.execute(
+            "ALTER TABLE bronze.snapshots ALTER COLUMN snapshot_id SET DEFAULT nextval('bronze.snapshots_id_seq')"
+        )
 
         # 4. Re-apply schema to create all new silver tables
         apply_schema(conn)
