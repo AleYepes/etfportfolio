@@ -124,6 +124,14 @@ CREATE TABLE IF NOT EXISTS bronze.prices (
     PRIMARY KEY (product_id, date)
 );
 
+-- Price series ingestion attempt status and freshness tracking
+CREATE TABLE IF NOT EXISTS bronze.price_status (
+    product_id      INTEGER PRIMARY KEY,
+    last_checked_at TIMESTAMP NOT NULL,
+    status          VARCHAR NOT NULL,  -- 'ok', 'no_data', 'error'
+    error_message   VARCHAR            -- NULL for 'ok' and 'no_data', populated only on exceptions
+);
+
 -- Cold storage archives
 CREATE TABLE IF NOT EXISTS cold_storage.prices (
     product_id   INTEGER NOT NULL,

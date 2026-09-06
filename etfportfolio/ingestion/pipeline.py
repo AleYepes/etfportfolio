@@ -114,18 +114,19 @@ async def _run_themes(force: bool = False) -> tuple[int, int]:
         await client.aclose()
 
 
-async def _run_details_only(product_ids: str | None, limit: int | None, force: bool) -> None:
+async def _run_details_only(force: bool = False) -> None:
     async with AsyncDbWorker(settings.db_path) as worker:
         client, account_id = await session.ensure_session()
         console.info(f"Session OK. Active account: {account_id}")
         try:
-            target_ids = await worker.submit(products.resolve_target_ids, product_ids, limit)
+            target_products = await worker.submit(products.resolve_target_products)
+            target_ids = [p.product_id for p in target_products]
             await _run_details_phase(worker, client, account_id, target_ids, force)
         finally:
             await client.aclose()
 
 
-async def _run_full(product_ids: str | None, limit: int | None, force: bool) -> None:
+async def _run_full(force: bool = False) -> None:
     console.info("=== Phase 1: Product discovery ===")
     try:
         count = await products.sync(force=force)
@@ -135,7 +136,7 @@ async def _run_full(product_ids: str | None, limit: int | None, force: bool) -> 
 
     console.info("=== Phase 2: Contract qualification ===")
     try:
-        count = await contracts.sync(product_ids=product_ids, limit=limit, force=force)
+        count = await contracts.sync(force=force)
         console.info(f"Contract qualification complete. {count} products processed.")
     except Exception as e:
         logger.error("Contract qualification failed: %s", e)
@@ -143,7 +144,7 @@ async def _run_full(product_ids: str | None, limit: int | None, force: bool) -> 
 
     console.info("=== Phase 3: Price series ===")
     try:
-        count = await prices.sync(product_ids=product_ids, limit=limit, force=force)
+        count = await prices.sync(force=force)
         console.info(f"Price series complete. {count} products processed.")
     except Exception as e:
         logger.error("Price series failed: %s", e)
@@ -163,7 +164,8 @@ async def _run_full(product_ids: str | None, limit: int | None, force: bool) -> 
 
         console.info("=== Phase 6: Product details ===")
         async with AsyncDbWorker(settings.db_path) as worker:
-            target_ids = await worker.submit(products.resolve_target_ids, product_ids, limit)
+            target_products = await worker.submit(products.resolve_target_products)
+            target_ids = [p.product_id for p in target_products]
             await _run_details_phase(worker, client, account_id, target_ids, force)
     finally:
         await client.aclose()
@@ -174,8 +176,8 @@ async def _run_full(product_ids: str | None, limit: int | None, force: bool) -> 
 class Ingest:
     """CLI surface for the ingestion pipeline: `main.py ingest <phase>`."""
 
-    def __call__(self, product_ids: str | None = None, limit: int | None = None, force: bool = False) -> None:
-        asyncio.run(_run_full(product_ids, limit, force))
+    def __call__(self, force: bool = False) -> None:
+        asyncio.run(_run_full(force=force))
 
     def session(self) -> None:
         account_id = asyncio.run(_run_session())
@@ -185,20 +187,20 @@ class Ingest:
         count = asyncio.run(products.sync(force=force))
         console.info(f"Product sync complete. Total products synced: {count}")
 
-    def contracts(self, product_ids: str | None = None, limit: int | None = None, force: bool = False) -> None:
-        count = asyncio.run(contracts.sync(product_ids=product_ids, limit=limit, force=force))
+    def contracts(self, force: bool = False) -> None:
+        count = asyncio.run(contracts.sync(force=force))
         console.info(f"Contract qualification complete. {count} products processed.")
 
-    def prices(self, product_ids: str | None = None, limit: int | None = None, force: bool = False) -> None:
-        count = asyncio.run(prices.sync(product_ids=product_ids, limit=limit, force=force))
+    def prices(self, force: bool = False) -> None:
+        count = asyncio.run(prices.sync(force=force))
         console.info(f"Price series complete. {count} products processed.")
 
     def themes(self, force: bool = False) -> None:
         p_count, n_count = asyncio.run(_run_themes(force=force))
         console.info(f"Theme taxonomy synced: {p_count} parents, {n_count} nodes.")
 
-    def details(self, product_ids: str | None = None, limit: int | None = None, force: bool = False) -> None:
-        asyncio.run(_run_details_only(product_ids, limit, force))
+    def details(self, force: bool = False) -> None:
+        asyncio.run(_run_details_only(force=force))
 
 
 cli = Ingest()

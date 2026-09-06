@@ -18,7 +18,7 @@ def main() -> None:
     fire.Fire(
         {
             "ingest": ingest_pipeline.cli,
-            "observations": obs_cli.cli,
+            "prep": obs_cli.cli,
         },
         command=argv,
     )

@@ -5,19 +5,22 @@ import pytest
 
 from etfportfolio.core.db import apply_schema
 from etfportfolio.core.utils import decompress_payload
-from etfportfolio.ingestion.utils import (
+from etfportfolio.ingestion.prices import (
     OVERLAP_CALENDAR_DAYS,
     PRICES_SPEC,
+    PriceSeriesStatus,
+    is_series_fresh,
+    overlap_start_for,
+    replace_series,
+    upsert_series,
+    validate_overlap,
+)
+from etfportfolio.ingestion.utils import (
     canonical_bytes,
     content_address,
     gc_preview_blob,
     is_fresh,
-    is_series_fresh,
-    overlap_start_for,
-    replace_series,
     store_blob,
-    upsert_series,
-    validate_overlap,
 )
 
 
@@ -301,21 +304,30 @@ def test_is_series_fresh():
 
     # 1. None or empty status is never fresh
     assert is_series_fresh(None, yesterday, 24.0) is False
-    assert is_series_fresh((None, None), yesterday, 24.0) is False
+    assert is_series_fresh(PriceSeriesStatus(None, None, None, None), yesterday, 24.0) is False
 
-    # 2. Fresh by date (date >= yesterday), even if updated_at is stale or None
-    assert is_series_fresh((yesterday, None), yesterday, 24.0) is True
-    assert is_series_fresh((yesterday + timedelta(days=1), None), yesterday, 24.0) is True
+    # 2. Fresh by date (date >= yesterday), even if updated_at is stale or None, regardless of status
+    assert is_series_fresh(PriceSeriesStatus(yesterday, None, None, None), yesterday, 24.0) is True
+    assert is_series_fresh(PriceSeriesStatus(yesterday + timedelta(days=1), None, None, None), yesterday, 24.0) is True
     stale_updated = (now - timedelta(hours=48)).replace(tzinfo=None)
-    assert is_series_fresh((yesterday, stale_updated), yesterday, 24.0) is True
+    assert is_series_fresh(PriceSeriesStatus(yesterday, stale_updated, None, None), yesterday, 24.0) is True
+    assert is_series_fresh(PriceSeriesStatus(yesterday, None, None, "error"), yesterday, 24.0) is True
 
-    # 3. Fresh by updated_at (date < yesterday, but updated_at within 24h)
+    # 3. Fresh by checked_at or updated_at within 24h ONLY when status is 'ok' or 'no_data'
     old_date = yesterday - timedelta(days=3)
     recent_updated = (now - timedelta(hours=2)).replace(tzinfo=None)
-    assert is_series_fresh((old_date, recent_updated), yesterday, 24.0) is True
+    assert is_series_fresh(PriceSeriesStatus(old_date, recent_updated, None, "ok"), yesterday, 24.0) is True
+    assert is_series_fresh(PriceSeriesStatus(old_date, None, recent_updated, "ok"), yesterday, 24.0) is True
+    assert is_series_fresh(PriceSeriesStatus(old_date, None, recent_updated, "no_data"), yesterday, 24.0) is True
 
-    # 4. Stale: date < yesterday AND updated_at > 24h ago
-    assert is_series_fresh((old_date, stale_updated), yesterday, 24.0) is False
+    # 4. Never fresh when status is None or 'error' (if date < yesterday)
+    assert is_series_fresh(PriceSeriesStatus(old_date, recent_updated, None, None), yesterday, 24.0) is False
+    assert (
+        is_series_fresh(PriceSeriesStatus(old_date, recent_updated, recent_updated, "error"), yesterday, 24.0) is False
+    )
+
+    # 5. Stale: date < yesterday AND checked_at/updated_at > 24h ago
+    assert is_series_fresh(PriceSeriesStatus(old_date, stale_updated, stale_updated, "ok"), yesterday, 24.0) is False
 
 
 def test_upsert_series_updates_updated_at_on_overlap(db_conn):

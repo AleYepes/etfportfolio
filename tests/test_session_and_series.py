@@ -57,7 +57,7 @@ def test_load_series_status():
     import duckdb
 
     from etfportfolio.core.db import apply_schema
-    from etfportfolio.ingestion.prices import _load_price_series_status
+    from etfportfolio.ingestion.prices import PriceSeriesStatus, _load_price_series_status
 
     conn = duckdb.connect(":memory:")
     apply_schema(conn)
@@ -65,11 +65,11 @@ def test_load_series_status():
     # Empty tables return empty dicts
     assert _load_price_series_status(conn) == {}
 
-    # Insert test product into bronze.products
+    # Insert test contracts into bronze.contracts
     conn.execute(
         """
-        INSERT INTO bronze.products (product_id, symbol, created_at, updated_at)
-        VALUES (1001, 'TEST1', now(), now()), (1002, 'TEST2', now(), now())
+        INSERT INTO bronze.contracts (product_id, symbol, created_at, updated_at)
+        VALUES (1001, 'TEST1', now(), now()), (1002, 'TEST2', now(), now()), (1003, 'TEST3', now(), now())
         """
     )
 
@@ -77,6 +77,7 @@ def test_load_series_status():
     d2 = datetime(2026, 8, 2, 0, 0)
     u1 = datetime(2026, 8, 2, 10, 0)
     u2 = datetime(2026, 8, 2, 12, 0)
+    chk1 = datetime(2026, 8, 2, 13, 0)
 
     # Populate bronze.prices
     conn.execute(
@@ -92,6 +93,32 @@ def test_load_series_status():
         [d1, u1],
     )
 
+    # Populate bronze.price_status
+    conn.execute(
+        "INSERT INTO bronze.price_status (product_id, last_checked_at, status, error_message) VALUES (1001, $1, 'ok', NULL)",
+        [chk1],
+    )
+    conn.execute(
+        "INSERT INTO bronze.price_status (product_id, last_checked_at, status, error_message) VALUES (1003, $1, 'no_data', NULL)",
+        [chk1],
+    )
+
     price_status = _load_price_series_status(conn)
-    assert price_status[1001] == (d2, u2)
-    assert price_status[1002] == (d1, u1)
+    assert price_status[1001] == PriceSeriesStatus(
+        last_date=d2,
+        last_updated=u2,
+        last_checked_at=chk1,
+        status="ok",
+    )
+    assert price_status[1002] == PriceSeriesStatus(
+        last_date=d1,
+        last_updated=u1,
+        last_checked_at=None,
+        status=None,
+    )
+    assert price_status[1003] == PriceSeriesStatus(
+        last_date=None,
+        last_updated=None,
+        last_checked_at=chk1,
+        status="no_data",
+    )

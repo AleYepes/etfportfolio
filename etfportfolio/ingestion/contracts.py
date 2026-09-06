@@ -199,24 +199,9 @@ def upsert_contract(
     conn.execute(insert_sql, values)
 
 
-def _select_target_product_ids(
-    conn: duckdb.DuckDBPyConnection,
-    product_ids: str | None = None,
-    limit: int | None = None,
-) -> list[int]:
-    """Return target product IDs from bronze.products."""
-    if product_ids is not None and limit is not None:
-        raise ValueError("product_ids and limit are mutually exclusive.")
-
-    if product_ids is not None:
-        from etfportfolio.ingestion.products import _parse_product_ids_arg
-
-        return _parse_product_ids_arg(product_ids)
-
-    query = "SELECT product_id FROM bronze.products ORDER BY product_id"
-    if limit is not None and limit > 0:
-        query += f" LIMIT {int(limit)}"
-    rows = conn.execute(query).fetchall()
+def _select_target_product_ids(conn: duckdb.DuckDBPyConnection) -> list[int]:
+    """Return all product IDs from bronze.products."""
+    rows = conn.execute("SELECT product_id FROM bronze.products ORDER BY product_id").fetchall()
     return [row[0] for row in rows]
 
 
@@ -241,14 +226,10 @@ async def _qualify_one(ib: Any, product_id: int) -> ContractDetails | None:
     return None
 
 
-async def _run_contract_qualification(
-    product_ids: str | None = None,
-    limit: int | None = None,
-    force: bool = False,
-) -> int:
+async def _run_contract_qualification(force: bool = False) -> int:
     """Run the contract qualification phase."""
     async with AsyncDbWorker(settings.db_path) as worker:
-        target_ids = await worker.submit(_select_target_product_ids, product_ids, limit)
+        target_ids = await worker.submit(_select_target_product_ids)
 
         to_process = []
         for pid in target_ids:
@@ -284,10 +265,6 @@ async def _run_contract_qualification(
     return len(to_process)
 
 
-async def sync(
-    product_ids: str | None = None,
-    limit: int | None = None,
-    force: bool = False,
-) -> int:
+async def sync(force: bool = False) -> int:
     """Public entry point for the contracts phase."""
-    return await _run_contract_qualification(product_ids=product_ids, limit=limit, force=force)
+    return await _run_contract_qualification(force=force)

@@ -1,7 +1,5 @@
-import contextlib
 import logging
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 
 import duckdb
@@ -12,7 +10,7 @@ from etfportfolio.core.db import AsyncDbWorker
 from etfportfolio.core.logging import console
 from etfportfolio.core.progress import progress_bar
 from etfportfolio.ingestion.session import build_async_client
-from etfportfolio.ingestion.utils import is_fresh
+from etfportfolio.ingestion.utils import ProductContract, is_fresh
 
 logger = logging.getLogger(__name__)
 
@@ -193,42 +191,48 @@ async def sync(client: httpx.AsyncClient | None = None, force: bool = False) -> 
     return total_synced
 
 
-def _parse_product_ids_arg(product_ids_arg: str) -> list[int]:
-    path = Path(product_ids_arg)
-    if path.is_file():
-        content = path.read_text(encoding="utf-8")
-        ids: list[int] = []
-        for line in content.splitlines():
-            line = line.strip()
-            if line and not line.startswith("#"):
-                with contextlib.suppress(ValueError):
-                    ids.append(int(line))
-        return ids
-
-    return [int(x.strip()) for x in product_ids_arg.split(",") if x.strip()]
-
-
-def resolve_target_ids(
-    conn: duckdb.DuckDBPyConnection,
-    product_ids: str | None = None,
-    limit: int | None = None,
-) -> list[int]:
-    """Resolves the target product_id list for a per-product ingestion phase.
-
-    This function is synchronous and designed to be executed by a worker.
+def resolve_target_products(conn: duckdb.DuckDBPyConnection) -> list[ProductContract]:
+    """Select active qualified products from bronze.contracts, excluding blocked exchanges."""
+    blocked = settings.blocked_exchanges
+    query = """
+    SELECT
+        product_id,
+        symbol,
+        sec_type,
+        exchange_id,
+        primary_exchange_id,
+        currency,
+        local_symbol,
+        trading_class
+    FROM bronze.contracts
     """
-    if product_ids is not None and limit is not None:
-        raise ValueError("product_ids and limit are mutually exclusive.")
+    params: list[Any] = []
+    if blocked:
+        placeholders = ", ".join(f"${i + 1}" for i in range(len(blocked)))
+        query += f" WHERE (COALESCE(primary_exchange_id, exchange_id) IS NULL OR COALESCE(primary_exchange_id, exchange_id) NOT IN ({placeholders}))"
+        params.extend(blocked)
 
-    if product_ids is not None:
-        return _parse_product_ids_arg(product_ids)
-
-    query = "SELECT product_id FROM silver.products ORDER BY product_id"
-    if limit is not None and limit > 0:
-        query += f" LIMIT {int(limit)}"
-    rows = conn.execute(query).fetchall()
+    query += " ORDER BY product_id"
+    rows = conn.execute(query, params).fetchall()
 
     if not rows:
-        raise RuntimeError("silver.products is empty. Run 'ingest contracts' first to qualify products.")
+        total_row = conn.execute("SELECT COUNT(*) FROM bronze.contracts").fetchone()
+        total_contracts = total_row[0] if total_row else 0
+        if total_contracts == 0:
+            raise RuntimeError("bronze.contracts is empty. Run 'ingest contracts' first to qualify products.")
+        logger.info("All products were excluded by blocked_exchanges.")
+        return []
 
-    return [row[0] for row in rows]
+    return [
+        ProductContract(
+            product_id=row[0],
+            symbol=row[1],
+            sec_type=row[2],
+            exchange_id=row[3],
+            primary_exchange_id=row[4],
+            currency=row[5],
+            local_symbol=row[6],
+            trading_class=row[7],
+        )
+        for row in rows
+    ]

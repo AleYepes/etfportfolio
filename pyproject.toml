@@ -84,3 +84,4 @@ freshness_window_hours = 72.0
 ib_gateway_host = "127.0.0.1"
 ib_gateway_port = 4001
 ib_gateway_timeout = 90.0
+blocked_exchanges = ["SFB", "EBS", "TSEJ", "B3", "TWSE", "FWB", "SWB", "TASE", "MEXI", "VALUE", "WSE"]

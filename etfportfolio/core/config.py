@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     ibkr_base_url: str = "https://www.interactivebrokers.ie"
     details_concurrency: int = 10
     freshness_window_hours: float = 24.0
+    blocked_exchanges: list[str] = []
 
     # IB Gateway
     ib_gateway_host: str = "127.0.0.1"

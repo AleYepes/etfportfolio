@@ -23,3 +23,6 @@ The session is done at my request or when the frontier is empty; when every bran
 ## Handoff
 
 I'm thinking we've stretched out this conversation a lot already, and would benefit from organizing everything we've discussed in an FRD-like document. This document should summarize our findings, conclusions and decisions clearly and comprehensively enough for a fresh, uninformed agent to catch up to speed and accurately understand the decisions we've settled and why.
+
+
+If that clears the frontier, Let's draft a new FDR-like document that conveys all the decisions we've settled and why. The document should be clear and comprehensive enough so that a fresh agent (one without access to this conversation or the previous FDR) can accurately understand and implement all the specs. That may require straying from the conventional FDR structure to provide examples or anything else you think could be of value. The agent will receive the same preliminary context you did at the start of our conversation (Project overview, Project structure, and Architecture & coding principles) and they will access to read from and write to the repo directly.
