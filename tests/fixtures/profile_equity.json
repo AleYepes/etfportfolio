@@ -1,11 +1,11 @@
 {
-  "objective": "The Fund seeks to track the performance of a benchmark index that measures the investment return of stocks of companies located in developed and emerging markets around the world. The Fund employs an indexing investment approach to track the performance of the FTSE Global All Cap Index and attempts to sample the index.",
-  "symbol": "VT",
+  "objective": "The Fund seeks to track the investment results of the Cboe S&P 500 Enhanced 1% OTM BuyWrite Index. The Underlying Index is designed to measure the performance of a strategy of holding the iShares Core S&P 500 ETF while writing (selling) one-month call options primarily on the S&P 500 Index to generate income.",
+  "symbol": "IVVW",
   "fund_and_profile": [
     {
       "name": "Fund Management Company",
       "name_tag": "Fund_Management_Company",
-      "value": "Vanguard Capital Management, LLC"
+      "value": "BlackRock Fund Advisors"
     },
     {
       "name": "Distribution Details",
@@ -21,22 +21,22 @@
     {
       "name": "Launch Opening Price",
       "name_tag": "Launch_Opening_Price",
-      "value": "2008-06-24"
+      "value": "2024-03-14"
     },
     {
       "name": "Geographical Focus",
       "name_tag": "Geographical_Focus",
-      "value": "Global"
+      "value": "United States of America"
     },
     {
       "name": "Asset Type",
       "name_tag": "Asset_Type",
-      "value": "Equity"
+      "value": "Alternatives"
     },
     {
       "name": "Fund Manager Benchmark",
       "name_tag": "Fund_Manager_Benchmark",
-      "value": "FTSE Global All Cap TR USD"
+      "value": "Index is not available on Lipper Database"
     },
     {
       "name": "Management Approach",
@@ -46,12 +46,12 @@
     {
       "name": "Total Expense Ratio",
       "name_tag": "Total_Expense_Ratio",
-      "value": "0.06%"
+      "value": "0.25%"
     },
     {
       "name": "Inception Date",
       "name_tag": "Inception_Date",
-      "value": "2008/06/24"
+      "value": "2024/03/14"
     },
     {
       "name": "Domicile",
@@ -66,7 +66,7 @@
     {
       "name": "Classification",
       "name_tag": "Classification",
-      "value": "Global Multi-Cap Core"
+      "value": "Option Income Strategies Funds"
     },
     {
       "name": "Fund Market Cap Focus",
@@ -81,58 +81,29 @@
     {
       "name": "Total Net Assets (Month End)",
       "name_tag": "Total_Net_Assets_Month_End",
-      "value": "$78.63B (2026/07/31)"
+      "value": "$329.53M (2026/07/31)"
     },
     {
       "name": "Objective Type",
       "name_tag": "Objective_Type",
-      "value": "Global Funds"
+      "value": "Option Income Strategies Funds"
     },
     {
       "name": "Portfolio Manager",
       "name_tag": "Portfolio_Manager",
-      "value": "Franquin/Geiger"
+      "value": "Montalvo/Armstrong/McClements"
     },
     {
       "name": "Manager Tenure",
       "name_tag": "Manager_Tenure",
-      "value": "2013/01/01"
+      "value": "2025/01/01"
     },
     {
       "name": "Management Expenses",
       "name_tag": "management_expenses",
-      "value": "88.71%"
+      "value": "100%"
     }
   ],
-  "mstar": {
-    "name": "Global Multi-Cap Core",
-    "x_axis": [
-      "Value",
-      "Core",
-      "Growth"
-    ],
-    "y_axis": [
-      "Large",
-      "Multi",
-      "Mid",
-      "Small"
-    ],
-    "x_axis_tag": [
-      "value",
-      "core",
-      "growth"
-    ],
-    "y_axis_tag": [
-      "large",
-      "multi",
-      "mid",
-      "small"
-    ],
-    "selected": [
-      [1, 1]
-    ],
-    "hist": []
-  },
   "reports": [
     {
       "name": "Annual Report",
@@ -140,64 +111,36 @@
       "fields": [
         {
           "name": "Total Expense",
-          "value": "0.0564%",
+          "value": "0.22%",
           "is_summary": true
         },
         {
           "name": "Total Gross Expense",
-          "value": "0.1527%",
+          "value": "0.2201%",
           "is_summary": true
         },
         {
           "name": "Total Net Expense",
-          "value": "0.0564%",
+          "value": "0.22%",
           "is_summary": true
         },
         {
           "name": "Management Fees",
-          "value": "0.0475%",
+          "value": "0.22%",
           "is_summary": true
         },
         {
           "name": "Advisor Expenses",
-          "value": "0.0056%"
-        },
-        {
-          "name": "Administrator Expenses",
-          "value": "0.0419%"
+          "value": "0.22%"
         },
         {
           "name": "Non-Management Expenses",
-          "value": "0.006%",
+          "value": "0%",
           "is_summary": true
         },
         {
-          "name": "Audit Expenses",
-          "value": "0.0001%"
-        },
-        {
-          "name": "Custodian Expenses",
-          "value": "0.0035%"
-        },
-        {
-          "name": "Director Expense",
-          "value": "0%"
-        },
-        {
-          "name": "Misc. Expenses",
-          "value": "0.0008%"
-        },
-        {
-          "name": "Postage and Printing Expenses",
-          "value": "0.0017%"
-        },
-        {
-          "name": "Other Non-Management Fees",
-          "value": "0%"
-        },
-        {
           "name": "Other Expense",
-          "value": "0.0964%"
+          "value": "0.0001%"
         }
       ]
     },
@@ -206,45 +149,54 @@
       "as_of_date": 1772168400000,
       "fields": [
         {
+          "name": "Prospectus Gross Acquired Fund Expense Ratio",
+          "value": "0.03%"
+        },
+        {
           "name": "Prospectus Gross Expense Ratio",
-          "value": "0.06%"
+          "value": "0.25%"
         },
         {
           "name": "Prospectus Gross Management Fee Ratio",
-          "value": "0.06%"
+          "value": "0.25%"
         },
         {
-          "name": "Prospectus Gross Other Expense Ratio",
-          "value": "0.01%"
+          "name": "Prospectus Net 12b-1 Fee Ratio",
+          "value": "0.03%"
+        },
+        {
+          "name": "Prospectus Net Acquired Fund Expense Ratio",
+          "value": "0.03%"
         },
         {
           "name": "Prospectus Net Expense Ratio",
-          "value": "0.06%"
+          "value": "0.25%"
         },
         {
           "name": "Prospectus Net Management Fee Ratio",
-          "value": "0.05%"
-        },
-        {
-          "name": "Prospectus Net Other Expense Ratio",
-          "value": "0.01%"
+          "value": "0.22%"
         }
       ]
     }
   ],
   "themes": [
+    "Fdof Fds Affiliated",
+    "Fundof Etfs",
+    "Fund of Funds",
+    "Fund of Funds Internal",
+    "Fund of Funds Passive",
     "Index Tracking"
   ],
   "expenses_allocation": [
     {
       "name": "Management Expenses",
-      "value": "88.71%",
-      "ratio": 0.887127365149982
+      "value": "100%",
+      "ratio": 1
     },
     {
       "name": "Non-Management Expenses",
-      "value": "11.29%",
-      "ratio": 0.112872634850018
+      "value": "0%",
+      "ratio": 0
     }
   ],
   "jap_fund_warning": false

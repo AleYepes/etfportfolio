@@ -1,39 +1,38 @@
+from __future__ import annotations
+
 import logging
-from typing import Any
 
 from etfportfolio.core.db import db_connection
 from etfportfolio.core.logging import console
 from etfportfolio.core.progress import progress_bar
 from etfportfolio.core.utils import decompress_payload
 from etfportfolio.observations.extractors import EXTRACTOR_REGISTRY
+from etfportfolio.observations.utils import DimensionTuple, MetricTuple
 
 logger = logging.getLogger(__name__)
 
-BATCH_SIZE = 500
+BATCH_SIZE = 100
 
 INSERT_METRICS_SQL = """
-INSERT INTO silver.metric_observations (product_id, source, metric_id, effective_date, fetched_at, value)
-VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO silver.product_metrics (
+    product_id, source, metric_id, effective_date, effective_date_source, fetched_at, value, raw_value
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (product_id, source, metric_id, effective_date) DO UPDATE SET
     value = EXCLUDED.value,
+    raw_value = EXCLUDED.raw_value,
+    effective_date_source = EXCLUDED.effective_date_source,
     fetched_at = EXCLUDED.fetched_at;
 """
 
-INSERT_ALLOCATIONS_SQL = """
-INSERT INTO silver.portfolio_allocations (product_id, breakdown_type, item_name, item_code, effective_date, fetched_at, weight)
-VALUES (?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT (product_id, breakdown_type, item_name, effective_date) DO UPDATE SET
-    weight = EXCLUDED.weight,
-    item_code = EXCLUDED.item_code,
-    fetched_at = EXCLUDED.fetched_at;
-"""
-
-INSERT_THEMES_SQL = """
-INSERT INTO silver.theme_exposures (product_id, theme_id, effective_date, fetched_at, weight, rank_adjusted_weight)
-VALUES (?, ?, ?, ?, ?, ?)
-ON CONFLICT (product_id, theme_id, effective_date) DO UPDATE SET
-    weight = EXCLUDED.weight,
-    rank_adjusted_weight = EXCLUDED.rank_adjusted_weight,
+INSERT_DIMENSIONS_SQL = """
+INSERT INTO silver.product_dimensions (
+    product_id, dimension_type, dimension_name, dimension_code, effective_date, effective_date_source, fetched_at, value, raw_value
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT (product_id, dimension_type, dimension_name, effective_date) DO UPDATE SET
+    value = EXCLUDED.value,
+    dimension_code = EXCLUDED.dimension_code,
+    raw_value = EXCLUDED.raw_value,
+    effective_date_source = EXCLUDED.effective_date_source,
     fetched_at = EXCLUDED.fetched_at;
 """
 
@@ -44,15 +43,13 @@ VALUES (?, CURRENT_TIMESTAMP);
 
 
 def run_observations(force: bool = False, db_path: str | None = None) -> int:
-    """Extracts and normalizes bronze snapshots into canonical silver observations tables."""
     with db_connection(db_path) as conn:
         if force:
             conn.execute("BEGIN TRANSACTION")
             try:
                 conn.execute("DELETE FROM silver.processed_snapshots")
-                conn.execute("DELETE FROM silver.metric_observations")
-                conn.execute("DELETE FROM silver.portfolio_allocations")
-                conn.execute("DELETE FROM silver.theme_exposures")
+                conn.execute("DELETE FROM silver.product_metrics")
+                conn.execute("DELETE FROM silver.product_dimensions")
                 conn.execute("COMMIT")
             except Exception:
                 conn.execute("ROLLBACK")
@@ -85,9 +82,9 @@ def run_observations(force: bool = False, db_path: str | None = None) -> int:
             for i in range(0, total_pending, BATCH_SIZE):
                 chunk = pending_snapshots[i : i + BATCH_SIZE]
 
-                metrics_rows: list[tuple[Any, ...]] = []
-                allocations_rows: list[tuple[Any, ...]] = []
-                themes_rows: list[tuple[Any, ...]] = []
+                # Staged in dictionaries keyed by primary keys to prevent intra-batch DuckDB conflict errors
+                metrics_staged: dict[tuple[int, str, str, object], MetricTuple] = {}
+                dimensions_staged: dict[tuple[int, str, str, object], DimensionTuple] = {}
                 processed_ids: list[tuple[int]] = []
 
                 for row in chunk:
@@ -100,30 +97,28 @@ def run_observations(force: bool = False, db_path: str | None = None) -> int:
                         raise
 
                     if not data:
-                        # Empty stub payload: mark processed as valid no-op
                         processed_ids.append((snapshot_id,))
                         continue
 
                     extractor = EXTRACTOR_REGISTRY.get(url_prefix)
                     if extractor is not None:
-                        extracted = extractor(product_id, data, created_at)
-                        if url_prefix == "/tws.proxy/fundamentals/mf_holdings/":
-                            allocations_rows.extend(extracted)
-                        elif url_prefix == "/tws.proxy/knowledge-graph/ui/fund?conid=":
-                            themes_rows.extend(extracted)
-                        else:
-                            metrics_rows.extend(extracted)
+                        result = extractor(product_id, data, created_at)
+                        for m in result.metrics:
+                            metric_pk = (m[0], m[1], m[2], m[3])
+                            metrics_staged[metric_pk] = m
+
+                        for d in result.dimensions:
+                            dim_pk = (d[0], d[1], d[2], d[4])
+                            dimensions_staged[dim_pk] = d
 
                     processed_ids.append((snapshot_id,))
 
                 conn.execute("BEGIN TRANSACTION")
                 try:
-                    if metrics_rows:
-                        conn.executemany(INSERT_METRICS_SQL, metrics_rows)
-                    if allocations_rows:
-                        conn.executemany(INSERT_ALLOCATIONS_SQL, allocations_rows)
-                    if themes_rows:
-                        conn.executemany(INSERT_THEMES_SQL, themes_rows)
+                    if metrics_staged:
+                        conn.executemany(INSERT_METRICS_SQL, list(metrics_staged.values()))
+                    if dimensions_staged:
+                        conn.executemany(INSERT_DIMENSIONS_SQL, list(dimensions_staged.values()))
                     if processed_ids:
                         conn.executemany(INSERT_WATERMARK_SQL, processed_ids)
                     conn.execute("COMMIT")

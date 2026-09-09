@@ -1,532 +1,717 @@
-# Technical Specification Document
+# Functional Design Document (FDD): Silver Observations Preprocessing Engine
 
-**Document Title**: Exchange Blacklisting, Dedicated Price Status Tracking, and Ingestion Pipeline Simplification  
-**Target Components**: `etfportfolio.core`, `etfportfolio.ingestion`  
-
----
-
-## 1. Executive Summary & Problem Context
-
-The ingestion pipeline fetches ETF universe data and historical daily price series from Interactive Brokers (IBKR) Gateway (`ib_async`) and persists it into DuckDB following a medallion architecture (`bronze` $\rightarrow$ `silver` $\rightarrow$ `gold`, with `cold_storage` for audit archives).
-
-### Identified Issues
-1. **Unsubscribed Exchange Failures**: Market data subscriptions in IBKR are billed per-exchange. Queries for products on unsubscribed foreign exchanges (e.g., `SFB`, `EBS`, `TSEJ`, `B3`, `TWSE`, `FWB`, `SWB`) fail with permission errors or return zero data bars (`HMDS query returned no data`).
-2. **Missing Retry Dampening**: When a product returns 0 price bars or errors out, nothing is written to `bronze.prices`. Consequently, the pipeline considers the product perpetually un-updated and re-queries hundreds of unpriceable contracts on *every single execution*, wasting API rate limits and generating log noise.
-3. **Invalid Duration Parameter Strings (IB Error 321)**: In incremental fetching, `prices.py` calculates duration as `f"{gap_days + 9} D"`. The IBKR API strictly rejects durations formatted with `"D"` if the count exceeds 365 days. Day counts $> 365$ must use the `"Y"` (years) unit.
-4. **Architectural Leakage (Layer Boundary Violation)**: Ingestion scripts currently query `silver.products`. As an ingestion engine responsible strictly for producing Bronze data, `ingestion` must only interact with `bronze` tables. `silver.products` is a downstream consumer view and should not be a prerequisite or target for Bronze ingestion.
-5. **CLI and Parameter Clutter**: Unused `--product_ids` and `--limit` flags permeate all CLI commands and internal function signatures, introducing dead parsing code and test maintenance overhead.
+**Status:** Final / Approved  
+**Layer:** Silver (Medallion Architecture)  
+**Target Module:** `etfportfolio.observations`  
+**CLI Surface:** `uv run python main.py prep [--force]`
 
 ---
 
-## 2. Architectural Decisions & Design Principles
+## 1. Executive Summary & Design Rationale
 
-All changes in this specification adhere to the project's foundational guidelines:
-1. **Bronze-Only Ingestion Boundary**: The `ingestion` module queries and writes strictly to `bronze` schemas (`bronze.products`, `bronze.contracts`, `bronze.prices`, `bronze.price_status`, `bronze.snapshots`, `bronze.payload_blobs`) and `cold_storage`. It must never query `silver.products`.
-2. **Module Organization (Rule 2)**:
-   - Shared across multiple scripts within `ingestion/` $\rightarrow$ `etfportfolio.ingestion.utils` (e.g., `ProductContract`, `is_fresh`).
-   - Used only within `prices.py` $\rightarrow$ stays in `etfportfolio.ingestion.prices` (e.g., `format_duration`, `PRICES_SPEC`, `is_series_fresh`, `validate_overlap`, `replace_series`, `upsert_series`).
-3. **Replacement Over Deprecation (Rule 3)**: Replace old queries, parameters, and helpers cleanly; do not accumulate deprecated fallback paths or unused parameter shims.
-4. **Differentiated Freshness Dampening**:
-   - `status = 'ok'` or `'no_data'`: Dampened by the 24-hour freshness window (`settings.freshness_window_hours`). Products that definitively have no data (e.g., untraded, zero volume, unsubscribed exchange) will not be re-queried for 24 hours.
-   - `status = 'error'`: Represents transient infrastructure failures (socket drops, Gateway timeouts, temporary network hiccups). An `'error'` status is **never dampened**; it remains immediately eligible for retry on subsequent pipeline runs.
-5. **`--force` Flag Semantics**:
-   - `--force` acts strictly as a **freshness bypass**, not an unconditional 30-year database wipe.
-   - When `--force` is passed, all qualified target products are selected (bypassing the 24-hour dampening gate).
-   - For each target product:
-     - If `last_date is None` (no prior price bars): pulls full `"30 Y"`.
-     - If `last_date is not None` (prior bars exist): runs an incremental fetch with duration `format_duration(gap_days + 9)`.
-     - Data corruption recovery remains fully automated: if the existing price series diverges, `validate_overlap` fails its 7-day checksum, archives the corrupt series to `cold_storage.prices`, and pulls a full 30-year replacement.
+The **Silver Observations Preprocessing Engine** is responsible for transforming raw, immutable Bronze JSON snapshot blobs (`bronze.payload_blobs` joined with `bronze.snapshots`) into strongly typed, normalized, and deterministic relational tables in DuckDB.
 
----
+Downstream Gold modules consume these Silver tables to construct monthly Last-Observation-Carried-Forward (LOCF) factor panels, estimate factor loadings, and execute asset-allocation models.
 
-## 3. Configuration & Schema Specifications
-
-### 3.1 Configuration (`etfportfolio/core/config.py`)
-
-Add `blocked_exchanges` to `Settings`.
-
-```python
-class Settings(BaseSettings):
-    ...
-    blocked_exchanges: list[str] = []
+```
+                   ┌─────────────────────────────────────────┐
+                   │           bronze.snapshots /            │
+                   │          bronze.payload_blobs           │
+                   └────────────────────┬────────────────────┘
+                                        │
+                           [Observations Extraction]
+                             (python main.py prep)
+                                        │
+          ┌─────────────────────────────┴─────────────────────────────┐
+          ▼                                                           ▼
+┌──────────────────────────────────┐        ┌───────────────────────────────────┐
+│      silver.product_metrics      │        │    silver.product_dimensions      │
+├──────────────────────────────────┤        ├───────────────────────────────────┤
+│ product_id            INTEGER    │        │ product_id            INTEGER     │
+│ source                VARCHAR    │        │ dimension_type        VARCHAR     │
+│ metric_id             VARCHAR    │        │ dimension_name        VARCHAR     │
+│ effective_date        DATE       │        │ dimension_code        VARCHAR     │
+│ effective_date_source VARCHAR    │        │ effective_date        DATE        │
+│ fetched_at            TIMESTAMPTZ│        │ effective_date_source VARCHAR     │
+│ value                 DOUBLE     │        │ fetched_at            TIMESTAMPTZ │
+│ raw_value             VARCHAR    │        │ value                 DOUBLE      │
+│                                  │        │ raw_value             VARCHAR     │
+│ PRIMARY KEY:                     │        │                                   │
+│ (product_id, source, metric_id,  │        │ PRIMARY KEY:                      │
+│  effective_date)                 │        │ (product_id, dimension_type,      │
+└──────────────────────────────────┘        │  dimension_name, effective_date)  │
+                                            └───────────────────────────────────┘
 ```
 
-- **Default**: `[]` (no exchanges blocked unless explicitly configured).
-- **Configuration**: Set in `pyproject.toml` under `[tool.etfportfolio]` or via `.env`.
-  ```toml
-  [tool.etfportfolio]
-  blocked_exchanges = ["SFB", "EBS", "TSEJ", "B3", "TWSE", "FWB", "SWB", "TASE", "MEXI", "VALUE", "WSE"]
-  ```
+### Core Architecture Decisions (Settled)
+1. **Geometric Table Separation:**
+   - **`silver.product_metrics`**: Zero-dimensional scalar metrics (financial ratios, growth rates, ESG scores, qualitative ratings, AUM, expense ratios, concentration).
+   - **`silver.product_dimensions`**: One-dimensional exposure vectors, constituent breakdowns, and categorical memberships (asset classes, industries, countries, credit ratings, debt types, maturities, thematic loadings, top-10 holdings, and current/historical style box assignments).
+2. **Standardized Extractor Interface (`ExtractionResult`):**
+   - Every extractor returns a uniform dataclass `ExtractionResult(metrics=[...], dimensions=[...])`. This completely decouples `pipeline.py` from endpoint-specific branching.
+3. **Point-in-Time Provenance Tracking (`effective_date_source`):**
+   - Dates are resolved strictly via a 3-tier hierarchy:
+     $$\text{Item-level embedded date} \longrightarrow \text{Payload top-level date} \longrightarrow \text{Snapshot ingestion date}$$
+   - The column `effective_date_source` explicitly records this origin using a controlled vocabulary: `'item'`, `'payload'`, or `'snapshot'`.
+4. **Multicollinearity Elimination:**
+   - Discards overlapping raw `weight` in themes; ingests only `rank_adjusted_weight`.
+   - Excludes `currency` and `geographic` allocations from holdings, preserving `investor_country` as the sole geographic exposure breakdown.
+5. **In-Memory Batch Staging & Deduplication:**
+   - DuckDB throws hard `Constraint Error` exceptions when duplicate keys appear within the same `executemany` batch.
+   - Snapshots are processed in 500-snapshot batches staged in memory. Intra-payload items are naturally distinct; inter-snapshot key collisions within the batch are resolved by overwriting with the newer observation (`fetched_at`).
+6. **Strict Validation vs. Graceful Skipping:**
+   - **Missing optional sections** (e.g., absent `Manager Tenure`, absent `Annual Report`, or omitted debt breakdowns) are gracefully skipped without creating empty rows.
+   - **Present but unmapped or malformed categorical values** (e.g., an unrecognized Morningstar pillar string or invalid date format) throw immediate hard errors (`ValueError`) to alert developers to vendor schema changes.
+7. **Purity of Silver Storage:**
+   - Numeric fields are cleanly parsed and typecast to `DOUBLE` while preserving the exact unparsed text in `raw_value`. Outlier clipping, winsorization, and statistical cleaning are deferred to Gold.
 
-### 3.2 Database Schema (`etfportfolio/core/schema.sql`)
+---
 
-Add the `bronze.price_status` table:
+## 2. DuckDB Schema DDL
+
+In `etfportfolio/core/schema.sql`, the Silver layer is defined as follows (note: legacy tables `silver.metric_observations`, `silver.portfolio_allocations`, and `silver.theme_exposures` are dropped manually by the operator):
 
 ```sql
--- Price series ingestion attempt status and freshness tracking
-CREATE TABLE IF NOT EXISTS bronze.price_status (
-    product_id      INTEGER PRIMARY KEY,
-    last_checked_at TIMESTAMP NOT NULL,
-    status          VARCHAR NOT NULL,  -- 'ok', 'no_data', 'error'
-    error_message   VARCHAR            -- NULL for 'ok' and 'no_data', populated only on exceptions
+CREATE SCHEMA IF NOT EXISTS silver;
+
+-- 1. Fund-Level Scalar Observations
+CREATE TABLE IF NOT EXISTS silver.product_metrics (
+    product_id            INTEGER NOT NULL,
+    source                VARCHAR NOT NULL,       -- 'ratios', 'profile', 'esg', 'mstar', 'lipper', 'holdings'
+    metric_id             VARCHAR NOT NULL,       -- lower_snake_case identifier
+    effective_date        DATE NOT NULL,          -- Point-in-time observation/publication date
+    effective_date_source VARCHAR NOT NULL,       -- 'item', 'payload', or 'snapshot'
+    fetched_at            TIMESTAMP WITH TIME ZONE NOT NULL, -- Snapshot creation timestamp
+    value                 DOUBLE NOT NULL,        -- Clean numeric float for matrix math
+    raw_value             VARCHAR NOT NULL,       -- Exact source string representation
+    PRIMARY KEY (product_id, source, metric_id, effective_date)
+);
+
+-- 2. Fund Portfolio Allocations, Dimensions, and Loadings
+CREATE TABLE IF NOT EXISTS silver.product_dimensions (
+    product_id            INTEGER NOT NULL,
+    dimension_type        VARCHAR NOT NULL,       -- 'asset_class', 'industry', 'country', 'credit_rating', 'debt_type', 'maturity', 'theme', 'top_holding', 'style_box', 'style_box_hist'
+    dimension_name        VARCHAR NOT NULL,       -- Constituent or bucket display name
+    dimension_code        VARCHAR,                -- Standardized code (ISO country, theme UUID, rating, conids, or style box slug)
+    effective_date        DATE NOT NULL,          -- Point-in-time observation date
+    effective_date_source VARCHAR NOT NULL,       -- 'item', 'payload', or 'snapshot'
+    fetched_at            TIMESTAMP WITH TIME ZONE NOT NULL, -- Snapshot creation timestamp
+    value                 DOUBLE NOT NULL,        -- Normalized decimal proportion [0.0, 1.0] or binary indicator (1.0)
+    raw_value             VARCHAR NOT NULL,       -- Exact source string representation
+    PRIMARY KEY (product_id, dimension_type, dimension_name, effective_date)
+);
+
+-- 3. Incremental Processing Watermark
+CREATE TABLE IF NOT EXISTS silver.processed_snapshots (
+    snapshot_id           BIGINT PRIMARY KEY,
+    processed_at          TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
-- **Medallion Purity**: Keeps `bronze.prices` exclusively populated with authentic market bars. Zero dummy or sentinel rows (`close = -1`) are written to price tables.
-- **Error Transparency**: `error_message` records up to 500 characters of exception details strictly when `status == 'error'`, remaining `NULL` for successful or cleanly empty queries.
-
 ---
 
-## 4. Module-by-Module Technical Specifications
+## 3. Data Types and Extractor Contracts
 
-```
-                     ┌────────────────────────────────┐
-                     │   etfportfolio/core/config.py  │
-                     │  - blocked_exchanges: list[str]│
-                     └───────────────┬────────────────┘
-                                     │
-                 ┌───────────────────┴───────────────────┐
-                 ▼                                       ▼
-  ┌──────────────────────────────┐       ┌──────────────────────────────┐
-  │ etfportfolio/ingestion/      │       │ etfportfolio/ingestion/      │
-  │ utils.py                     │       │ products.py                  │
-  │ - ProductContract (DTO)      │◄──────┤ - resolve_target_products()  │
-  │ - is_fresh()                 │       │   (queries bronze.contracts, │
-  │ - content_address(), blobs   │       │    filters blocked_exchanges)│
-  └──────────────┬───────────────┘       └──────────────┬───────────────┘
-                 │                                      │
-                 │          ┌───────────────────────────┘
-                 ▼          ▼
-  ┌─────────────────────────────────────────────────────────────────────┐
-  │ etfportfolio/ingestion/prices.py                                    │
-  │ - format_duration()                                                 │
-  │ - PriceSeriesStatus (dataclass)                                     │
-  │ - is_series_fresh() [evaluates 'error' vs 'no_data' in Python]      │
-  │ - _load_price_series_status() [reads bronze.contracts/prices/status]│
-  │ - _record_price_status() [upserts bronze.price_status]              │
-  │ - SeriesSpec, PRICES_SPEC, validate_overlap, replace, upsert        │
-  │ - sync(force: bool = False)                                         │
-  └─────────────────────────────────────────────────────────────────────┘
-```
+### 3.1 Dataclass Definitions (`etfportfolio/observations/utils.py`)
 
----
-
-### 4.1 Ingestion Shared Utilities (`etfportfolio/ingestion/utils.py`)
-
-1. **Move `ProductContract` in**: Since `ProductContract` is a data transfer object (DTO) shared across `products.py`, `prices.py`, and `pipeline.py`, it belongs in `etfportfolio/ingestion/utils.py` per Principle 2.
-2. **Move Price-Specific Helpers out**: Move `SeriesSpec`, `PRICES_SPEC`, `OVERLAP_CALENDAR_DAYS`, `FETCH_MARGIN_DAYS`, `overlap_start_for`, `validate_overlap`, `_insert_points`, `replace_series`, `upsert_series`, and `is_series_fresh` out of `utils.py` and into `prices.py`.
-3. **Preserve General Snapshot Helpers**: Keep `_TYPE_RANK`, `_sort_key`, `_canonicalize`, `canonical_bytes`, `content_address`, `store_blob`, `gc_preview_blob`, and `is_fresh` in `utils.py`.
+All extractors return an instance of `ExtractionResult`:
 
 ```python
-@dataclass(frozen=True)
-class ProductContract:
+from dataclasses import dataclass, field
+from datetime import date, datetime
+from typing import Any
+
+@dataclass(slots=True)
+class MetricRow:
     product_id: int
-    symbol: str | None = None
-    sec_type: str | None = None
-    exchange_id: str | None = None
-    primary_exchange_id: str | None = None
-    currency: str | None = None
-    local_symbol: str | None = None
-    trading_class: str | None = None
-```
+    source: str
+    metric_id: str
+    effective_date: date
+    effective_date_source: str  # 'item' | 'payload' | 'snapshot'
+    fetched_at: datetime
+    value: float
+    raw_value: str
 
----
-
-### 4.2 Target Product Resolution (`etfportfolio/ingestion/products.py`)
-
-1. **Delete Dead Code**: Remove `_parse_product_ids_arg` and `resolve_target_ids`.
-2. **Implement `resolve_target_products`**:
-   - Query strictly from `bronze.contracts` (never `silver.products`).
-   - Filter `blocked_exchanges` against `COALESCE(primary_exchange_id, exchange_id)`.
-   - Ensure null-safety in SQL: `WHERE (COALESCE(primary_exchange_id, exchange_id) IS NULL OR COALESCE(primary_exchange_id, exchange_id) NOT IN (...))`.
-   - **Fail-Fast Check**: If 0 rows return, check `SELECT COUNT(*) FROM bronze.contracts`.
-     - If count is 0: raise `RuntimeError("bronze.contracts is empty. Run 'ingest contracts' first to qualify products.")`.
-     - If count is $> 0$: log info (`"All products were excluded by blocked_exchanges."`) and return `[]`.
-
-```python
-from etfportfolio.ingestion.utils import ProductContract
-
-def resolve_target_products(conn: duckdb.DuckDBPyConnection) -> list[ProductContract]:
-    """Select active qualified products from bronze.contracts, excluding blocked exchanges."""
-    blocked = settings.blocked_exchanges
-    query = """
-    SELECT
-        product_id,
-        symbol,
-        sec_type,
-        exchange_id,
-        primary_exchange_id,
-        currency,
-        local_symbol,
-        trading_class
-    FROM bronze.contracts
-    """
-    params: list[Any] = []
-    if blocked:
-        placeholders = ", ".join(f"${i + 1}" for i in range(len(blocked)))
-        query += f" WHERE (COALESCE(primary_exchange_id, exchange_id) IS NULL OR COALESCE(primary_exchange_id, exchange_id) NOT IN ({placeholders}))"
-        params.extend(blocked)
-
-    query += " ORDER BY product_id"
-    rows = conn.execute(query, params).fetchall()
-
-    if not rows:
-        total_contracts = conn.execute("SELECT COUNT(*) FROM bronze.contracts").fetchone()[0]
-        if total_contracts == 0:
-            raise RuntimeError("bronze.contracts is empty. Run 'ingest contracts' first to qualify products.")
-        logger.info("All products were excluded by blocked_exchanges.")
-        return []
-
-    return [
-        ProductContract(
-            product_id=row[0],
-            symbol=row[1],
-            sec_type=row[2],
-            exchange_id=row[3],
-            primary_exchange_id=row[4],
-            currency=row[5],
-            local_symbol=row[6],
-            trading_class=row[7],
+    def as_tuple(self) -> tuple:
+        return (
+            self.product_id,
+            self.source,
+            self.metric_id,
+            self.effective_date,
+            self.effective_date_source,
+            self.fetched_at,
+            self.value,
+            self.raw_value,
         )
-        for row in rows
-    ]
-```
 
----
+@dataclass(slots=True)
+class DimensionRow:
+    product_id: int
+    dimension_type: str
+    dimension_name: str
+    dimension_code: str | None
+    effective_date: date
+    effective_date_source: str  # 'item' | 'payload' | 'snapshot'
+    fetched_at: datetime
+    value: float
+    raw_value: str
 
-### 4.3 Price Ingestion Refactoring (`etfportfolio/ingestion/prices.py`)
-
-#### A. Duration Formatting
-Implement `format_duration(days: int) -> str` to prevent IB Error 321:
-
-```python
-import math
-
-def format_duration(days: int) -> str:
-    """Format duration string for IB reqHistoricalDataAsync.
-    
-    Days <= 365 use 'D' (minimum 10 D for margin).
-    Days > 365 must use 'Y' (up to 30 Y).
-    """
-    if days <= 365:
-        return f"{max(days, 10)} D"
-    years = math.ceil(days / 365.25)
-    return f"{min(years, 30)} Y"
-```
-
-#### B. Status Tracking & Python Freshness Evaluation
-Define `PriceSeriesStatus` and implement status recording and loading:
-
-```python
-@dataclass(frozen=True)
-class PriceSeriesStatus:
-    last_date: datetime | None
-    last_updated: datetime | None        # MAX(bronze.prices.updated_at)
-    last_checked_at: datetime | None     # MAX(bronze.price_status.last_checked_at)
-    status: str | None                   # 'ok', 'no_data', 'error', or None
-
-
-def _record_price_status(
-    conn: duckdb.DuckDBPyConnection,
-    product_id: int,
-    status: str,
-    error_message: str | None = None,
-) -> None:
-    now = datetime.now(UTC).replace(tzinfo=None)
-    truncated_msg = error_message[:500] if error_message else None
-    conn.execute(
-        """
-        INSERT INTO bronze.price_status (product_id, last_checked_at, status, error_message)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (product_id) DO UPDATE SET
-            last_checked_at = EXCLUDED.last_checked_at,
-            status = EXCLUDED.status,
-            error_message = EXCLUDED.error_message
-        """,
-        [product_id, now, status, truncated_msg],
-    )
-
-
-def _load_price_series_status(conn: duckdb.DuckDBPyConnection) -> dict[int, PriceSeriesStatus]:
-    """Load product_id -> PriceSeriesStatus from bronze tables."""
-    rows = conn.execute(
-        """
-        SELECT
-            c.product_id,
-            MAX(pr.date) AS last_date,
-            MAX(pr.updated_at) AS last_updated,
-            MAX(ps.last_checked_at) AS last_checked_at,
-            MAX(ps.status) AS status
-        FROM bronze.contracts c
-        LEFT JOIN bronze.prices pr ON c.product_id = pr.product_id
-        LEFT JOIN bronze.price_status ps ON c.product_id = ps.product_id
-        GROUP BY c.product_id
-        """
-    ).fetchall()
-    return {
-        row[0]: PriceSeriesStatus(
-            last_date=row[1],
-            last_updated=row[2],
-            last_checked_at=row[3],
-            status=row[4],
+    def as_tuple(self) -> tuple:
+        return (
+            self.product_id,
+            self.dimension_type,
+            self.dimension_name,
+            self.dimension_code,
+            self.effective_date,
+            self.effective_date_source,
+            self.fetched_at,
+            self.value,
+            self.raw_value,
         )
-        for row in rows
-    }
 
-
-def is_series_fresh(
-    status: PriceSeriesStatus | None,
-    target_date: datetime,
-    hours: float,
-) -> bool:
-    """Evaluate price freshness with differentiated status dampening.
-    
-    1. Fresh if price bars reach target_date (yesterday).
-    2. Fresh if checked within hours and status was 'ok' or 'no_data'.
-    3. Fresh if last prices were updated within hours (fallback).
-    4. An 'error' status is NEVER fresh; retried on subsequent runs.
-    """
-    if not status:
-        return False
-    if status.last_date is not None and status.last_date >= target_date:
-        return True
-    if status.status in ("ok", "no_data") and is_fresh(status.last_checked_at, hours):
-        return True
-    if status.status != "error" and is_fresh(status.last_updated, hours):
-        return True
-    return False
+@dataclass(slots=True)
+class ExtractionResult:
+    metrics: list[MetricRow] = field(default_factory=list)
+    dimensions: list[DimensionRow] = field(default_factory=list)
 ```
 
-#### C. Fetch and Store Workflow (`_fetch_and_store`)
-Update `_fetch_and_store` to handle both initial and incremental paths, recording status without wiping data on empty responses:
+---
 
+## 4. Date and String Parsing Utility Specifications
+
+All parsing utilities reside in `etfportfolio/observations/utils.py`.
+
+### 4.1 Hierarchical Date Parsing (`parse_effective_date`)
 ```python
-async def _fetch_and_store(
-    worker: AsyncDbWorker,
-    ib: Any,
-    product: ProductContract,
-    force: bool = False,
-) -> None:
-    """Fetch and store prices for one product.
-    
-    force=True bypasses the freshness gate in target selection; products with
-    existing bars still fetch incrementally with overlap validation.
+def parse_effective_date(
+    val: Any,
+    fallback_date: date,
+    default_source: str = "payload",
+) -> tuple[date, str]:
+    """Parses date from epoch ms (int/float), YYYYMMDD, YYYY-MM-DD, or YYYY/MM/DD string.
+
+    Returns:
+        (resolved_date, effective_date_source)
+        where effective_date_source is default_source if val is successfully parsed,
+        or 'snapshot' if val is None, <= 0, unparseable, or invalid.
     """
-    last_date = await worker.submit(_get_last_date, product.product_id)
-    today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
-    yesterday = today - timedelta(days=1)
-
-    # Initial fetch (no existing bars in bronze.prices)
-    if last_date is None:
-        duration = "30 Y"
-        bars = await _fetch_historical(ib, product, duration, end_datetime="")
-        new_bars = _extract_bars(bars, max_date=yesterday)
-        if new_bars:
-            await worker.submit(replace_series, PRICES_SPEC, product.product_id, new_bars, archive=False)
-            await worker.submit(_record_price_status, product.product_id, "ok", None)
-            logger.info("Product %d: full price refetch complete (%d bars)", product.product_id, len(new_bars))
-        else:
-            await worker.submit(_record_price_status, product.product_id, "no_data", None)
-            logger.warning("Product %d: no price bars returned", product.product_id)
-        return
-
-    # Incremental fetch
-    gap_days = (today - last_date).days
-    duration = format_duration(gap_days + 7 + 2)
-    bars = await _fetch_historical(ib, product, duration, end_datetime="")
-    new_bars = _extract_bars(bars, max_date=yesterday)
-
-    if not new_bars:
-        # Existing price bars remain intact
-        await worker.submit(_record_price_status, product.product_id, "no_data", None)
-        logger.info("Product %d: no price bars returned for incremental update", product.product_id)
-        return
-
-    valid, mismatch_type = await worker.submit(validate_overlap, PRICES_SPEC, product.product_id, new_bars, last_date)
-
-    if not valid:
-        logger.warning(
-            "Product %d: %s detected. Replacing with full refetch and archiving...",
-            product.product_id,
-            mismatch_type,
-        )
-        full_bars_raw = await _fetch_historical(ib, product, "30 Y", end_datetime="")
-        full_bars = _extract_bars(full_bars_raw, max_date=yesterday)
-        if full_bars:
-            await worker.submit(
-                replace_series,
-                PRICES_SPEC,
-                product.product_id,
-                full_bars,
-                archive=True,
-                reason=mismatch_type,
-            )
-            await worker.submit(_record_price_status, product.product_id, "ok", None)
-            logger.info("Product %d: mismatch refetch archived and replaced (%d bars)", product.product_id, len(full_bars))
-        else:
-            await worker.submit(_record_price_status, product.product_id, "no_data", None)
-            logger.warning("Product %d: full refetch returned no bars after mismatch. Preserving existing rows.", product.product_id)
-        return
-
-    # Overlap validated: persist validated window and tail
-    overlap_start = overlap_start_for(last_date)
-    points_to_store = {d: pt for d, pt in new_bars.items() if d >= overlap_start}
-    await worker.submit(upsert_series, PRICES_SPEC, product.product_id, points_to_store)
-    await worker.submit(_record_price_status, product.product_id, "ok", None)
-    logger.info("Product %d: incremental price update complete (%d bars)", product.product_id, len(points_to_store))
 ```
+- Supported formats:
+  - Integer / Float: epoch milliseconds (e.g., `1785470400000` $\to$ `2026-07-31`). If $\le 0$, fallback to `'snapshot'`.
+  - 8-digit numeric string: `YYYYMMDD` (e.g., `"20260731"` $\to$ `2026-07-31`).
+  - Delimited string: `YYYY-MM-DD` or `YYYY/MM/DD`.
+- If parsing fails or input is null: returns `(fallback_date, 'snapshot')`.
 
-#### D. Runner Loop & Error Capture (`_run_price_ingestion`)
-Catch unexpected exceptions per-product to record `status = 'error'`, while re-raising `IBConnectionError` immediately to abort if the gateway connection drops:
-
+### 4.2 AUM and Embedded Date Parsing (`parse_net_assets`)
 ```python
-async def _run_price_ingestion(force: bool = False) -> int:
-    async with AsyncDbWorker(settings.db_path) as worker:
-        from etfportfolio.ingestion.products import resolve_target_products
+def parse_net_assets(
+    raw_val: Any,
+    fallback_date: date,
+) -> tuple[float, str, date, str] | None:
+    """Parses total net assets from strings like '$78.63B (2026/07/31)', '€500M (2025/12/31)', or '2,5B'.
 
-        products = await worker.submit(resolve_target_products)
-        if not products:
-            return 0
-
-        if force:
-            to_process = products
-        else:
-            status_cache = await worker.submit(_load_price_series_status)
-            today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
-            yesterday = today - timedelta(days=1)
-            to_process = [
-                p
-                for p in products
-                if not is_series_fresh(status_cache.get(p.product_id), yesterday, settings.freshness_window_hours)
-            ]
-
-        skipped = len(products) - len(to_process)
-        if skipped:
-            console.info(f"{skipped}/{len(products)} products up to date, {len(to_process)} to process.")
-        else:
-            console.info(f"Processing {len(products)} product(s)...")
-
-        if not to_process:
-            console.info("Done. All products are up to date.")
-            return 0
-
-        logger.info("Price ingestion: %d products to process", len(to_process))
-
-        async with ib_connection(client_id=2) as ib:
-            with progress_bar(len(to_process), desc="Prices") as bar:
-                for product in to_process:
-                    bar.set_postfix_str(str(product.product_id))
-                    if not ib.isConnected():
-                        raise IBConnectionError("IB Gateway connection was lost during price ingestion.")
-                    try:
-                        await _fetch_and_store(worker, ib, product, force)
-                    except IBConnectionError:
-                        raise
-                    except Exception as e:
-                        logger.error("Failed to fetch prices for product %d: %s", product.product_id, e)
-                        await worker.submit(_record_price_status, product.product_id, "error", str(e))
-                    finally:
-                        bar.update(1)
-
-        return len(to_process)
+    Returns:
+        (numeric_value, raw_value_str, effective_date, effective_date_source)
+        or None if missing or completely unparseable.
+    """
 ```
+- **Date Extraction:** Searches for `\(([0-9]{4}[-/][0-9]{2}[-/][0-9]{2})\)`. If found, parses as `date` with source `'item'`. If absent, uses `fallback_date` with source `'snapshot'`.
+- **Amount Extraction:**
+  1. Captures numeric portion and magnitude unit: `r'([0-9.,]+)\s*([kKmMbBtT]?)'`.
+  2. Number normalization: Handles European comma decimals vs. US thousands separators:
+     - If string contains `,` and no `.`, and comma is followed by 1 or 2 digits, replace `,` with `.` (e.g., `"2,5"` $\to$ `2.5`).
+     - Otherwise, strip commas as thousands separators (e.g., `"1,250.5"` $\to$ `1250.5`).
+  3. Magnitude multipliers:
+     - `k` or `K`: $\times 10^3$
+     - `m` or `M`: $\times 10^6$
+     - `b` or `B`: $\times 10^9$
+     - `t` or `T`: $\times 10^{12}$
+     - No unit: $\times 1.0$
+  4. Returns `(float_value, str(raw_val).strip(), effective_date, effective_date_source)`.
+
+### 4.3 Manager Tenure Duration (`parse_manager_tenure`)
+```python
+def parse_manager_tenure(
+    tenure_val: Any,
+    ref_date: date,
+) -> tuple[float, str] | None:
+    """Computes tenure in years relative to ref_date from start date string (e.g. '2013/01/01').
+
+    Returns:
+        (tenure_years, raw_value_str)
+        or None if tenure_val is missing, empty, or None.
+    Raises:
+        ValueError if tenure_val is present but cannot be parsed as a valid date.
+    """
+```
+- If `tenure_val` is `None` or whitespace: return `None`.
+- Parse date from string using `YYYY/MM/DD`, `YYYY-MM-DD`, or `YYYYMMDD`. If invalid, raise `ValueError(f"Invalid Manager Tenure date string: '{tenure_val}'")`.
+- Calculation:
+  $$\text{tenure\_years} = \max\left(0.0, \frac{(\text{ref\_date} - \text{start\_date}).\text{days}}{365.25}\right)$$
+- Return `(round(tenure_years, 4), str(tenure_val).strip())`.
+
+### 4.4 Tag Sanitization and Credit Rating Cleaning
+- `sanitize_metric_id(tag: str) -> str`: Converts any string to `lower_snake_case` stripping non-alphanumeric characters. (e.g., `"Price/Earnings"` $\to$ `"price_earnings"`, `"TRESGS"` $\to$ `"tresgs"`).
+- `clean_credit_rating(raw_name: str) -> str`: Strips leading `"% Quality/"` or `"% Quality "` prefixes (e.g., `"% Quality/BBB"` $\to$ `"BBB"`, `"% Quality Not Available"` $\to$ `"Not Available"`).
 
 ---
 
-### 4.4 Contract Qualification Refactoring (`etfportfolio/ingestion/contracts.py`)
+## 5. Extractor Routing and Detailed Specifications
 
-Simplify `contracts.py` to remove `limit` and `product_ids`:
+Routing table matching Bronze snapshot URL prefixes:
 
-1. `_select_target_product_ids(conn: duckdb.DuckDBPyConnection) -> list[int]`:
-   ```python
-   def _select_target_product_ids(conn: duckdb.DuckDBPyConnection) -> list[int]:
-       """Return all product IDs from bronze.products."""
-       rows = conn.execute("SELECT product_id FROM bronze.products ORDER BY product_id").fetchall()
-       return [row[0] for row in rows]
-   ```
-2. Update runner functions:
-   ```python
-   async def _run_contract_qualification(force: bool = False) -> int: ...
-   async def sync(force: bool = False) -> int: ...
-   ```
-
----
-
-### 4.5 Pipeline & CLI Simplification (`etfportfolio/ingestion/pipeline.py`)
-
-1. **Details Phase**: Derive target product IDs from `resolve_target_products`:
-   ```python
-   async def _run_details_only(force: bool = False) -> None:
-       async with AsyncDbWorker(settings.db_path) as worker:
-           client, account_id = await session.ensure_session()
-           console.info(f"Session OK. Active account: {account_id}")
-           try:
-               target_products = await worker.submit(products.resolve_target_products)
-               target_ids = [p.product_id for p in target_products]
-               await _run_details_phase(worker, client, account_id, target_ids, force)
-           finally:
-               await client.aclose()
-   ```
-2. **Full Pipeline (`_run_full`)**:
-   - `Phase 2`: `await contracts.sync(force=force)`
-   - `Phase 3`: `await prices.sync(force=force)`
-   - `Phase 6`:
-     ```python
-     async with AsyncDbWorker(settings.db_path) as worker:
-         target_products = await worker.submit(products.resolve_target_products)
-         target_ids = [p.product_id for p in target_products]
-         await _run_details_phase(worker, client, account_id, target_ids, force)
-     ```
-3. **Ingest CLI Interface**:
-   ```python
-   class Ingest:
-       """CLI surface for the ingestion pipeline: `main.py ingest <phase>`."""
-
-       def __call__(self, force: bool = False) -> None:
-           asyncio.run(_run_full(force=force))
-
-       def session(self) -> None:
-           account_id = asyncio.run(_run_session())
-           console.info(f"Session OK. Active account: {account_id}")
-
-       def products(self, force: bool = False) -> None:
-           count = asyncio.run(products.sync(force=force))
-           console.info(f"Product sync complete. Total products synced: {count}")
-
-       def contracts(self, force: bool = False) -> None:
-           count = asyncio.run(contracts.sync(force=force))
-           console.info(f"Contract qualification complete. {count} products processed.")
-
-       def prices(self, force: bool = False) -> None:
-           count = asyncio.run(prices.sync(force=force))
-           console.info(f"Price series complete. {count} products processed.")
-
-       def themes(self, force: bool = False) -> None:
-           p_count, n_count = asyncio.run(_run_themes(force=force))
-           console.info(f"Theme taxonomy synced: {p_count} parents, {n_count} nodes.")
-
-       def details(self, force: bool = False) -> None:
-           asyncio.run(_run_details_only(force=force))
-   ```
-
----
-
-## 5. Verification & Acceptance Criteria
-
-### 5.1 Verification Scenarios
-
-| Scenario | Input Condition | Expected Behavior |
+| Bronze URL Prefix | Extractor | Target Silver Tables |
 | :--- | :--- | :--- |
-| **Exchange Blacklisting** | `blocked_exchanges = ["SFB", "EBS"]` | Products where `COALESCE(primary_exchange_id, exchange_id)` is `'SFB'` or `'EBS'` are absent from `resolve_target_products()`. Neither `prices` nor `details` executes requests for them. |
-| **Fail-Fast Empty Check** | `bronze.contracts` has 0 rows | `resolve_target_products()` raises `RuntimeError("bronze.contracts is empty. Run 'ingest contracts' first to qualify products.")`. |
-| **All Blocked Logging** | All contracts match `blocked_exchanges` | `resolve_target_products()` logs `"All products were excluded by blocked_exchanges."` and returns `[]` without raising. |
-| **No-Data Dampening** | Product query returns 0 bars | `bronze.price_status` records `status = 'no_data'` and `error_message = NULL`. A second run within 24 hours skips the product. |
-| **Preservation of Prices on 0 Bars** | Product has existing bars; incremental fetch returns 0 bars | Existing rows in `bronze.prices` remain unchanged. `bronze.price_status` updates to `'no_data'`. |
-| **Error Retry Exemption** | Request raises `Exception("Timeout")` | `bronze.price_status` records `status = 'error'`, `error_message = 'Timeout'`. A second run immediately re-queries this product (no 24h lockout). |
-| **IB Duration Format** | Incremental gap is 15 days | Duration sent to IB is `"24 D"`. |
-| **IB Duration Yearly Cap** | Incremental gap is 400 days | Duration sent to IB is `"2 Y"` (never `"409 D"`). |
-| **Force Flag Freshness Bypass** | `main.py ingest prices --force` | Bypasses 24h freshness check in target selection. Products with existing bars fetch incrementally; products without bars fetch `"30 Y"`. |
-| **CLI Signatures** | CLI commands invoked | Only `--force` / `-f` accepted. Invoking with `--limit` or `--product_ids` fails cleanly at CLI parser level. |
+| `/tws.proxy/fundamentals/mf_ratios_fundamentals/` | `extract_ratios` | `silver.product_metrics` |
+| `/tws.proxy/fundamentals/mf_profile_and_fees/` | `extract_profile` | `silver.product_metrics` |
+| `/tws.proxy/impact/esg/` | `extract_esg` | `silver.product_metrics` |
+| `/tws.proxy/mstar/fund/detail?conid=` | `extract_mstar` | `silver.product_metrics` |
+| `/tws.proxy/fundamentals/mf_lip_ratings/` | `extract_lipper` | `silver.product_metrics` |
+| `/tws.proxy/fundamentals/mf_holdings/` | `extract_holdings` | `silver.product_metrics` & `silver.product_dimensions` |
+| `/tws.proxy/knowledge-graph/ui/fund?conid=` | `extract_theme_weights` | `silver.product_dimensions` |
 
-### 5.2 Test Import Updates
-Any existing unit or integration tests that imported `PRICES_SPEC`, `validate_overlap`, `replace_series`, `upsert_series`, or `is_series_fresh` from `etfportfolio.ingestion.utils` must be updated to import from `etfportfolio.ingestion.prices`. Test references importing `ProductContract` import it from `etfportfolio.ingestion.utils`.
+---
+
+### 5.1 Fundamentals & Multiples (`extract_ratios`)
+- **Endpoint Prefix:** `/tws.proxy/fundamentals/mf_ratios_fundamentals/`
+- **Output:** `ExtractionResult.metrics`
+- **Source Identifier:** `'ratios'`
+- **Date Resolution:** Top-level `payload.get("as_of_date")` (epoch ms). Source = `'payload'`; fallback = `'snapshot'`.
+- **Sections Processed:** `["dividend", "financials", "fixed_income", "ratios", "zscore"]`.
+- **Extraction Rules:**
+  - Iterate through all items in the processed sections.
+  - Skip items where `item.get("value") is None`. Ignore peer comparison fields (`avg`, `min`, `max`, `vs`, `percentile`).
+  - `metric_id`: `sanitize_metric_id(item["name_tag"])`.
+  - `value`: `float(item["value"])`.
+  - `raw_value`: `str(item.get("value_fmt") if item.get("value_fmt") is not None else item["value"])`.
+
+---
+
+### 5.2 Fund Profile, Fees & Style (`extract_profile`)
+- **Endpoint Prefix:** `/tws.proxy/fundamentals/mf_profile_and_fees/`
+- **Output:** `ExtractionResult.metrics` and `ExtractionResult.dimensions`
+- **Source Identifier:** `'profile'`
+- **Fallback Date:** `snapshot_created_at.date()`.
+- **Extraction Sections:**
+  1. **Expenses Allocation (`expenses_allocation`):**
+     - Iterate through items. If `item.get("ratio") is None`, skip.
+     - `"Management Expenses"` $\to$ `metric_id = 'management_expense_ratio'`, `value = float(ratio)`, `raw_value = str(item.get("value", ratio))`, date source = `'snapshot'`.
+     - `"Non-Management Expenses"` $\to$ `metric_id = 'non_management_expense_ratio'`, `value = float(ratio)`, `raw_value = str(item.get("value", ratio))`, date source = `'snapshot'`.
+  2. **Fund Profile Scalars (`fund_and_profile`):**
+     - Search by `name_tag` or `name`:
+     - **Total Expense Ratio (`Total_Expense_Ratio`):**
+       - Strip `%`, divide by 100.0 (e.g., `"0.06%"` $\to$ `0.0006`).
+       - `metric_id = 'total_expense_ratio'`, date source = `'snapshot'`.
+     - **Management Approach (`Management_Approach`):**
+       - If `"passive"` (case-insensitive) $\to$ `1.0`.
+       - If `"active"` (case-insensitive) $\to$ `0.0`.
+       - If unrecognized string, raise `ValueError(f"Unknown Management Approach: '{val}'")`.
+       - `metric_id = 'is_passive'`, `raw_value = str(val)`, date source = `'snapshot'`.
+     - **Total Net Assets (`Total Net Assets (Month End)`):**
+       - Parse using `parse_net_assets(val, snapshot_created_at.date())`.
+       - If valid, emits `metric_id = 'total_net_assets_local'`.
+     - **Manager Tenure (`Manager Tenure`):**
+       - Parse using `parse_manager_tenure(val, snapshot_created_at.date())`.
+       - If valid, emits `metric_id = 'manager_tenure_years'`, date source = `'snapshot'`.
+  3. **Audited Annual Reports (`reports`):**
+     - Iterate over *all* entries in `reports` where `report.get("name") == "Annual Report"`.
+     - Resolve report date from `report.get("as_of_date")` (epoch ms). Source = `'item'`.
+     - Locate field where `field.get("name") == "Total Net Expense"`.
+     - Strip `%`, divide by 100.0 (e.g., `"0.0564%"` $\to$ `0.000564`).
+     - Emit `metric_id = 'audited_net_expense_ratio'`, `raw_value = str(val)`.
+  4. **Morningstar Style Box (`mstar`):**
+     - Discard `mstar["name"]` entirely.
+     - Evaluate coordinate tuples in `mstar.get("selected", [])` and `mstar.get("hist", [])`. If both are empty or absent, cleanly emit nothing.
+     - Validate axis tags against accepted taxonomy:
+       - `x_axis_tag` (or `x_axis`): `{"value", "core", "growth"}`
+       - `y_axis_tag` (or `y_axis`): `{"large", "multi", "mid", "small"}`
+       - If unexpected tags are present or coordinates are out of bounds, raise `ValueError`.
+     - Output goes directly to `silver.product_dimensions` (no scalar style metrics in `silver.product_metrics`):
+       - `dimension_type`: `'style_box'` for `selected` coordinates; `'style_box_hist'` for `hist` coordinates.
+       - `dimension_name`: `f"{y_label.title()} {x_label.title()}"` (e.g., `"Large Core"`, `"Mid Growth"`).
+       - `dimension_code`: `f"{y_label.lower()}_{x_label.lower()}"` (e.g., `"large_core"`, `"mid_growth"`).
+       - `effective_date`: `snapshot_created_at.date()`, `effective_date_source`: `'snapshot'`.
+       - `value`: `1.0` (sparse indicator: each assigned quadrant generates a row; unassigned quadrants have no rows).
+       - `raw_value`: string coordinate representation (e.g., `"[1, 1]"`).
+
+---
+
+### 5.3 Refinitiv ESG Scores (`extract_esg`)
+- **Endpoint Prefix:** `/tws.proxy/impact/esg/`
+- **Output:** `ExtractionResult.metrics`
+- **Source Identifier:** `'esg'`
+- **Date Resolution:** `payload.get("asOfDate")` (`YYYYMMDD` string). Source = `'payload'`; fallback = `'snapshot'`.
+- **Extraction Rules:**
+  - **Portfolio Coverage:** If `payload.get("coverage") is not None`, emit:
+    - `metric_id = 'esg_coverage'`, `value = float(coverage)`, `raw_value = str(coverage)`.
+  - **Score Hierarchy:** Recursively traverse `content` and all nested `children`:
+    - For every node having non-null `name` and `value`:
+      - `metric_id = sanitize_metric_id(node["name"])` (e.g., `TRESGS` $\to$ `tresgs`, `TRESGENRRS` $\to$ `tresgenrrs`).
+      - `value = float(node["value"])`.
+      - `raw_value = str(node["value"])`.
+
+---
+
+### 5.4 Morningstar Ratings & Pillars (`extract_mstar`)
+- **Endpoint Prefix:** `/tws.proxy/mstar/fund/detail?conid=`
+- **Output:** `ExtractionResult.metrics`
+- **Source Identifier:** `'mstar'`
+- **Commentary:** Discard the `commentary` array completely.
+- **Date Resolution:**
+  - For each summary item: item `publish_date` (`YYYYMMDD` or `YYYY-MM-DD`, source = `'item'`) $\to$ top-level `payload.get("as_of_date")` (source = `'payload'`) $\to$ fallback `snapshot_created_at.date()` (source = `'snapshot'`).
+- **Ordinal Mappings:**
+  ```python
+  MEDALIST_MAP = {
+      "gold": 5.0, "silver": 4.0, "bronze": 3.0, "neutral": 2.0, "negative": 1.0
+  }
+  PILLAR_MAP = {
+      "high": 5.0, "above_average": 4.0, "average": 3.0, "below_average": 2.0, "low": 1.0
+  }
+  STAR_MAP = {
+      "1": 1.0, "2": 2.0, "3": 3.0, "4": 4.0, "5": 5.0
+  }
+  SUSTAINABILITY_MAP = {
+      "1": 1.0, "2": 2.0, "3": 3.0, "4": 4.0, "5": 5.0,
+      "high": 5.0, "above_average": 4.0, "average": 3.0, "below_average": 2.0, "low": 1.0
+  }
+  ```
+- **Disambiguation Logic:**
+  - Skip non-rating items: `category`, `category_index`.
+  - Skip unrated/review statuses: `"under_review"`, `"not_applicable"`, `"under review"`, `"na"`, `"n/a"`, `""`, `"-"`.
+  - Check quantitative status:
+    ```python
+    is_quant = bool(item.get("q") is True or str(item.get("id", "")).startswith("q_"))
+    ```
+  - Strip leading `q_` from `item["id"]`.
+  - If `base_metric == "quantitative_rating"`, base becomes `"medalist_rating"`.
+  - Suffix assignment:
+    - If base metric is `medalist_rating`, `people`, `process`, or `parent`:
+      - Append `_quant` if `is_quant` else `_analyst` (e.g., `mstar_process_analyst`, `mstar_medalist_rating_quant`).
+    - If `morningstar_rating`: `mstar_morningstar_rating` (no suffix).
+    - If `sustainability_rating`: `mstar_sustainability_rating` (no suffix).
+  - Value mapping:
+    - If lowercase string is not in the respective mapping dictionary, **raise `ValueError(f"Unrecognized rating string '{raw_val}' for pillar '{pillar_id}'")`**.
+    - Emit mapped numeric `float` and original `raw_val`.
+
+---
+
+### 5.5 Lipper Ratings by Country (`extract_lipper`)
+- **Endpoint Prefix:** `/tws.proxy/fundamentals/mf_lip_ratings/`
+- **Output:** `ExtractionResult.metrics`
+- **Source Identifier:** `'lipper'`
+- **Disambiguation Rule:** Do **not** average universes. Embed sanitized country name in `metric_id`.
+- **Horizon Mapping:**
+  - `overall` $\to$ `overall`
+  - `3_year` $\to$ `3yr`
+  - `5_year` $\to$ `5yr`
+  - `10_year` $\to$ `10yr`
+- **Extraction Rules:**
+  - Iterate through all universes in `payload.get("universes", [])`.
+  - Date: universe `as_of_date` (epoch ms). Source = `'item'`; fallback = `'snapshot'`.
+  - Universe Country: `country = sanitize_metric_id(u.get("name") or "global")`.
+  - For each horizon:
+    - Iterate through ratings items (`consistent_return`, `total_return`, `preservation`, `tax_efficiency`, `expense`):
+      - `tag = sanitize_metric_id(item["name_tag"])`
+      - `metric_id = f"lipper_{tag}_{horizon_suffix}_{country}"`
+      - `value = float(item["rating"]["value"])`
+      - `raw_value = str(item["rating"]["value"])`
+
+---
+
+### 5.6 Holdings & Portfolio Dimensions (`extract_holdings`)
+- **Endpoint Prefix:** `/tws.proxy/fundamentals/mf_holdings/`
+- **Output:** Populates **both** `ExtractionResult.metrics` and `ExtractionResult.dimensions`!
+- **Date Resolution:** Top-level `payload.get("as_of_date")` (epoch ms). Source = `'payload'`; fallback = `'snapshot'`.
+- **A. Concentration Scalar Metric (`silver.product_metrics`):**
+  - If `payload.get("top_10_weight")` is present and non-empty:
+    - Strip `%`, divide by 100.0 (e.g., `"30.47%"` $\to$ `0.3047`).
+    - `source = 'holdings'`, `metric_id = 'portfolio_top_10_concentration'`, `value = 0.3047`, `raw_value = "30.47%"`.
+- **B. Allocation Dimensions (`silver.product_dimensions`):**
+  - **Explicit Exclusions:** Discard `currency` and `geographic` completely (eliminates collinearity).
+  - **Breakdown Mappings:**
+    | Payload Key | `dimension_type` | `dimension_name` Rule | `dimension_code` Rule | `value` Rule |
+    | :--- | :--- | :--- | :--- | :--- |
+    | `allocation_self` | `'asset_class'` | `item["name"].strip()` | `None` | `weight / 100.0` |
+    | `investor_country` | `'country'` | `item["name"].strip()` | `item.get("country_code")` | `weight / 100.0` |
+    | `industry` | `'industry'` | `item["name"].strip()` | `None` | `weight / 100.0` |
+    | `debtor` | `'credit_rating'` | `clean_credit_rating(item["name"])` | `clean_credit_rating(item["name"])` | `weight / 100.0` |
+    | `debt_type` | `'debt_type'` | `item["name"].strip()` | `None` | `weight / 100.0` |
+    | `maturity` | `'maturity'` | `item["name"].strip()` | `None` | `weight / 100.0` |
+    | `top_10` | `'top_holding'` | `f"{ticker} - {name}"` (or `{name}`) | Comma-separated `conids` | `assets_pct / 100.0` |
+  - **Top-10 Holdings Detail:**
+    - For each holding in `payload.get("top_10", [])`:
+      - `dimension_name`: If `item.get("ticker")` is present and non-empty:
+        ```python
+        f"{item['ticker'].strip()} - {item['name'].strip()}"
+        ```
+        Otherwise: `item["name"].strip()`.
+      - `dimension_code`: `",".join(str(c) for c in item.get("conids", [])) or None`.
+      - `value`: Strip `<`, strip `%`, divide by 100.0. If `assets_pct` is non-numeric (`"-"`, `"N/A"`), skip item.
+      - `raw_value`: `str(item["assets_pct"])`.
+
+---
+
+### 5.7 Thematic Factor Loadings (`extract_theme_weights`)
+- **Endpoint Prefix:** `/tws.proxy/knowledge-graph/ui/fund?conid=`
+- **Output:** `ExtractionResult.dimensions`
+- **Date Resolution:** Snapshot creation date `snapshot_created_at.date()`. Source = `'snapshot'`.
+- **Extraction Rules:**
+  - Iterate through `payload.get("themes", [])`.
+  - Discard raw `weight`. Ingest only `rank_adjusted_weight`.
+  - `dimension_type = 'theme'`.
+  - `dimension_name = theme["name"].strip()`.
+  - `dimension_code = str(theme["key"]).strip()`.
+  - `value = float(theme["rank_adjusted_weight"])`.
+  - `raw_value = str(theme["rank_adjusted_weight"])`.
+
+---
+
+## 6. Pipeline Execution & In-Memory Deduplication
+
+### 6.1 Execution Flow (`etfportfolio/observations/pipeline.py`)
+
+1. **Batch Fetching:**
+   Fetch unparsed snapshots joined with blobs in chunks of `BATCH_SIZE = 500`:
+   ```sql
+   SELECT
+       s.snapshot_id,
+       s.product_id,
+       s.url_prefix,
+       s.created_at,
+       b.payload
+   FROM bronze.snapshots s
+   JOIN bronze.payload_blobs b ON s.hash = b.hash
+   LEFT JOIN silver.processed_snapshots p ON s.snapshot_id = p.snapshot_id
+   WHERE p.snapshot_id IS NULL
+   ORDER BY s.snapshot_id ASC;
+   ```
+2. **In-Memory Batch Staging & Deduplication:**
+   To prevent DuckDB `Constraint Error: Duplicate key` failures inside `executemany`:
+   ```python
+   staged_metrics: dict[tuple, tuple] = {}
+   staged_dimensions: dict[tuple, tuple] = {}
+   processed_ids: list[tuple[int]] = []
+
+   for snapshot_id, product_id, url_prefix, created_at, raw_blob in chunk:
+       data = decompress_payload(raw_blob)
+       if not data:
+           processed_ids.append((snapshot_id,))
+           continue
+
+       extractor = EXTRACTOR_REGISTRY.get(url_prefix)
+       if extractor is None:
+           processed_ids.append((snapshot_id,))
+           continue
+
+       result: ExtractionResult = extractor(product_id, data, created_at)
+
+       for m in result.metrics:
+           key = (m.product_id, m.source, m.metric_id, m.effective_date)
+           # Inter-snapshot collision: latest fetched_at overwrites
+           staged_metrics[key] = m.as_tuple()
+
+       for d in result.dimensions:
+           key = (d.product_id, d.dimension_type, d.dimension_name, d.effective_date)
+           # Inter-snapshot collision: latest fetched_at overwrites
+           staged_dimensions[key] = d.as_tuple()
+
+       processed_ids.append((snapshot_id,))
+   ```
+
+3. **Atomic Batch Upsert:**
+   Wrap database writes in an explicit DuckDB transaction:
+   ```sql
+   -- silver.product_metrics Upsert
+   INSERT INTO silver.product_metrics (
+       product_id, source, metric_id, effective_date, effective_date_source, fetched_at, value, raw_value
+   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+   ON CONFLICT (product_id, source, metric_id, effective_date) DO UPDATE SET
+       value = EXCLUDED.value,
+       raw_value = EXCLUDED.raw_value,
+       effective_date_source = EXCLUDED.effective_date_source,
+       fetched_at = EXCLUDED.fetched_at;
+
+   -- silver.product_dimensions Upsert
+   INSERT INTO silver.product_dimensions (
+       product_id, dimension_type, dimension_name, dimension_code, effective_date, effective_date_source, fetched_at, value, raw_value
+   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+   ON CONFLICT (product_id, dimension_type, dimension_name, effective_date) DO UPDATE SET
+       value = EXCLUDED.value,
+       dimension_code = EXCLUDED.dimension_code,
+       raw_value = EXCLUDED.raw_value,
+       effective_date_source = EXCLUDED.effective_date_source,
+       fetched_at = EXCLUDED.fetched_at;
+
+   -- Watermark Persistence
+   INSERT INTO silver.processed_snapshots (snapshot_id, processed_at)
+   VALUES (?, CURRENT_TIMESTAMP);
+   ```
+
+4. **Force Reset Behavior:**
+   When `run_observations(force=True)` is called:
+   ```sql
+   BEGIN TRANSACTION;
+   DELETE FROM silver.processed_snapshots;
+   DELETE FROM silver.product_metrics;
+   DELETE FROM silver.product_dimensions;
+   COMMIT;
+   ```
+
+---
+
+## 7. Concrete End-to-End Extraction Examples
+
+### Example 1: Morningstar Ratings Disambiguation
+**Source Snapshot (`mstar/fund/detail?conid=`):**
+```json
+{
+  "as_of_date": "20260731",
+  "summary": [
+    {"id": "medalist_rating", "value": "Gold", "q": false, "publish_date": "20260427"},
+    {"id": "process", "value": "High", "q": false, "publish_date": "20260427"},
+    {"id": "q_process", "value": "Below_Average", "q": true, "publish_date": "20260731"},
+    {"id": "morningstar_rating", "value": "4", "q": false, "publish_date": "20260731"}
+  ]
+}
+```
+**Stored in `silver.product_metrics`:**
+| product_id | source | metric_id | effective_date | effective_date_source | value | raw_value |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `52197301` | `'mstar'` | `'mstar_medalist_rating_analyst'` | `2026-04-27` | `'item'` | `5.0` | `'Gold'` |
+| `52197301` | `'mstar'` | `'mstar_process_analyst'` | `2026-04-27` | `'item'` | `5.0` | `'High'` |
+| `52197301` | `'mstar'` | `'mstar_process_quant'` | `2026-07-31` | `'item'` | `2.0` | `'Below_Average'` |
+| `52197301` | `'mstar'` | `'mstar_morningstar_rating'` | `2026-07-31` | `'item'` | `4.0` | `'4'` |
+
+---
+
+### Example 2: Lipper Ratings Preserving Country Universes
+**Source Snapshot (`mf_lip_ratings`):**
+```json
+{
+  "universes": [
+    {
+      "name": "United States",
+      "as_of_date": 1785470400000,
+      "3_year": [{"name_tag": "consistent_return", "rating": {"value": 4}}]
+    },
+    {
+      "name": "Chile",
+      "as_of_date": 1785470400000,
+      "3_year": [{"name_tag": "consistent_return", "rating": {"value": 5}}]
+    }
+  ]
+}
+```
+**Stored in `silver.product_metrics`:**
+| product_id | source | metric_id | effective_date | effective_date_source | value | raw_value |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `52197301` | `'lipper'` | `'lipper_consistent_return_3yr_united_states'` | `2026-07-31` | `'item'` | `4.0` | `'4'` |
+| `52197301` | `'lipper'` | `'lipper_consistent_return_3yr_chile'` | `2026-07-31` | `'item'` | `5.0` | `'5'` |
+
+---
+
+### Example 3: Holdings Dual Output & Top-10
+**Source Snapshot (`mf_holdings`):**
+```json
+{
+  "as_of_date": 1785470400000,
+  "top_10_weight": "30.47%",
+  "investor_country": [
+    {"name": "United States", "country_code": "US", "weight": 71.2451}
+  ],
+  "top_10": [
+    {
+      "name": "GUGGENHEIM STRATEGIC OPPORTUNITIES FUND",
+      "conids": [86174372],
+      "assets_pct": "3.49%"
+    },
+    {
+      "name": "MICROSOFT CORP",
+      "ticker": "MSFT",
+      "conids": [272093],
+      "assets_pct": "<0.01%"
+    }
+  ]
+}
+```
+**Stored in `silver.product_metrics`:**
+| product_id | source | metric_id | effective_date | effective_date_source | value | raw_value |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `52197301` | `'holdings'` | `'portfolio_top_10_concentration'` | `2026-07-31` | `'payload'` | `0.3047` | `'30.47%'` |
+
+**Stored in `silver.product_dimensions`:**
+| product_id | dimension_type | dimension_name | dimension_code | effective_date | effective_date_source | value | raw_value |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `52197301` | `'country'` | `'United States'` | `'US'` | `2026-07-31` | `'payload'` | `0.712451` | `'71.25%'` |
+| `52197301` | `'top_holding'` | `'GUGGENHEIM STRATEGIC OPPORTUNITIES FUND'` | `'86174372'` | `2026-07-31` | `'payload'` | `0.0349` | `'3.49%'` |
+| `52197301` | `'top_holding'` | `'MSFT - MICROSOFT CORP'` | `'272093'` | `2026-07-31` | `'payload'` | `0.0001` | `'<0.01%'` |
+
+---
+
+### Example 4: AUM, Manager Tenure, and Audited Reports
+**Source Snapshot (`mf_profile_and_fees` with snapshot creation `2026-08-15`):**
+```json
+{
+  "fund_and_profile": [
+    {"name": "Total Expense Ratio", "value": "0.06%"},
+    {"name": "Management Approach", "value": "Passive"},
+    {"name": "Total Net Assets (Month End)", "value": "$78.63B (2026/07/31)"},
+    {"name": "Manager Tenure", "value": "2013/01/01"}
+  ],
+  "reports": [
+    {
+      "name": "Annual Report",
+      "as_of_date": 1761883200000,
+      "fields": [{"name": "Total Net Expense", "value": "0.0564%"}]
+    }
+  ]
+}
+```
+**Stored in `silver.product_metrics`:**
+| product_id | source | metric_id | effective_date | effective_date_source | value | raw_value |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `52197301` | `'profile'` | `'total_expense_ratio'` | `2026-08-15` | `'snapshot'` | `0.0006` | `'0.06%'` |
+| `52197301` | `'profile'` | `'is_passive'` | `2026-08-15` | `'snapshot'` | `1.0` | `'Passive'` |
+| `52197301` | `'profile'` | `'total_net_assets_local'` | `2026-07-31` | `'item'` | `78630000000.0` | `'$78.63B (2026/07/31)'` |
+| `52197301` | `'profile'` | `'manager_tenure_years'` | `2026-08-15` | `'snapshot'` | `13.6208` | `'2013/01/01'` |
+| `52197301` | `'profile'` | `'audited_net_expense_ratio'` | `2025-10-31` | `'item'` | `0.000564` | `'0.0564%'` |
+
+---
+
+### Example 5: Style Box Assignments (Current & Historical)
+**Source Snapshot (`mf_profile_and_fees` with snapshot creation `2026-08-15`):**
+```json
+{
+  "mstar": {
+    "x_axis_tag": ["value", "core", "growth"],
+    "y_axis_tag": ["large", "multi", "mid", "small"],
+    "selected": [[1, 1], [1, 2]],
+    "hist": [[0, 0]]
+  }
+}
+```
+**Stored in silver.product_dimensions:**
+| product_id | dimension_type | dimension_name | dimension_code | effective_date | effective_date_source | value | raw_value |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `52197301` | `'style_box'` | `'Multi Core'` | `'multi_core'` | `2026-08-15` | `'snapshot'` | `1.0` | `'[1, 1]'` |
+| `52197301` | `'style_box'` | `'Mid Core'` | `'mid_core'` | `2026-08-15` | `'snapshot'` | `1.0` | `'[1, 2]'` |
+| `52197301` | `'style_box_hist'` | `'Large Value'` | `'large_value'` | `2026-08-15` | `'snapshot'` | `1.0` | `'[0, 0]'` |
+
+---
+
+## 8. Implementation Verification & Acceptance Criteria
+
+1. **Schema Integrity:**
+   - Verify `schema.sql` contains correct table DDL for `silver.product_metrics`, `silver.product_dimensions`, and `silver.processed_snapshots`.
+   - Running `db_connection()` must create the two new tables without SQL syntax errors.
+2. **Extractor Contract:**
+   - Every extractor in `EXTRACTOR_REGISTRY` returns `ExtractionResult`.
+   - Unit tests pass with mock JSON payloads matching all 7 endpoints.
+3. **Pipeline Invariance:**
+   - Processing 500 snapshots with duplicate or overlapping keys raises zero DuckDB constraint errors.
+   - `python main.py prep` runs to completion and marks snapshots in `silver.processed_snapshots`.
+   - `python main.py prep --force` completely clears both silver observation tables and reprocesses from bronze.
+4. **Validation Hard-Errors:**
+   - Modifying a Morningstar pillar value to `"Nonexistent_Rating"` in a test payload immediately raises `ValueError`.
+   - Modifying `Management Approach` to `"Robotic"` raises `ValueError`.
+   - Omission of `Manager Tenure` or `reports` cleanly skips without raising an exception.

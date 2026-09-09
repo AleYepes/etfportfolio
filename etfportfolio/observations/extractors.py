@@ -1,15 +1,20 @@
-from collections import defaultdict
+from __future__ import annotations
+
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
 from etfportfolio.observations.utils import (
+    DimensionTuple,
+    ExtractionResult,
     clean_credit_rating,
     parse_effective_date,
+    parse_manager_tenure,
+    parse_net_assets,
+    parse_percentage,
     sanitize_metric_id,
 )
 
-# Ordinal mappings for Morningstar ratings and pillars
 _MSTAR_MEDALIST_MAP = {
     "gold": 5.0,
     "silver": 4.0,
@@ -47,54 +52,43 @@ _MSTAR_SUSTAINABILITY_MAP = {
     "low": 1.0,
 }
 
-_MSTAR_PILLAR_TARGETS = {
-    "medalist_rating": _MSTAR_MEDALIST_MAP,
-    "quantitative_rating": _MSTAR_MEDALIST_MAP,
-    "people": _MSTAR_PILLAR_MAP,
-    "process": _MSTAR_PILLAR_MAP,
-    "parent": _MSTAR_PILLAR_MAP,
-    "q_people": _MSTAR_PILLAR_MAP,
-    "q_process": _MSTAR_PILLAR_MAP,
-    "q_parent": _MSTAR_PILLAR_MAP,
-    "morningstar_rating": _MSTAR_STAR_MAP,
-    "sustainability_rating": _MSTAR_SUSTAINABILITY_MAP,
+_LIPPER_HORIZONS = {
+    "overall": "overall",
+    "3_year": "3yr",
+    "5_year": "5yr",
+    "10_year": "10yr",
 }
 
-_LIPPER_HORIZON_SUFFIXES = {
-    "overall": "_overall",
-    "3_year": "_3yr",
-    "5_year": "_5yr",
-    "10_year": "_10yr",
-}
+_HOLDINGS_BREAKDOWNS = (
+    ("allocation_self", "asset_class"),
+    ("investor_country", "country"),
+    ("industry", "industry"),
+    ("debtor", "credit_rating"),
+    ("debt_type", "debt_type"),
+    ("maturity", "maturity"),
+)
 
-_HOLDINGS_BREAKDOWN_MAPPING = {
-    "allocation_self": "asset_class",
-    "currency": "currency",
-    "investor_country": "country",
-    "industry": "industry",
-    "maturity": "maturity",
-    "debtor": "credit_rating",
-}
+_VALID_STYLE_X_TAGS = {"value", "core", "growth"}
+_VALID_STYLE_Y_TAGS = {"large", "multi", "mid", "small"}
 
 
 def extract_ratios(
     product_id: int,
     payload: dict[str, Any],
     snapshot_created_at: datetime,
-) -> list[tuple[int, str, str, Any, datetime, float]]:
-    """Extracts valuation multiples, growth rates, profitability, fixed income, and factor Z-scores."""
+) -> ExtractionResult:
+    result = ExtractionResult()
     if not payload:
-        return []
+        return result
 
-    effective_date = parse_effective_date(
+    eff_date, eff_source = parse_effective_date(
         payload.get("as_of_date"),
         fallback_date=snapshot_created_at.date(),
+        default_source="payload",
     )
 
-    rows: list[tuple[int, str, str, Any, datetime, float]] = []
     for section in ("dividend", "financials", "fixed_income", "ratios", "zscore"):
-        items = payload.get(section, [])
-        for item in items:
+        for item in payload.get(section, []):
             value = item.get("value")
             if value is None:
                 continue
@@ -105,114 +99,111 @@ def extract_ratios(
 
             metric_id = sanitize_metric_id(tag)
             val_float = float(value)
-            rows.append((product_id, "ratios", metric_id, effective_date, snapshot_created_at, val_float))
+            raw_value = str(item.get("value_fmt") if item.get("value_fmt") is not None else value)
+            result.metrics.append(
+                (product_id, "ratios", metric_id, eff_date, eff_source, snapshot_created_at, val_float, raw_value)
+            )
 
-    return rows
+    return result
 
 
-def _extract_mstar_style(mstar: dict[str, Any]) -> list[tuple[str, float]]:
-    """Extracts normalized style coordinates for size and value."""
-    selected = mstar.get("selected")
-    if not selected or len(selected) == 0 or len(selected[0]) < 2:
+def _extract_style_box_dimensions(
+    product_id: int,
+    mstar: dict[str, Any],
+    snapshot_created_at: datetime,
+) -> list[DimensionTuple]:
+    selected = mstar.get("selected") or []
+    hist = mstar.get("hist") or []
+    if not selected and not hist:
         return []
 
-    name = (mstar.get("name") or "").lower()
-    name_tokens = name.replace("-", " ").replace("/", " ").split()
+    x_tags = [str(t).strip().lower() for t in (mstar.get("x_axis_tag") or mstar.get("x_axis") or [])]
+    y_tags = [str(t).strip().lower() for t in (mstar.get("y_axis_tag") or mstar.get("y_axis") or [])]
 
-    # Determine size score
-    # Large=3.0, Mid=2.0, Small=1.0, Multi=0.0
-    size_val: float | None = None
-    if "large" in name_tokens:
-        size_val = 3.0
-    elif "mid" in name_tokens:
-        size_val = 2.0
-    elif "small" in name_tokens:
-        size_val = 1.0
-    elif "multi" in name_tokens:
-        size_val = 0.0
+    if not x_tags or not y_tags:
+        raise ValueError(f"Missing style box axis tags: {mstar}")
 
-    # Determine value score
-    # Value=1.0, Core=2.0, Growth=3.0
-    val_score: float | None = None
-    if "growth" in name_tokens:
-        val_score = 3.0
-    elif "core" in name_tokens or "blend" in name_tokens:
-        val_score = 2.0
-    elif "value" in name_tokens:
-        val_score = 1.0
+    if any(t not in _VALID_STYLE_X_TAGS for t in x_tags) or any(t not in _VALID_STYLE_Y_TAGS for t in y_tags):
+        raise ValueError(f"Unrecognized style box axis configuration: {mstar}")
 
-    y_coord, x_coord = selected[0][0], selected[0][1]
+    snapshot_date = snapshot_created_at.date()
+    dimensions: list[DimensionTuple] = []
 
-    # Fallback to coordinate mapping if not resolved from name
-    if size_val is None:
-        y_axis = [s.lower() for s in mstar.get("y_axis", [])]
-        if 0 <= y_coord < len(y_axis):
-            cat = y_axis[y_coord]
-            if "large" in cat:
-                size_val = 3.0
-            elif "mid" in cat:
-                size_val = 2.0
-            elif "small" in cat:
-                size_val = 1.0
-            elif "multi" in cat:
-                size_val = 0.0
-        if size_val is None:
-            size_val = float(y_coord)
+    for dim_type, coords in (("style_box", selected), ("style_box_hist", hist)):
+        for coord in coords:
+            if not isinstance(coord, (list, tuple)) or len(coord) < 2:
+                raise ValueError(f"Invalid coordinate format in style box: {coord}")
+            x_idx, y_idx = coord[0], coord[1]
+            if not (0 <= x_idx < len(x_tags)) or not (0 <= y_idx < len(y_tags)):
+                raise ValueError(
+                    f"Style box coordinate out of bounds: [{x_idx}, {y_idx}] for axes x={x_tags}, y={y_tags}"
+                )
 
-    if val_score is None:
-        x_axis = [s.lower() for s in mstar.get("x_axis", [])]
-        if 0 <= x_coord < len(x_axis):
-            cat = x_axis[x_coord]
-            if "growth" in cat:
-                val_score = 3.0
-            elif "core" in cat:
-                val_score = 2.0
-            elif "value" in cat:
-                val_score = 1.0
-        if val_score is None:
-            val_score = float(x_coord)
+            x_tag = x_tags[x_idx]
+            y_tag = y_tags[y_idx]
+            dim_name = f"{y_tag.title()} {x_tag.title()}"
+            dim_code = f"{y_tag}_{x_tag}"
+            dimensions.append(
+                (
+                    product_id,
+                    dim_type,
+                    dim_name,
+                    dim_code,
+                    snapshot_date,
+                    "snapshot",
+                    snapshot_created_at,
+                    1.0,
+                    str(coord),
+                )
+            )
 
-    return [
-        ("mstar_style_size", size_val),
-        ("mstar_style_value", val_score),
-    ]
+    return dimensions
 
 
 def extract_profile(
     product_id: int,
     payload: dict[str, Any],
     snapshot_created_at: datetime,
-) -> list[tuple[int, str, str, Any, datetime, float]]:
-    """Extracts management/non-management expense ratios, TER, passive/active, and style box."""
+) -> ExtractionResult:
+    result = ExtractionResult()
     if not payload:
-        return []
+        return result
 
-    effective_date = snapshot_created_at.date()
-    rows: list[tuple[int, str, str, Any, datetime, float]] = []
+    snapshot_date = snapshot_created_at.date()
 
-    # 1. expenses_allocation
     for item in payload.get("expenses_allocation", []):
         ratio = item.get("ratio")
         if ratio is None:
             continue
         name = item.get("name")
+        raw_val = str(item.get("value", ratio))
         if name == "Management Expenses":
-            rows.append(
-                (product_id, "profile", "management_expense_ratio", effective_date, snapshot_created_at, float(ratio))
+            result.metrics.append(
+                (
+                    product_id,
+                    "profile",
+                    "management_expense_ratio",
+                    snapshot_date,
+                    "snapshot",
+                    snapshot_created_at,
+                    float(ratio),
+                    raw_val,
+                )
             )
         elif name == "Non-Management Expenses":
-            rows.append(
+            result.metrics.append(
                 (
                     product_id,
                     "profile",
                     "non_management_expense_ratio",
-                    effective_date,
+                    snapshot_date,
+                    "snapshot",
                     snapshot_created_at,
                     float(ratio),
+                    raw_val,
                 )
             )
 
-    # 2. fund_and_profile
     for item in payload.get("fund_and_profile", []):
         name_tag = item.get("name_tag") or ""
         name = item.get("name") or ""
@@ -221,80 +212,188 @@ def extract_profile(
             continue
 
         if name_tag == "Total_Expense_Ratio" or name == "Total Expense Ratio":
-            clean_str = str(val).replace("%", "").strip()
-            if clean_str:
-                ter_val = float(clean_str) / 100.0
-                rows.append(
-                    (product_id, "profile", "total_expense_ratio", effective_date, snapshot_created_at, ter_val)
+            parsed = parse_percentage(val)
+            if parsed is not None:
+                ter_val, raw_str = parsed
+                result.metrics.append(
+                    (
+                        product_id,
+                        "profile",
+                        "total_expense_ratio",
+                        snapshot_date,
+                        "snapshot",
+                        snapshot_created_at,
+                        ter_val,
+                        raw_str,
+                    )
                 )
         elif name_tag == "Management_Approach" or name == "Management Approach":
-            approach = str(val).strip().lower()
+            raw_str = str(val).strip()
+            approach = raw_str.lower()
             if approach == "passive":
-                rows.append((product_id, "profile", "is_passive", effective_date, snapshot_created_at, 1.0))
+                approach_val = 1.0
             elif approach == "active":
-                rows.append((product_id, "profile", "is_passive", effective_date, snapshot_created_at, 0.0))
+                approach_val = 0.0
+            else:
+                raise ValueError(f"Unrecognized management approach: '{val}'")
+            result.metrics.append(
+                (
+                    product_id,
+                    "profile",
+                    "is_passive",
+                    snapshot_date,
+                    "snapshot",
+                    snapshot_created_at,
+                    approach_val,
+                    raw_str,
+                )
+            )
+        elif name_tag == "Total_Net_Assets_Month_End" or name.startswith("Total Net Assets"):
+            aum_val, raw_str, aum_date, aum_source = parse_net_assets(val, fallback_date=snapshot_date)
+            result.metrics.append(
+                (
+                    product_id,
+                    "profile",
+                    "total_net_assets_local",
+                    aum_date,
+                    aum_source,
+                    snapshot_created_at,
+                    aum_val,
+                    raw_str,
+                )
+            )
+        elif name_tag == "Manager_Tenure" or name == "Manager Tenure":
+            raw_str = str(val).strip()
+            if raw_str and raw_str.lower() not in ("-", "n/a", "none"):
+                tenure_years, raw_str = parse_manager_tenure(val, ref_date=snapshot_date)
+                result.metrics.append(
+                    (
+                        product_id,
+                        "profile",
+                        "manager_tenure_years",
+                        snapshot_date,
+                        "snapshot",
+                        snapshot_created_at,
+                        tenure_years,
+                        raw_str,
+                    )
+                )
 
-    # 3. mstar (Style Box)
+    for report in payload.get("reports", []):
+        if report.get("name") == "Annual Report":
+            report_date, report_source = parse_effective_date(
+                report.get("as_of_date"),
+                fallback_date=snapshot_date,
+                default_source="item",
+            )
+            for report_field in report.get("fields", []):
+                if report_field.get("name") == "Total Net Expense":
+                    parsed = parse_percentage(report_field.get("value"))
+                    if parsed is not None:
+                        fee_val, raw_str = parsed
+                        result.metrics.append(
+                            (
+                                product_id,
+                                "profile",
+                                "audited_net_expense_ratio",
+                                report_date,
+                                report_source,
+                                snapshot_created_at,
+                                fee_val,
+                                raw_str,
+                            )
+                        )
+
     mstar = payload.get("mstar")
     if isinstance(mstar, dict):
-        for metric_id, style_val in _extract_mstar_style(mstar):
-            rows.append((product_id, "profile", metric_id, effective_date, snapshot_created_at, style_val))
+        result.dimensions.extend(_extract_style_box_dimensions(product_id, mstar, snapshot_created_at))
 
-    return rows
+    return result
 
 
 def extract_esg(
     product_id: int,
     payload: dict[str, Any],
     snapshot_created_at: datetime,
-) -> list[tuple[int, str, str, Any, datetime, float]]:
-    """Extracts ESG portfolio coverage and hierarchical Refinitiv score tree."""
+) -> ExtractionResult:
+    result = ExtractionResult()
     if not payload:
-        return []
+        return result
 
-    effective_date = parse_effective_date(
+    eff_date, eff_source = parse_effective_date(
         payload.get("asOfDate"),
         fallback_date=snapshot_created_at.date(),
+        default_source="payload",
     )
-
-    rows: list[tuple[int, str, str, Any, datetime, float]] = []
 
     coverage = payload.get("coverage")
     if coverage is not None:
-        rows.append((product_id, "esg", "esg_coverage", effective_date, snapshot_created_at, float(coverage)))
+        result.metrics.append(
+            (
+                product_id,
+                "esg",
+                "esg_coverage",
+                eff_date,
+                eff_source,
+                snapshot_created_at,
+                float(coverage),
+                str(coverage),
+            )
+        )
 
     for node in payload.get("content", []):
         node_name = node.get("name")
         node_val = node.get("value")
         if node_name and node_val is not None:
             metric_id = sanitize_metric_id(node_name)
-            rows.append((product_id, "esg", metric_id, effective_date, snapshot_created_at, float(node_val)))
+            result.metrics.append(
+                (
+                    product_id,
+                    "esg",
+                    metric_id,
+                    eff_date,
+                    eff_source,
+                    snapshot_created_at,
+                    float(node_val),
+                    str(node_val),
+                )
+            )
 
         for child in node.get("children", []):
             child_name = child.get("name")
             child_val = child.get("value")
             if child_name and child_val is not None:
                 metric_id = sanitize_metric_id(child_name)
-                rows.append((product_id, "esg", metric_id, effective_date, snapshot_created_at, float(child_val)))
+                result.metrics.append(
+                    (
+                        product_id,
+                        "esg",
+                        metric_id,
+                        eff_date,
+                        eff_source,
+                        snapshot_created_at,
+                        float(child_val),
+                        str(child_val),
+                    )
+                )
 
-    return rows
+    return result
 
 
 def extract_mstar(
     product_id: int,
     payload: dict[str, Any],
     snapshot_created_at: datetime,
-) -> list[tuple[int, str, str, Any, datetime, float]]:
-    """Extracts Medalist ratings, pillar scores, star ratings, and sustainability globe ratings."""
+) -> ExtractionResult:
+    result = ExtractionResult()
     if not payload:
-        return []
+        return result
 
-    top_level_date = parse_effective_date(
+    top_level_date, top_level_source = parse_effective_date(
         payload.get("as_of_date"),
         fallback_date=snapshot_created_at.date(),
+        default_source="payload",
     )
-
-    rows: list[tuple[int, str, str, Any, datetime, float]] = []
 
     for pillar in payload.get("summary", []):
         pillar_id = pillar.get("id")
@@ -302,8 +401,7 @@ def extract_mstar(
             raise ValueError("Missing 'id' in mstar summary item")
 
         pillar_key = pillar_id.strip().lower()
-        if pillar_key not in _MSTAR_PILLAR_TARGETS:
-            # Skip non-rating summary items like 'category' and 'category_index'
+        if pillar_key in ("category", "category_index"):
             continue
 
         raw_val = pillar.get("value")
@@ -314,95 +412,130 @@ def extract_mstar(
         if val_str in ("", "-"):
             continue
 
-        # Non-numeric rating statuses representing unrated/suspended are skipped
         norm_val = val_str.lower()
         if norm_val in ("under_review", "not_applicable", "not applicable", "under review", "na", "n/a"):
             continue
 
-        mapping = _MSTAR_PILLAR_TARGETS[pillar_key]
+        is_quant = bool(pillar.get("q") is True or pillar_key.startswith("q_"))
+        base_metric = pillar_key[2:] if pillar_key.startswith("q_") else pillar_key
+        if base_metric == "quantitative_rating":
+            base_metric = "medalist_rating"
+
+        if base_metric in ("medalist_rating", "people", "process", "parent"):
+            metric_id = f"mstar_{base_metric}_{'quant' if is_quant else 'analyst'}"
+            mapping = _MSTAR_MEDALIST_MAP if base_metric == "medalist_rating" else _MSTAR_PILLAR_MAP
+        elif base_metric == "morningstar_rating":
+            metric_id = f"mstar_{base_metric}"
+            mapping = _MSTAR_STAR_MAP
+        elif base_metric == "sustainability_rating":
+            metric_id = f"mstar_{base_metric}"
+            mapping = _MSTAR_SUSTAINABILITY_MAP
+        else:
+            raise ValueError(f"Unrecognized mstar pillar id: '{pillar_id}'")
+
         if norm_val not in mapping:
             raise ValueError(f"Unrecognized rating string '{raw_val}' for mstar pillar '{pillar_id}'")
 
-        mapped_score = mapping[norm_val]
-        effective_date = parse_effective_date(
-            pillar.get("publish_date"),
-            fallback_date=top_level_date,
+        score = mapping[norm_val]
+        if pillar.get("publish_date"):
+            eff_date, eff_source = parse_effective_date(
+                pillar.get("publish_date"),
+                fallback_date=top_level_date,
+                default_source="item",
+            )
+        else:
+            eff_date, eff_source = top_level_date, top_level_source
+
+        result.metrics.append(
+            (product_id, "mstar", metric_id, eff_date, eff_source, snapshot_created_at, score, val_str)
         )
 
-        rows.append((product_id, "mstar", pillar_key, effective_date, snapshot_created_at, mapped_score))
-
-    return rows
+    return result
 
 
 def extract_lipper(
     product_id: int,
     payload: dict[str, Any],
     snapshot_created_at: datetime,
-) -> list[tuple[int, str, str, Any, datetime, float]]:
-    """Groups universes by date, averages same-date scores, and extracts ratings across horizons."""
+) -> ExtractionResult:
+    result = ExtractionResult()
     universes = payload.get("universes", [])
     if not universes:
-        return []
+        return result
 
-    # Group universes by raw as_of_date
-    date_groups: dict[Any, list[dict[str, Any]]] = defaultdict(list)
     for u in universes:
-        date_groups[u.get("as_of_date")].append(u)
-
-    rows: list[tuple[int, str, str, Any, datetime, float]] = []
-
-    for as_of_date, group_universes in date_groups.items():
-        effective_date = parse_effective_date(
-            as_of_date,
+        country_name = sanitize_metric_id(u.get("name") or "global")
+        eff_date, eff_source = parse_effective_date(
+            u.get("as_of_date"),
             fallback_date=snapshot_created_at.date(),
+            default_source="item",
         )
 
-        metrics_acc: dict[str, list[float]] = defaultdict(list)
-        for horizon, suffix in _LIPPER_HORIZON_SUFFIXES.items():
-            for u in group_universes:
-                for item in u.get(horizon, []):
-                    tag = item.get("name_tag")
-                    if not tag:
-                        continue
-                    rating = item.get("rating")
-                    if not isinstance(rating, dict):
-                        continue
-                    val = rating.get("value")
-                    if val is None:
-                        continue
-                    metric_id = f"{tag.strip().lower()}{suffix}"
-                    metrics_acc[metric_id].append(float(val))
+        for horizon_key, horizon_suffix in _LIPPER_HORIZONS.items():
+            for item in u.get(horizon_key, []):
+                tag = item.get("name_tag")
+                if not tag:
+                    continue
+                rating = item.get("rating")
+                if not isinstance(rating, dict):
+                    continue
+                val = rating.get("value")
+                if val is None:
+                    continue
 
-        for metric_id, values in metrics_acc.items():
-            consensus_val = sum(values) / len(values)
-            rows.append((product_id, "lipper", metric_id, effective_date, snapshot_created_at, consensus_val))
+                metric_id = f"lipper_{sanitize_metric_id(tag)}_{horizon_suffix}_{country_name}"
+                result.metrics.append(
+                    (
+                        product_id,
+                        "lipper",
+                        metric_id,
+                        eff_date,
+                        eff_source,
+                        snapshot_created_at,
+                        float(val),
+                        str(val),
+                    )
+                )
 
-    return rows
+    return result
 
 
 def extract_holdings(
     product_id: int,
     payload: dict[str, Any],
     snapshot_created_at: datetime,
-) -> list[tuple[int, str, str, str | None, Any, datetime, float]]:
-    """Extracts portfolio allocations across asset class, currency, country, industry, maturity, credit rating."""
+) -> ExtractionResult:
+    result = ExtractionResult()
     if not payload:
-        return []
+        return result
 
-    effective_date = parse_effective_date(
+    eff_date, eff_source = parse_effective_date(
         payload.get("as_of_date"),
         fallback_date=snapshot_created_at.date(),
+        default_source="payload",
     )
 
-    rows: list[tuple[int, str, str, str | None, Any, datetime, float]] = []
+    top_10_weight_raw = payload.get("top_10_weight")
+    if top_10_weight_raw is not None:
+        parsed = parse_percentage(top_10_weight_raw)
+        if parsed is not None:
+            conc_val, raw_str = parsed
+            result.metrics.append(
+                (
+                    product_id,
+                    "holdings",
+                    "portfolio_top_10_concentration",
+                    eff_date,
+                    eff_source,
+                    snapshot_created_at,
+                    conc_val,
+                    raw_str,
+                )
+            )
 
-    for field, breakdown_type in _HOLDINGS_BREAKDOWN_MAPPING.items():
-        items = payload.get(field, [])
-        if not items:
-            continue
-
-        agg: dict[tuple[str, str], dict[str, Any]] = {}
-        for item in items:
+    # Exclude currency and geographic to eliminate collinearity with investor_country
+    for field_name, dim_type in _HOLDINGS_BREAKDOWNS:
+        for item in payload.get(field_name, []):
             raw_name = item.get("name")
             if not raw_name:
                 continue
@@ -411,70 +544,105 @@ def extract_holdings(
             if weight_val is None:
                 continue
 
-            # Standardized decimal weight (e.g. 99.76% -> 0.9976)
             weight = float(weight_val) / 100.0
+            raw_str = str(item.get("formatted_weight", f"{weight_val}%"))
 
-            if breakdown_type == "credit_rating":
-                item_name = clean_credit_rating(raw_name)
-                item_code = item_name
-            elif breakdown_type == "currency":
-                s = raw_name.strip()
-                item_name = "Unassigned" if s in ("<No Currency>", "<NoCurrency>") else s
-                item_code = item.get("code")
-            elif breakdown_type == "country":
-                item_name = raw_name.strip()
-                item_code = item.get("country_code")
+            if dim_type == "credit_rating":
+                dim_name = clean_credit_rating(raw_name)
+                dim_code = dim_name
+            elif dim_type == "country":
+                dim_name = raw_name.strip()
+                dim_code = item.get("country_code")
             else:
-                item_name = raw_name.strip()
-                item_code = None
+                dim_name = raw_name.strip()
+                dim_code = None
 
-            key = (breakdown_type, item_name)
-            if key in agg:
-                agg[key]["weight"] += weight
-            else:
-                agg[key] = {"item_code": item_code, "weight": weight}
-
-        for (b_type, name), data in agg.items():
-            rows.append(
+            result.dimensions.append(
                 (
                     product_id,
-                    b_type,
-                    name,
-                    data["item_code"],
-                    effective_date,
+                    dim_type,
+                    dim_name,
+                    dim_code,
+                    eff_date,
+                    eff_source,
                     snapshot_created_at,
-                    data["weight"],
+                    weight,
+                    raw_str,
                 )
             )
 
-    return rows
+    for item in payload.get("top_10", []):
+        name = item.get("name")
+        if not name:
+            continue
+
+        ticker = item.get("ticker")
+        dim_name = f"{ticker.strip()} - {name.strip()}" if ticker and str(ticker).strip() else name.strip()
+        conids = item.get("conids", [])
+        dim_code = ",".join(str(c) for c in conids) if conids else None
+
+        assets_pct = item.get("assets_pct")
+        parsed = parse_percentage(assets_pct, allow_bound=True)
+        if parsed is not None:
+            pct_val, raw_str = parsed
+            result.dimensions.append(
+                (
+                    product_id,
+                    "top_holding",
+                    dim_name,
+                    dim_code,
+                    eff_date,
+                    eff_source,
+                    snapshot_created_at,
+                    pct_val,
+                    raw_str,
+                )
+            )
+
+    return result
 
 
 def extract_theme_weights(
     product_id: int,
     payload: dict[str, Any],
     snapshot_created_at: datetime,
-) -> list[tuple[int, str, Any, datetime, float, float]]:
-    """Extracts thematic factor exposures and rank-adjusted weights."""
+) -> ExtractionResult:
+    result = ExtractionResult()
     if not payload:
-        return []
+        return result
 
-    effective_date = snapshot_created_at.date()
-    rows: list[tuple[int, str, Any, datetime, float, float]] = []
+    eff_date = snapshot_created_at.date()
 
+    # Raw weight is discarded to prevent multicollinearity with rank_adjusted_weight
     for theme in payload.get("themes", []):
         theme_id = theme.get("key")
-        if not theme_id:
+        name = theme.get("name")
+        if not theme_id or not name:
             continue
 
-        weight = float(theme["weight"])
-        rank_adj_weight = float(theme["rank_adjusted_weight"])
-        rows.append((product_id, str(theme_id), effective_date, snapshot_created_at, weight, rank_adj_weight))
+        rank_adj_weight = theme.get("rank_adjusted_weight")
+        if rank_adj_weight is None:
+            continue
 
-    return rows
+        val_float = float(rank_adj_weight)
+        result.dimensions.append(
+            (
+                product_id,
+                "theme",
+                name.strip(),
+                str(theme_id).strip(),
+                eff_date,
+                "snapshot",
+                snapshot_created_at,
+                val_float,
+                str(rank_adj_weight),
+            )
+        )
+
+    return result
 
 
-EXTRACTOR_REGISTRY: dict[str, Callable] = {
+EXTRACTOR_REGISTRY: dict[str, Callable[[int, dict[str, Any], datetime], ExtractionResult]] = {
     "/tws.proxy/fundamentals/mf_ratios_fundamentals/": extract_ratios,
     "/tws.proxy/fundamentals/mf_profile_and_fees/": extract_profile,
     "/tws.proxy/impact/esg/": extract_esg,
