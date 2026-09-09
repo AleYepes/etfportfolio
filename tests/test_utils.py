@@ -4,7 +4,6 @@ import duckdb
 import pytest
 
 from etfportfolio.core.db import apply_schema
-from etfportfolio.core.utils import decompress_payload
 from etfportfolio.ingestion.prices import (
     OVERLAP_CALENDAR_DAYS,
     PRICES_SPEC,
@@ -22,6 +21,7 @@ from etfportfolio.ingestion.utils import (
     is_fresh,
     store_blob,
 )
+from etfportfolio.observations.utils import decompress_payload
 
 
 def test_is_fresh():

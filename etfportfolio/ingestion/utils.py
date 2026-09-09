@@ -49,6 +49,9 @@ def canonical_bytes(payload: Any) -> bytes:
     return orjson.dumps(_canonicalize(payload), option=orjson.OPT_SORT_KEYS)
 
 
+_COMPRESSOR = zstd.ZstdCompressor(level=3)
+
+
 def content_address(payload: Any) -> tuple[int, bytes]:
     """Returns (hash, compressed_bytes) ready for bronze.payload_blobs.
 
@@ -56,7 +59,7 @@ def content_address(payload: Any) -> tuple[int, bytes]:
     """
     canonical = canonical_bytes(payload)
     digest = xxhash.xxh3_64_intdigest(canonical, seed=0)
-    compressed = zstd.ZstdCompressor(level=3).compress(canonical)
+    compressed = _COMPRESSOR.compress(canonical)
     return digest, compressed
 
 

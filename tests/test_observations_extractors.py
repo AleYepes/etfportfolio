@@ -14,25 +14,29 @@ from etfportfolio.observations.extractors import (
 from etfportfolio.observations.utils import (
     clean_credit_rating,
     parse_effective_date,
+    parse_manager_tenure,
+    parse_net_assets,
+    parse_percentage,
     sanitize_metric_id,
 )
 
 
 def test_utils():
     fallback = date(2026, 9, 1)
-    assert parse_effective_date(None, fallback) == fallback
-    assert parse_effective_date(0, fallback) == fallback
-    assert parse_effective_date(-100, fallback) == fallback
-    assert parse_effective_date("", fallback) == fallback
-    assert parse_effective_date("invalid", fallback) == fallback
-    # Epoch ms: 1785470400000 -> 2026-07-31
-    assert parse_effective_date(1785470400000, fallback) == date(2026, 7, 31)
-    # YYYYMMDD
-    assert parse_effective_date("20260831", fallback) == date(2026, 8, 31)
-    # YYYY-MM-DD
-    assert parse_effective_date("2026-08-15", fallback) == date(2026, 8, 15)
-    # YYYY/MM/DD
-    assert parse_effective_date("2026/08/20", fallback) == date(2026, 8, 20)
+
+    # parse_effective_date fallbacks
+    assert parse_effective_date(None, fallback) == (fallback, "snapshot")
+    assert parse_effective_date(0, fallback) == (fallback, "snapshot")
+    assert parse_effective_date(-100, fallback) == (fallback, "snapshot")
+    assert parse_effective_date("", fallback) == (fallback, "snapshot")
+    assert parse_effective_date("invalid", fallback) == (fallback, "snapshot")
+
+    # parse_effective_date successes
+    assert parse_effective_date(1785470400000, fallback) == (date(2026, 7, 31), "payload")
+    assert parse_effective_date(1785470400000, fallback, default_source="item") == (date(2026, 7, 31), "item")
+    assert parse_effective_date("20260831", fallback) == (date(2026, 8, 31), "payload")
+    assert parse_effective_date("2026-08-15", fallback) == (date(2026, 8, 15), "payload")
+    assert parse_effective_date("2026/08/20", fallback) == (date(2026, 8, 20), "payload")
 
     # clean_credit_rating
     assert clean_credit_rating("% Quality/AAA") == "AAA"
@@ -46,6 +50,51 @@ def test_utils():
     assert sanitize_metric_id("Price/Earnings") == "price_earnings"
     assert sanitize_metric_id("Dividend_Yield_Weighted_Average") == "dividend_yield_weighted_average"
     assert sanitize_metric_id("  Sales Growth 5 Yr  ") == "sales_growth_5_yr"
+    assert sanitize_metric_id("TRESGS") == "tresgs"
+
+    # parse_net_assets
+    aum_us = parse_net_assets("$78.63B (2026/07/31)", fallback_date=fallback)
+    assert aum_us is not None
+    assert aum_us[0] == 78630000000.0
+    assert aum_us[1] == "$78.63B (2026/07/31)"
+    assert aum_us[2] == date(2026, 7, 31)
+    assert aum_us[3] == "item"
+
+    aum_eu = parse_net_assets("2,5B", fallback_date=fallback)
+    assert aum_eu is not None
+    assert aum_eu[0] == 2500000000.0
+    assert aum_eu[2] == fallback
+    assert aum_eu[3] == "snapshot"
+
+    aum_thousands = parse_net_assets("1,250.5M", fallback_date=fallback)
+    assert aum_thousands is not None
+    assert aum_thousands[0] == 1250500000.0
+
+    assert parse_net_assets(None, fallback_date=fallback) is None
+    assert parse_net_assets("", fallback_date=fallback) is None
+    assert parse_net_assets("N/A", fallback_date=fallback) is None
+    assert parse_net_assets("abc", fallback_date=fallback) is None
+
+    # parse_manager_tenure
+    ref_date = date(2026, 8, 15)
+    tenure = parse_manager_tenure("2013/01/01", ref_date=ref_date)
+    assert tenure is not None
+    expected_years = round((ref_date - date(2013, 1, 1)).days / 365.25, 4)
+    assert tenure[0] == expected_years
+    assert tenure[1] == "2013/01/01"
+
+    assert parse_manager_tenure(None, ref_date=ref_date) is None
+    assert parse_manager_tenure("", ref_date=ref_date) is None
+    with pytest.raises(ValueError, match="Invalid Manager Tenure date string"):
+        parse_manager_tenure("not-a-date", ref_date=ref_date)
+
+    # parse_percentage
+    assert parse_percentage("0.32%") == (0.0032, "0.32%")
+    assert parse_percentage("<0.01%", allow_bound=True) == (0.0001, "<0.01%")
+    assert parse_percentage(None) is None
+    assert parse_percentage("-") is None
+    with pytest.raises(ValueError, match="Cannot parse percentage"):
+        parse_percentage("invalid_pct")
 
 
 def test_extract_ratios():
@@ -70,8 +119,9 @@ def test_extract_ratios():
         ],
     }
 
-    rows = extract_ratios(1001, payload, created_at)
-    assert len(rows) == 5
+    res = extract_ratios(1001, payload, created_at)
+    assert len(res.metrics) == 5
+    assert len(res.dimensions) == 0
 
     eff_date = date(2026, 7, 31)
     expected_metrics = {
@@ -82,67 +132,115 @@ def test_extract_ratios():
         "latest_composite_z_score": -0.18,
     }
 
-    for r in rows:
-        pid, source, metric_id, eff, snap_time, val = r
+    for m in res.metrics:
+        pid, source, metric_id, eff, eff_src, snap_time, val, raw_val = m
         assert pid == 1001
         assert source == "ratios"
         assert eff == eff_date
+        assert eff_src == "payload"
         assert snap_time == created_at
         assert val == expected_metrics[metric_id]
 
-    # Empty payload returns []
-    assert extract_ratios(1001, {}, created_at) == []
+    empty_res = extract_ratios(1001, {}, created_at)
+    assert len(empty_res.metrics) == 0
+    assert len(empty_res.dimensions) == 0
 
 
 def test_extract_profile():
-    created_at = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
+    created_at = datetime(2026, 8, 15, 10, 0, 0, tzinfo=UTC)
     payload = {
         "expenses_allocation": [
             {"name": "Management Expenses", "ratio": 0.85},
             {"name": "Non-Management Expenses", "ratio": 0.15},
         ],
         "fund_and_profile": [
-            {"name": "Total Expense Ratio", "name_tag": "Total_Expense_Ratio", "value": "0.32%"},
-            {"name": "Management Approach", "name_tag": "Management_Approach", "value": "Passive"},
-            {"name": "Inception Date", "name_tag": "Inception_Date", "value": "2001/01/29"},
+            {"name_tag": "Total_Expense_Ratio", "value": "0.06%"},
+            {"name_tag": "Management_Approach", "value": "Passive"},
+            {"name": "Total Net Assets (Month End)", "value": "$78.63B (2026/07/31)"},
+            {"name": "Manager Tenure", "value": "2013/01/01"},
+            {"name_tag": "Inception_Date", "value": "2001/01/29"},  # ignored
+        ],
+        "reports": [
+            {
+                "name": "Annual Report",
+                "as_of_date": 1761883200000,  # 2025-10-31
+                "fields": [{"name": "Total Net Expense", "value": "0.0564%"}],
+            }
         ],
         "mstar": {
-            "name": "Large-Cap Growth Funds",
-            "selected": [[0, 2]],
-            "x_axis": ["Core", "Growth", "Value"],
-            "y_axis": ["Large", "Mid", "Multi", "Small"],
+            "x_axis_tag": ["value", "core", "growth"],
+            "y_axis_tag": ["large", "multi", "mid", "small"],
+            "selected": [[1, 1], [1, 2]],
+            "hist": [[0, 0]],
         },
     }
 
-    rows = extract_profile(1001, payload, created_at)
-    # 2 expenses + 2 fund_and_profile + 2 mstar style box = 6 metrics
-    assert len(rows) == 6
+    res = extract_profile(1001, payload, created_at)
+    # 2 expenses + 4 fund_and_profile + 1 annual report = 7 metrics
+    assert len(res.metrics) == 7
+    # 2 selected style_box + 1 hist style_box_hist = 3 dimensions
+    assert len(res.dimensions) == 3
 
-    eff_date = created_at.date()
-    for r in rows:
-        assert r[3] == eff_date
+    metrics = {m[2]: (m[3], m[4], m[6], m[7]) for m in res.metrics}
+    snap_date = date(2026, 8, 15)
 
-    metrics = {r[2]: r[5] for r in rows}
-    assert metrics["management_expense_ratio"] == 0.85
-    assert metrics["non_management_expense_ratio"] == 0.15
-    assert pytest.approx(metrics["total_expense_ratio"]) == 0.0032
-    assert metrics["is_passive"] == 1.0
-    assert metrics["mstar_style_size"] == 3.0  # Large
-    assert metrics["mstar_style_value"] == 3.0  # Growth
+    assert metrics["management_expense_ratio"] == (snap_date, "snapshot", 0.85, "0.85")
+    assert metrics["non_management_expense_ratio"] == (snap_date, "snapshot", 0.15, "0.15")
+    assert pytest.approx(metrics["total_expense_ratio"][2]) == 0.0006
+    assert metrics["total_expense_ratio"][:2] == (snap_date, "snapshot")
+    assert metrics["total_expense_ratio"][3] == "0.06%"
+    assert metrics["is_passive"] == (snap_date, "snapshot", 1.0, "Passive")
+    assert metrics["total_net_assets_local"] == (date(2026, 7, 31), "item", 78630000000.0, "$78.63B (2026/07/31)")
+    assert metrics["manager_tenure_years"][1] == "snapshot"
+    assert pytest.approx(metrics["manager_tenure_years"][2]) == round((snap_date - date(2013, 1, 1)).days / 365.25, 4)
+
+    audited = metrics["audited_net_expense_ratio"]
+    assert audited[0] == date(2025, 10, 31)
+    assert audited[1] == "item"
+    assert pytest.approx(audited[2]) == 0.000564
+    assert audited[3] == "0.0564%"
+
+    # Style Box dimensions check
+    dims = {(d[1], d[2], d[3]): (d[4], d[5], d[7], d[8]) for d in res.dimensions}
+    assert dims[("style_box", "Multi Core", "multi_core")] == (snap_date, "snapshot", 1.0, "[1, 1]")
+    assert dims[("style_box", "Mid Core", "mid_core")] == (snap_date, "snapshot", 1.0, "[1, 2]")
+    assert dims[("style_box_hist", "Large Value", "large_value")] == (snap_date, "snapshot", 1.0, "[0, 0]")
 
     # Active fund test
-    active_payload = {
-        "fund_and_profile": [
-            {"name_tag": "Management_Approach", "value": "Active"},
-        ]
-    }
-    active_rows = extract_profile(1001, active_payload, created_at)
-    assert len(active_rows) == 1
-    assert active_rows[0][2] == "is_passive"
-    assert active_rows[0][5] == 0.0
+    active_payload = {"fund_and_profile": [{"name_tag": "Management_Approach", "value": "Active"}]}
+    active_res = extract_profile(1001, active_payload, created_at)
+    assert len(active_res.metrics) == 1
+    assert active_res.metrics[0][2] == "is_passive"
+    assert active_res.metrics[0][6] == 0.0
 
-    # Empty payload returns []
-    assert extract_profile(1001, {}, created_at) == []
+    # Validation errors
+    bad_approach = {"fund_and_profile": [{"name_tag": "Management_Approach", "value": "Robotic"}]}
+    with pytest.raises(ValueError, match="Unknown Management Approach"):
+        extract_profile(1001, bad_approach, created_at)
+
+    bad_style_tag = {
+        "mstar": {
+            "x_axis_tag": ["unknown"],
+            "y_axis_tag": ["large"],
+            "selected": [[0, 0]],
+        }
+    }
+    with pytest.raises(ValueError, match="Unrecognized style box axis configuration"):
+        extract_profile(1001, bad_style_tag, created_at)
+
+    bad_style_coord = {
+        "mstar": {
+            "x_axis_tag": ["value", "core", "growth"],
+            "y_axis_tag": ["large", "mid", "small"],
+            "selected": [[5, 5]],
+        }
+    }
+    with pytest.raises(ValueError, match="Style box coordinate out of bounds"):
+        extract_profile(1001, bad_style_coord, created_at)
+
+    empty_res = extract_profile(1001, {}, created_at)
+    assert len(empty_res.metrics) == 0
+    assert len(empty_res.dimensions) == 0
 
 
 def test_extract_esg():
@@ -166,181 +264,168 @@ def test_extract_esg():
         ],
     }
 
-    rows = extract_esg(1001, payload, created_at)
-    assert len(rows) == 5
+    res = extract_esg(1001, payload, created_at)
+    assert len(res.metrics) == 5
+    assert len(res.dimensions) == 0
 
     eff_date = date(2026, 8, 22)
-    metrics = {r[2]: r[5] for r in rows}
-    assert metrics["esg_coverage"] == 0.99762
-    assert metrics["tresgs"] == 6.0
-    assert metrics["tresgens"] == 7.0
-    assert metrics["tresgeners"] == 8.0
-    assert metrics["tresgenpis"] == 5.0
+    metrics = {m[2]: (m[4], m[6]) for m in res.metrics}
+    assert metrics["esg_coverage"] == ("payload", 0.99762)
+    assert metrics["tresgs"] == ("payload", 6.0)
+    assert metrics["tresgens"] == ("payload", 7.0)
+    assert metrics["tresgeners"] == ("payload", 8.0)
+    assert metrics["tresgenpis"] == ("payload", 5.0)
 
-    for r in rows:
-        assert r[0] == 1001
-        assert r[1] == "esg"
-        assert r[3] == eff_date
+    for m in res.metrics:
+        assert m[0] == 1001
+        assert m[1] == "esg"
+        assert m[3] == eff_date
 
-    assert extract_esg(1001, {}, created_at) == []
+    empty_res = extract_esg(1001, {}, created_at)
+    assert len(empty_res.metrics) == 0
+    assert len(empty_res.dimensions) == 0
 
 
 def test_extract_mstar():
     created_at = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
     payload = {
-        "as_of_date": "20260831",
+        "as_of_date": "20260731",
         "summary": [
-            {"id": "category", "value": "Real Estate"},  # non-rating, should be skipped
-            {"id": "medalist_rating", "publish_date": "20260731", "value": "Neutral"},
-            {"id": "morningstar_rating", "publish_date": "20260831", "value": "3"},
-            {"id": "parent", "publish_date": "20260731", "value": "Above_Average"},
-            {"id": "people", "publish_date": "20260731", "value": "High"},
-            {"id": "q_process", "publish_date": "20260731", "value": "Below_Average"},
-            {"id": "process", "value": "Not_Applicable"},  # should be skipped gracefully
-            {"id": "sustainability_rating", "publish_date": "20260630", "value": "Average"},
-            {"id": "quantitative_rating", "publish_date": "20221130", "value": "Gold"},
+            {"id": "category", "value": "Real Estate"},  # skipped
+            {"id": "medalist_rating", "value": "Gold", "q": False, "publish_date": "20260427"},
+            {"id": "process", "value": "High", "q": False, "publish_date": "20260427"},
+            {"id": "q_process", "value": "Below_Average", "q": True, "publish_date": "20260731"},
+            {"id": "morningstar_rating", "value": "4", "q": False, "publish_date": "20260731"},
+            {"id": "parent", "value": "Above_Average", "q": False},  # fallback to payload as_of_date
+            {"id": "people", "value": "Under_Review"},  # skipped
+            {"id": "sustainability_rating", "value": "High", "publish_date": "20260630"},
         ],
     }
 
-    rows = extract_mstar(1001, payload, created_at)
-    assert len(rows) == 7
+    res = extract_mstar(1001, payload, created_at)
+    # 5 active ratings: medalist_rating_analyst, process_analyst, process_quant, morningstar_rating, parent_analyst, sustainability_rating = 6
+    assert len(res.metrics) == 6
+    assert len(res.dimensions) == 0
 
-    metrics = {r[2]: (r[3], r[5]) for r in rows}
-    assert metrics["medalist_rating"] == (date(2026, 7, 31), 2.0)  # Neutral = 2.0
-    assert metrics["morningstar_rating"] == (date(2026, 8, 31), 3.0)  # 3 = 3.0
-    assert metrics["parent"] == (date(2026, 7, 31), 4.0)  # Above_Average = 4.0
-    assert metrics["people"] == (date(2026, 7, 31), 5.0)  # High = 5.0
-    assert metrics["q_process"] == (date(2026, 7, 31), 2.0)  # Below_Average = 2.0
-    assert metrics["sustainability_rating"] == (date(2026, 6, 30), 3.0)  # Average = 3.0
-    assert metrics["quantitative_rating"] == (date(2022, 11, 30), 5.0)  # Gold = 5.0
+    metrics = {m[2]: (m[3], m[4], m[6], m[7]) for m in res.metrics}
+    assert metrics["mstar_medalist_rating_analyst"] == (date(2026, 4, 27), "item", 5.0, "Gold")
+    assert metrics["mstar_process_analyst"] == (date(2026, 4, 27), "item", 5.0, "High")
+    assert metrics["mstar_process_quant"] == (date(2026, 7, 31), "item", 2.0, "Below_Average")
+    assert metrics["mstar_morningstar_rating"] == (date(2026, 7, 31), "item", 4.0, "4")
+    assert metrics["mstar_parent_analyst"] == (date(2026, 7, 31), "payload", 4.0, "Above_Average")
+    assert metrics["mstar_sustainability_rating"] == (date(2026, 6, 30), "item", 5.0, "High")
 
-    # Test unrecognized rating raises ValueError
-    bad_payload = {"summary": [{"id": "people", "value": "SuperDuper"}]}
+    # Unrecognized rating string raises ValueError
+    bad_payload = {"summary": [{"id": "people", "value": "Nonexistent_Rating"}]}
     with pytest.raises(ValueError, match="Unrecognized rating string"):
         extract_mstar(1001, bad_payload, created_at)
 
-    # Test missing id raises ValueError
+    # Missing id raises ValueError
     missing_id_payload = {"summary": [{"value": "High"}]}
     with pytest.raises(ValueError, match="Missing 'id'"):
         extract_mstar(1001, missing_id_payload, created_at)
 
-    assert extract_mstar(1001, {}, created_at) == []
+    empty_res = extract_mstar(1001, {}, created_at)
+    assert len(empty_res.metrics) == 0
+    assert len(empty_res.dimensions) == 0
 
 
 def test_extract_lipper():
     created_at = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
-    # Two universes with same date (should be averaged) and one historical date
     payload = {
         "universes": [
             {
                 "name": "United States",
                 "as_of_date": 1785470400000,  # 2026-07-31
-                "overall": [
-                    {"name_tag": "consistent_return", "rating": {"value": 4}},
-                    {"name_tag": "preservation", "rating": {"value": 2}},
-                ],
-                "3_year": [
-                    {"name_tag": "total_return", "rating": {"value": 5}},
-                ],
-            },
-            {
-                "name": "Peru",
-                "as_of_date": 1785470400000,  # same date
-                "overall": [
-                    {"name_tag": "consistent_return", "rating": {"value": 2}},  # avg with 4 -> 3.0
-                    {"name_tag": "preservation", "rating": {"value": 4}},  # avg with 2 -> 3.0
-                ],
-                "3_year": [
-                    {"name_tag": "total_return", "rating": {"value": 3}},  # avg with 5 -> 4.0
-                ],
+                "3_year": [{"name_tag": "consistent_return", "rating": {"value": 4}}],
             },
             {
                 "name": "Chile",
-                "as_of_date": 1600000000000,  # 2020-09-13
-                "overall": [
-                    {"name_tag": "preservation", "rating": {"value": 1}},
-                ],
+                "as_of_date": 1785470400000,  # 2026-07-31
+                "3_year": [{"name_tag": "consistent_return", "rating": {"value": 5}}],
             },
         ]
     }
 
-    rows = extract_lipper(1001, payload, created_at)
-    # Date 1 (2026-07-31): consistent_return_overall, preservation_overall, total_return_3yr
-    # Date 2 (2020-09-13): preservation_overall
-    # Total: 4 rows
-    assert len(rows) == 4
+    res = extract_lipper(1001, payload, created_at)
+    assert len(res.metrics) == 2
+    assert len(res.dimensions) == 0
 
-    d1 = date(2026, 7, 31)
-    d2 = date(2020, 9, 13)
+    metrics = {m[2]: (m[3], m[4], m[6], m[7]) for m in res.metrics}
+    eff_date = date(2026, 7, 31)
+    assert metrics["lipper_consistent_return_3yr_united_states"] == (eff_date, "item", 4.0, "4")
+    assert metrics["lipper_consistent_return_3yr_chile"] == (eff_date, "item", 5.0, "5")
 
-    metrics_d1 = {r[2]: r[5] for r in rows if r[3] == d1}
-    assert metrics_d1["consistent_return_overall"] == 3.0
-    assert metrics_d1["preservation_overall"] == 3.0
-    assert metrics_d1["total_return_3yr"] == 4.0
-
-    metrics_d2 = {r[2]: r[5] for r in rows if r[3] == d2}
-    assert metrics_d2["preservation_overall"] == 1.0
-
-    assert extract_lipper(1001, {}, created_at) == []
+    empty_res = extract_lipper(1001, {}, created_at)
+    assert len(empty_res.metrics) == 0
+    assert len(empty_res.dimensions) == 0
 
 
 def test_extract_holdings():
     created_at = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
     payload = {
         "as_of_date": 1785470400000,  # 2026-07-31
+        "top_10_weight": "30.47%",
         "allocation_self": [
             {"name": "Equity", "weight": 99.76},
-            {"name": "Cash", "weight": 0.20},
-            {"name": "Other", "weight": -0.02},
-            {"name": "Other", "weight": 0.06},  # duplicate "Other", should sum to 0.04% -> 0.0004
         ],
-        "currency": [
+        "currency": [  # explicitly discarded per FRD
             {"name": "US Dollar", "code": "USD", "weight": 99.8},
-            {"name": "<No Currency>", "weight": 0.2},  # should map to 'Unassigned'
+        ],
+        "geographic": [  # explicitly discarded per FRD
+            {"name": "North America", "weight": 99.8},
         ],
         "investor_country": [
-            {"name": "United States", "country_code": "US", "weight": 100.0},
+            {"name": "United States", "country_code": "US", "weight": 71.2451},
         ],
         "debtor": [
             {"name": "% Quality/AAA", "weight": 1.5},
-            {"name": "% Quality Not Rated", "weight": 0.5},
+        ],
+        "top_10": [
+            {
+                "name": "GUGGENHEIM STRATEGIC OPPORTUNITIES FUND",
+                "conids": [86174372],
+                "assets_pct": "3.49%",
+            },
+            {
+                "name": "MICROSOFT CORP",
+                "ticker": "MSFT",
+                "conids": [272093],
+                "assets_pct": "<0.01%",
+            },
         ],
     }
 
-    rows = extract_holdings(1001, payload, created_at)
-    eff_date = date(2026, 7, 31)
+    res = extract_holdings(1001, payload, created_at)
+    assert len(res.metrics) == 1
+    assert len(res.dimensions) == 5
 
-    # 3 unique asset_class + 2 currency + 1 country + 2 debtor = 8 rows
-    assert len(rows) == 8
+    # Scalar metric check
+    m = res.metrics[0]
+    assert m[1] == "holdings"
+    assert m[2] == "portfolio_top_10_concentration"
+    assert m[3] == date(2026, 7, 31)
+    assert m[4] == "payload"
+    assert pytest.approx(m[6]) == 0.3047
+    assert m[7] == "30.47%"
 
-    by_key = {(r[1], r[2]): (r[3], r[6]) for r in rows}
+    # Dimensions check
+    dims = {(d[1], d[2]): (d[3], d[7], d[8]) for d in res.dimensions}
+    assert pytest.approx(dims[("asset_class", "Equity")][1]) == 0.9976
+    assert dims[("country", "United States")][0] == "US"
+    assert pytest.approx(dims[("country", "United States")][1]) == 0.712451
+    assert dims[("credit_rating", "AAA")][0] == "AAA"
+    assert pytest.approx(dims[("credit_rating", "AAA")][1]) == 0.015
 
-    # Asset class
-    assert pytest.approx(by_key[("asset_class", "Equity")][1]) == 0.9976
-    assert pytest.approx(by_key[("asset_class", "Cash")][1]) == 0.0020
-    assert pytest.approx(by_key[("asset_class", "Other")][1]) == 0.0004  # -0.0002 + 0.0006
+    # Top-10 holdings
+    assert dims[("top_holding", "GUGGENHEIM STRATEGIC OPPORTUNITIES FUND")][0] == "86174372"
+    assert pytest.approx(dims[("top_holding", "GUGGENHEIM STRATEGIC OPPORTUNITIES FUND")][1]) == 0.0349
+    assert dims[("top_holding", "MSFT - MICROSOFT CORP")][0] == "272093"
+    assert pytest.approx(dims[("top_holding", "MSFT - MICROSOFT CORP")][1]) == 0.0001
 
-    # Currency
-    assert by_key[("currency", "US Dollar")][0] == "USD"
-    assert pytest.approx(by_key[("currency", "US Dollar")][1]) == 0.998
-    assert by_key[("currency", "Unassigned")][0] is None
-    assert pytest.approx(by_key[("currency", "Unassigned")][1]) == 0.002
-
-    # Country
-    assert by_key[("country", "United States")][0] == "US"
-    assert pytest.approx(by_key[("country", "United States")][1]) == 1.0
-
-    # Credit rating
-    assert by_key[("credit_rating", "AAA")][0] == "AAA"
-    assert pytest.approx(by_key[("credit_rating", "AAA")][1]) == 0.015
-    assert by_key[("credit_rating", "Not Rated")][0] == "Not Rated"
-    assert pytest.approx(by_key[("credit_rating", "Not Rated")][1]) == 0.005
-
-    for r in rows:
-        assert r[0] == 1001
-        assert r[4] == eff_date
-
-    assert extract_holdings(1001, {}, created_at) == []
+    empty_res = extract_holdings(1001, {}, created_at)
+    assert len(empty_res.metrics) == 0
+    assert len(empty_res.dimensions) == 0
 
 
 def test_extract_theme_weights():
@@ -350,27 +435,27 @@ def test_extract_theme_weights():
             {
                 "key": "006a0c27-4a9a-4766-8988-0d8acc6ede8b",
                 "name": "Discount Retail",
-                "weight": 0.084085,
-                "rank_adjusted_weight": 0.0094658,
-            },
-            {
-                "key": "00c23a97-6299-462b-bec4-4dfec9639ed9",
-                "name": "Last-mile Logistics",
-                "weight": 0.094797,
-                "rank_adjusted_weight": 0.080694,
-            },
+                "weight": 0.084085,  # discarded
+                "rank_adjusted_weight": 0.0094658,  # preserved
+            }
         ]
     }
 
-    rows = extract_theme_weights(1001, payload, created_at)
-    assert len(rows) == 2
+    res = extract_theme_weights(1001, payload, created_at)
+    assert len(res.metrics) == 0
+    assert len(res.dimensions) == 1
 
-    r1 = rows[0]
-    assert r1[0] == 1001
-    assert r1[1] == "006a0c27-4a9a-4766-8988-0d8acc6ede8b"
-    assert r1[2] == created_at.date()
-    assert r1[3] == created_at
-    assert r1[4] == 0.084085
-    assert r1[5] == 0.0094658
+    d = res.dimensions[0]
+    assert d[0] == 1001
+    assert d[1] == "theme"
+    assert d[2] == "Discount Retail"
+    assert d[3] == "006a0c27-4a9a-4766-8988-0d8acc6ede8b"
+    assert d[4] == date(2026, 9, 1)
+    assert d[5] == "snapshot"
+    assert d[6] == created_at
+    assert pytest.approx(d[7]) == 0.0094658
+    assert d[8] == "0.0094658"
 
-    assert extract_theme_weights(1001, {}, created_at) == []
+    empty_res = extract_theme_weights(1001, {}, created_at)
+    assert len(empty_res.metrics) == 0
+    assert len(empty_res.dimensions) == 0

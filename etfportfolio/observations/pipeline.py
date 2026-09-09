@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import logging
+from datetime import date
 
 from etfportfolio.core.db import db_connection
 from etfportfolio.core.logging import console
 from etfportfolio.core.progress import progress_bar
-from etfportfolio.core.utils import decompress_payload
 from etfportfolio.observations.extractors import EXTRACTOR_REGISTRY
-from etfportfolio.observations.utils import DimensionTuple, MetricTuple
+from etfportfolio.observations.utils import DimensionTuple, MetricTuple, decompress_payload
 
 logger = logging.getLogger(__name__)
 
-BATCH_SIZE = 100
+BATCH_SIZE = 500
 
 INSERT_METRICS_SQL = """
 INSERT INTO silver.product_metrics (
@@ -62,9 +62,8 @@ def run_observations(force: bool = False, db_path: str | None = None) -> int:
                 s.product_id,
                 s.url_prefix,
                 s.created_at,
-                b.payload
+                s.hash
             FROM bronze.snapshots s
-            JOIN bronze.payload_blobs b ON s.hash = b.hash
             LEFT JOIN silver.processed_snapshots p ON s.snapshot_id = p.snapshot_id
             WHERE p.snapshot_id IS NULL
             ORDER BY s.snapshot_id ASC;
@@ -81,14 +80,21 @@ def run_observations(force: bool = False, db_path: str | None = None) -> int:
         with progress_bar(total_pending, desc="Observations", unit="snapshot") as bar:
             for i in range(0, total_pending, BATCH_SIZE):
                 chunk = pending_snapshots[i : i + BATCH_SIZE]
+                unique_hashes = list({row[4] for row in chunk})
+                placeholders = ", ".join("?" for _ in unique_hashes)
+                blob_rows = conn.execute(
+                    f"SELECT hash, payload FROM bronze.payload_blobs WHERE hash IN ({placeholders})",
+                    unique_hashes,
+                ).fetchall()
+                payload_map = dict(blob_rows)
 
-                # Staged in dictionaries keyed by primary keys to prevent intra-batch DuckDB conflict errors
-                metrics_staged: dict[tuple[int, str, str, object], MetricTuple] = {}
-                dimensions_staged: dict[tuple[int, str, str, object], DimensionTuple] = {}
+                metrics_staged: dict[tuple[int, str, str, date], MetricTuple] = {}
+                dimensions_staged: dict[tuple[int, str, str, date], DimensionTuple] = {}
                 processed_ids: list[tuple[int]] = []
 
                 for row in chunk:
-                    snapshot_id, product_id, url_prefix, created_at, raw_blob = row
+                    snapshot_id, product_id, url_prefix, created_at, blob_hash = row
+                    raw_blob = payload_map[blob_hash]
 
                     try:
                         data = decompress_payload(raw_blob)
@@ -105,11 +111,21 @@ def run_observations(force: bool = False, db_path: str | None = None) -> int:
                         result = extractor(product_id, data, created_at)
                         for m in result.metrics:
                             metric_pk = (m[0], m[1], m[2], m[3])
-                            metrics_staged[metric_pk] = m
+                            # Inter-snapshot collision within batch: newer fetched_at overwrites
+                            if metric_pk in metrics_staged:
+                                if m[5] >= metrics_staged[metric_pk][5]:
+                                    metrics_staged[metric_pk] = m
+                            else:
+                                metrics_staged[metric_pk] = m
 
                         for d in result.dimensions:
                             dim_pk = (d[0], d[1], d[2], d[4])
-                            dimensions_staged[dim_pk] = d
+                            # Inter-snapshot collision within batch: newer fetched_at overwrites
+                            if dim_pk in dimensions_staged:
+                                if d[6] >= dimensions_staged[dim_pk][6]:
+                                    dimensions_staged[dim_pk] = d
+                            else:
+                                dimensions_staged[dim_pk] = d
 
                     processed_ids.append((snapshot_id,))
 

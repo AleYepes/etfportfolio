@@ -6,6 +6,17 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from typing import Any
 
+import orjson
+import zstandard as zstd
+
+_DECOMPRESSOR = zstd.ZstdDecompressor()
+
+
+def decompress_payload(compressed: bytes) -> Any:
+    canonical = _DECOMPRESSOR.decompress(compressed)
+    return orjson.loads(canonical)
+
+
 # Field order matches silver.product_metrics in schema.sql
 MetricTuple = tuple[int, str, str, date, str, datetime, float, str]
 
@@ -68,10 +79,13 @@ def parse_effective_date(
 def parse_net_assets(
     raw_val: Any,
     fallback_date: date,
-) -> tuple[float, str, date, str]:
+) -> tuple[float, str, date, str] | None:
+    if raw_val is None:
+        return None
+
     raw_str = str(raw_val).strip()
     if not raw_str or raw_str.lower() in ("-", "n/a", "none"):
-        raise ValueError(f"Invalid net assets value: '{raw_val}'")
+        return None
 
     date_match = _DATE_REGEX.search(raw_str)
     if date_match:
@@ -89,7 +103,7 @@ def parse_net_assets(
 
     amt_clean = re.sub(r"[^\d.,kKmMbBtT]", "", amt_str)
     if not amt_clean:
-        raise ValueError(f"Cannot parse net assets amount from '{raw_val}'")
+        return None
 
     if "," in amt_clean and "." in amt_clean:
         first_comma = amt_clean.find(",")
@@ -108,9 +122,13 @@ def parse_net_assets(
 
     m = _AUM_REGEX.search(amt_clean)
     if not m or not m.group(1):
-        raise ValueError(f"Cannot parse numeric AUM from '{raw_val}'")
+        return None
 
-    base_val = float(m.group(1))
+    try:
+        base_val = float(m.group(1))
+    except ValueError:
+        return None
+
     suffix = m.group(2).lower()
     multiplier = _AUM_MULTIPLIERS.get(suffix, 1.0)
     final_val = base_val * multiplier
@@ -121,10 +139,13 @@ def parse_net_assets(
 def parse_manager_tenure(
     raw_val: Any,
     ref_date: date,
-) -> tuple[float, str]:
+) -> tuple[float, str] | None:
+    if raw_val is None:
+        return None
+
     raw_str = str(raw_val).strip()
     if not raw_str or raw_str.lower() in ("-", "n/a", "none"):
-        raise ValueError(f"Empty manager tenure value: '{raw_val}'")
+        return None
 
     start_date: date | None = None
     for fmt in ("%Y/%m/%d", "%Y-%m-%d", "%Y%m%d"):
@@ -137,7 +158,7 @@ def parse_manager_tenure(
             start_date = date(int(raw_str), 1, 1)
 
     if start_date is None:
-        raise ValueError(f"Unparseable manager tenure start date: '{raw_val}'")
+        raise ValueError(f"Invalid Manager Tenure date string: '{raw_val}'")
 
     delta_days = (ref_date - start_date).days
     years = round(max(0.0, delta_days / 365.25), 4)

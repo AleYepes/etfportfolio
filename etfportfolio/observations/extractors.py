@@ -235,7 +235,7 @@ def extract_profile(
             elif approach == "active":
                 approach_val = 0.0
             else:
-                raise ValueError(f"Unrecognized management approach: '{val}'")
+                raise ValueError(f"Unknown Management Approach: '{val}'")
             result.metrics.append(
                 (
                     product_id,
@@ -249,23 +249,25 @@ def extract_profile(
                 )
             )
         elif name_tag == "Total_Net_Assets_Month_End" or name.startswith("Total Net Assets"):
-            aum_val, raw_str, aum_date, aum_source = parse_net_assets(val, fallback_date=snapshot_date)
-            result.metrics.append(
-                (
-                    product_id,
-                    "profile",
-                    "total_net_assets_local",
-                    aum_date,
-                    aum_source,
-                    snapshot_created_at,
-                    aum_val,
-                    raw_str,
+            parsed_aum = parse_net_assets(val, fallback_date=snapshot_date)
+            if parsed_aum is not None:
+                aum_val, raw_str, aum_date, aum_source = parsed_aum
+                result.metrics.append(
+                    (
+                        product_id,
+                        "profile",
+                        "total_net_assets_local",
+                        aum_date,
+                        aum_source,
+                        snapshot_created_at,
+                        aum_val,
+                        raw_str,
+                    )
                 )
-            )
         elif name_tag == "Manager_Tenure" or name == "Manager Tenure":
-            raw_str = str(val).strip()
-            if raw_str and raw_str.lower() not in ("-", "n/a", "none"):
-                tenure_years, raw_str = parse_manager_tenure(val, ref_date=snapshot_date)
+            parsed_tenure = parse_manager_tenure(val, ref_date=snapshot_date)
+            if parsed_tenure is not None:
+                tenure_years, raw_str = parsed_tenure
                 result.metrics.append(
                     (
                         product_id,
@@ -434,7 +436,7 @@ def extract_mstar(
             raise ValueError(f"Unrecognized mstar pillar id: '{pillar_id}'")
 
         if norm_val not in mapping:
-            raise ValueError(f"Unrecognized rating string '{raw_val}' for mstar pillar '{pillar_id}'")
+            raise ValueError(f"Unrecognized rating string '{raw_val}' for pillar '{pillar_id}'")
 
         score = mapping[norm_val]
         if pillar.get("publish_date"):
