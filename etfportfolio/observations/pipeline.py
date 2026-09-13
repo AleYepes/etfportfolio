@@ -11,7 +11,7 @@ from etfportfolio.observations.utils import DimensionTuple, MetricTuple, decompr
 
 logger = logging.getLogger(__name__)
 
-BATCH_SIZE = 500
+BATCH_SIZE = 100
 
 INSERT_METRICS_SQL = """
 INSERT INTO silver.product_metrics (
