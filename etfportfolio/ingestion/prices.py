@@ -43,9 +43,12 @@ PRICES_SPEC = SeriesSpec(
     bronze_table="bronze.prices",
     cold_table="cold_storage.prices",
     columns=("open", "high", "low", "close", "volume", "average", "bar_count"),
-    value_columns=("open", "high", "low", "close", "volume", "average"),
+    value_columns=("open", "high", "low", "close"),  # Exclude volume, average, bar_count
 )
 
+REL_TOL = 1e-4  # 1 basis point
+ABS_TOL = 0.01  # 1 cent
+MIN_REFETCH_RETENTION_RATIO = 0.95  # Refetch must contain >= 95% of existing bars
 
 @dataclass(frozen=True)
 class PriceSeriesStatus:
@@ -82,7 +85,7 @@ def validate_overlap(
     """Set-equality checksum on W = [last_date - 7d, last_date] (closed-closed).
 
     Dates outside W are ignored (fetch margin before W; new tail after last_date).
-    Value columns are compared with math.isclose; missing/None on either side is skipped.
+    Value columns are compared with calibrated tolerances; missing/None on either side is skipped.
     Returns (is_valid, mismatch_type) where mismatch_type is None, 'date_mismatch',
     or 'value_mismatch'.
     """
@@ -110,13 +113,47 @@ def validate_overlap(
     if existing_dates != new_dates:
         return False, "date_mismatch"
 
+    mismatched_dates: set[datetime] = set()
     for d, new_vals in new_in_w.items():
         old_vals = existing_vals[d]
         for key in spec.value_columns:
             v1, v2 = old_vals.get(key), new_vals.get(key)
-            if v1 is not None and v2 is not None and not math.isclose(float(v1), float(v2), rel_tol=1e-4, abs_tol=1e-4):
-                return False, "value_mismatch"
+            if (
+                v1 is not None
+                and v2 is not None
+                and not math.isclose(float(v1), float(v2), rel_tol=REL_TOL, abs_tol=ABS_TOL)
+            ):
+                mismatched_dates.add(d)
+                break
 
+    if not mismatched_dates:
+        return True, None
+
+    # Discrepancies prior to last_date indicate a historical corporate action (split/dividend)
+    interior_mismatches = {d for d in mismatched_dates if d < last_date}
+    if interior_mismatches:
+        return False, "value_mismatch"
+
+    # Mismatch is isolated to last_date (auction cross settlement drift)
+    # Ensure ALL mismatched pricing columns on last_date fall within the bounded seam envelope
+    old_seam = existing_vals[last_date]
+    new_seam = new_in_w[last_date]
+
+    for key in spec.value_columns:
+        v1, v2 = old_seam.get(key), new_seam.get(key)
+        if v1 is not None and v2 is not None:
+            f1, f2 = float(v1), float(v2)
+            if not math.isclose(f1, f2, rel_tol=REL_TOL, abs_tol=ABS_TOL):
+                abs_diff = abs(f2 - f1)
+                rel_diff = abs_diff / abs(f1) if f1 != 0 else float("inf")
+                if abs_diff > ABS_TOL and rel_diff > REL_TOL:
+                    return False, "value_mismatch"
+
+    logger.info(
+        "Product %d: accepted bounded seam revision on %s; overwriting with official settlement.",
+        product_id,
+        last_date.date(),
+    )
     return True, None
 
 
@@ -185,7 +222,11 @@ def upsert_series(
     product_id: int,
     points: dict[datetime, dict[str, Any]],
 ) -> None:
-    """Upsert points (the incremental tail, date > last_date). Overlap is not written."""
+    """Upsert points (overlap window bars and incremental tail).
+
+    Overlapping bars are updated in place with fresh auction settlement prints
+    and volume reconciliations, updating their updated_at timestamp.
+    """
     now = datetime.now(UTC).replace(tzinfo=None)
     col_sql = ", ".join(("product_id", "date", *spec.columns, "updated_at"))
     placeholders = ", ".join(f"${i + 1}" for i in range(len(spec.columns) + 3))
@@ -284,6 +325,14 @@ def _get_last_date(conn: duckdb.DuckDBPyConnection, product_id: int) -> datetime
         [product_id],
     ).fetchone()
     return row[0] if row and row[0] else None
+
+
+def _get_series_count(conn: duckdb.DuckDBPyConnection, product_id: int) -> int:
+    row = conn.execute(
+        "SELECT COUNT(*) FROM bronze.prices WHERE product_id = $1",
+        [product_id],
+    ).fetchone()
+    return row[0] if row else 0
 
 
 def _extract_bars(
@@ -395,8 +444,28 @@ async def _fetch_and_store(
             product.product_id,
             mismatch_type,
         )
+        existing_count = await worker.submit(_get_series_count, product.product_id)
+
         full_bars_raw = await _fetch_historical(ib, product, "30 Y", end_datetime="")
         full_bars = _extract_bars(full_bars_raw, max_date=yesterday)
+
+        min_expected_bars = (
+            max(1, math.floor(existing_count * MIN_REFETCH_RETENTION_RATIO)) if existing_count > 5 else 1
+        )
+
+        if len(full_bars) < min_expected_bars:
+            err_msg = (
+                f"Truncated refetch: received {len(full_bars)} bars, "
+                f"expected >= {min_expected_bars} (existing: {existing_count})"
+            )
+            logger.error(
+                "Product %d: %s. Aborting replace to prevent data loss. Preserving existing bronze rows.",
+                product.product_id,
+                err_msg,
+            )
+            await worker.submit(_record_price_status, product.product_id, "error", err_msg)
+            return
+
         if full_bars:
             await worker.submit(
                 replace_series,

@@ -26,3 +26,7 @@ I'm thinking we've stretched out this conversation a lot already, and would bene
 
 
 If that clears the frontier, Let's draft a new FDR-like document that conveys all the decisions we've settled and why. The document should be clear and comprehensive enough so that a fresh agent (one without access to this conversation or the previous FDR) can accurately understand and implement all the specs. That may require straying from the conventional FDR structure to provide examples or anything else you think could be of value. The agent will receive the same preliminary context you did at the start of our conversation (Project overview, Project structure, and Architecture & coding principles) and they will access to read from and write to the repo directly.
+
+Instead of updating the FRD, organize an implementation plan and execute it.
+
+Work on one file at a time. Wait for me to review the file before continuing to the next.
