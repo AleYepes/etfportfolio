@@ -1,19 +1,6 @@
-# Functional Requirements Document (FRD): Resilient Historical Price Ingestion, Overlap Validation & Ingest Lifecycle Cleaning
+# Implementation Plan: Resilient Historical Price Ingestion, Overlap Validation & Ingest Cleaning
 
-**Status:** Approved for Implementation  
-**Target Modules:**  
-- `etfportfolio/ingest/prices.py`
-- `etfportfolio/ingest/clean.py`
-- `etfportfolio/ingest/pipeline.py`
-- `main.py`
-- `tests/ingest/test_prices.py`, `tests/ingest/test_clean.py`  
-**Layer:** Bronze, Cold Storage & Maintenance (Medallion Architecture)  
-**Author:** Quantitative Architecture & Engineering  
-**Date:** September 2026  
-
----
-
-## 1. Executive Summary & Objective
+## Executive Summary & Objective
 
 The `etfportfolio` pipeline ingests daily historical OHLCV prices across 22,500+ global ETFs from Interactive Brokers (IBKR Gateway `clientId=2`) into DuckDB (`bronze.prices`). When corporate actions, splits, or structural restatements occur, superseded series are archived into `cold_storage.prices`.
 

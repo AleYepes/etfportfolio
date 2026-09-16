@@ -141,22 +141,22 @@ def test_is_series_fresh_differentiated():
 
 # --- Scenario: Overlap Calculations & Database Persistence ---
 def test_overlap_start_for_margin_trimming():
-    last_date = datetime(2026, 8, 10, 0, 0)
+    last_date = datetime(2026, 8, 20, 0, 0)
     start = overlap_start_for(last_date)
-    assert start == datetime(2026, 8, 3, 0, 0)  # exactly 7 days prior
+    assert start == datetime(2026, 8, 6, 0, 0)  # exactly 14 days prior
 
     incoming_dates = [
-        datetime(2026, 8, 1, 0, 0),  # 9 days prior (margin, trimmed)
-        datetime(2026, 8, 2, 0, 0),  # 8 days prior (margin, trimmed)
-        datetime(2026, 8, 3, 0, 0),  # 7 days prior (start of W, kept)
-        datetime(2026, 8, 10, 0, 0),  # last_date (end of W, kept)
-        datetime(2026, 8, 11, 0, 0),  # tail (kept)
+        datetime(2026, 8, 4, 0, 0),  # 16 days prior (margin, trimmed)
+        datetime(2026, 8, 5, 0, 0),  # 15 days prior (margin, trimmed)
+        datetime(2026, 8, 6, 0, 0),  # 14 days prior (start of W, kept)
+        datetime(2026, 8, 20, 0, 0),  # last_date (end of W, kept)
+        datetime(2026, 8, 21, 0, 0),  # tail (kept)
     ]
     trimmed = [d for d in incoming_dates if d >= start]
     assert trimmed == [
-        datetime(2026, 8, 3, 0, 0),
-        datetime(2026, 8, 10, 0, 0),
-        datetime(2026, 8, 11, 0, 0),
+        datetime(2026, 8, 6, 0, 0),
+        datetime(2026, 8, 20, 0, 0),
+        datetime(2026, 8, 21, 0, 0),
     ]
 
 
@@ -298,7 +298,7 @@ def test_upsert_series_updates_updated_at_on_overlap(db_conn):
 def test_validate_overlap_prices(db_conn):
     last_date = datetime(2026, 8, 30, 0, 0, 0)
     existing_points = {}
-    for i in range(10):
+    for i in range(OVERLAP_CALENDAR_DAYS + 1):
         d = last_date - timedelta(days=i)
         existing_points[d] = {
             "open": 100.0 + i,
@@ -314,8 +314,8 @@ def test_validate_overlap_prices(db_conn):
 
     # 1. Exact match in window W + tail
     new_points = {}
-    # Margin before W (date < 2026-08-23)
-    new_points[last_date - timedelta(days=12)] = {
+    # Margin before W (date < last_date - 14d)
+    new_points[last_date - timedelta(days=16)] = {
         "open": 999.0,
         "high": 999.0,
         "low": 999.0,
@@ -825,3 +825,108 @@ def test_cli_signatures_reject_unused_flags():
 
     with pytest.raises(TypeError):
         ingest.details(product_ids="1001,1002")  # type: ignore
+
+
+def test_validate_overlap_historical_core_triggers_corporate_action(db_conn):
+    """Any discrepancy in historical core (d < last_date - 5 trading days) is classified as corporate_action."""
+    last_date = datetime(2026, 8, 30, 0, 0, 0)
+    existing_points = {
+        last_date - timedelta(days=i): {
+            "open": 50.0,
+            "high": 51.0,
+            "low": 49.0,
+            "close": 50.0,
+            "volume": 1000.0,
+            "average": 50.0,
+            "bar_count": 50,
+        }
+        for i in range(12)  # 12 bars: last 5 are settlement, older 7 are core
+    }
+    replace_series(db_conn, PRICES_SPEC, 3001, existing_points, archive=False)
+
+    new_points = {d: dict(v) for d, v in existing_points.items()}
+    # Modify a bar in historical core (10 days prior)
+    core_d = last_date - timedelta(days=10)
+    new_points[core_d]["close"] = 55.0
+
+    valid, reason = validate_overlap(db_conn, PRICES_SPEC, 3001, new_points, last_date)
+    assert valid is False
+    assert reason == "corporate_action"
+
+
+def test_validate_overlap_uniform_ratio_triggers_corporate_action(db_conn):
+    """Multi-bar uniform ratio shift (stock split) triggers corporate_action."""
+    last_date = datetime(2026, 8, 30, 0, 0, 0)
+    existing_points = {
+        last_date - timedelta(days=i): {
+            "open": 50.0,
+            "high": 51.0,
+            "low": 49.0,
+            "close": 50.0,
+            "volume": 1000.0,
+            "average": 50.0,
+            "bar_count": 50,
+        }
+        for i in range(5)
+    }
+    replace_series(db_conn, PRICES_SPEC, 3002, existing_points, archive=False)
+
+    new_points = {d: dict(v) for d, v in existing_points.items()}
+    # 2:1 stock split on recent bars (prices halved uniformly)
+    for d in [last_date, last_date - timedelta(days=1)]:
+        new_points[d]["close"] = 25.0
+        new_points[d]["open"] = 25.0
+
+    valid, reason = validate_overlap(db_conn, PRICES_SPEC, 3002, new_points, last_date)
+    assert valid is False
+    assert reason == "corporate_action"
+
+
+def test_has_historical_price_change(db_conn):
+    from etfportfolio.ingest.prices import _has_historical_price_change
+
+    pid = 4001
+    cutoff = datetime(2026, 8, 15, 0, 0)
+    points = {
+        datetime(2026, 8, 1, 0, 0): {
+            "open": 10.0,
+            "high": 11.0,
+            "low": 9.0,
+            "close": 10.0,
+            "volume": 100.0,
+            "average": 10.0,
+            "bar_count": 10,
+        },
+        datetime(2026, 8, 20, 0, 0): {
+            "open": 12.0,
+            "high": 13.0,
+            "low": 11.0,
+            "close": 12.0,
+            "volume": 100.0,
+            "average": 12.0,
+            "bar_count": 10,
+        },
+    }
+    replace_series(db_conn, PRICES_SPEC, pid, points, archive=False)
+
+    # Identical historical bars (date < cutoff)
+    refetch_same = {
+        datetime(2026, 8, 1, 0, 0): {
+            "open": 10.0,
+            "high": 11.0,
+            "low": 9.0,
+            "close": 10.0,
+            "volume": 150.0,
+            "average": 10.1,
+            "bar_count": 15,
+        },
+        datetime(2026, 8, 20, 0, 0): {"open": 12.0, "high": 13.0, "low": 11.0, "close": 99.0},  # Changed after cutoff
+    }
+    assert _has_historical_price_change(db_conn, PRICES_SPEC, pid, refetch_same, cutoff) is False
+
+    # Differing historical bar (date < cutoff)
+    refetch_diff = {
+        datetime(2026, 8, 1, 0, 0): {"open": 5.0, "high": 5.5, "low": 4.5, "close": 5.0},  # Split before cutoff
+        datetime(2026, 8, 20, 0, 0): {"open": 12.0, "high": 13.0, "low": 11.0, "close": 12.0},
+    }
+    assert _has_historical_price_change(db_conn, PRICES_SPEC, pid, refetch_diff, cutoff) is True

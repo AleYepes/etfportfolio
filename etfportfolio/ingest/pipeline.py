@@ -202,5 +202,10 @@ class Ingest:
     def details(self, force: bool = False) -> None:
         asyncio.run(_run_details_only(force=force))
 
+    def clean(self) -> None:
+        from etfportfolio.ingest import clean
+
+        clean.run_clean()
+
 
 cli = Ingest()

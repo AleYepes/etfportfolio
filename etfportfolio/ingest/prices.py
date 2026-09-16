@@ -25,8 +25,19 @@ logger = logging.getLogger(__name__)
 
 WHAT_TO_SHOW = "ADJUSTED_LAST"
 BAR_SIZE = "1 day"
-OVERLAP_CALENDAR_DAYS = 7
+OVERLAP_CALENDAR_DAYS = 14
 FETCH_MARGIN_DAYS = 2
+
+PRICE_REL_TOL = 1e-4  # 1 basis point
+PRICE_ABS_TOL = 0.01  # 1 cent
+
+SETTLEMENT_REL_TOL = 0.01  # 1.00% max tolerance for recent settlement drift
+SETTLEMENT_ABS_TOL = 0.10  # $0.10 max absolute drift for recent settlement prints
+SETTLEMENT_TRADING_DAYS = 5  # Last 4-5 trading days horizon for settlement drift
+
+MIN_REFETCH_RETENTION_RATIO = 0.90  # Refetch must contain >= 90% of existing bars
+REL_TOL = PRICE_REL_TOL  # Backward compatibility alias
+ABS_TOL = PRICE_ABS_TOL  # Backward compatibility alias
 
 
 @dataclass(frozen=True)
@@ -46,9 +57,6 @@ PRICES_SPEC = SeriesSpec(
     value_columns=("open", "high", "low", "close"),  # Exclude volume, average, bar_count
 )
 
-REL_TOL = 1e-4  # 1 basis point
-ABS_TOL = 0.01  # 1 cent
-MIN_REFETCH_RETENTION_RATIO = 0.95  # Refetch must contain >= 95% of existing bars
 
 @dataclass(frozen=True)
 class PriceSeriesStatus:
@@ -82,12 +90,12 @@ def validate_overlap(
     new_points: dict[datetime, dict[str, Any]],
     last_date: datetime,
 ) -> tuple[bool, str | None]:
-    """Set-equality checksum on W = [last_date - 7d, last_date] (closed-closed).
+    """Set-equality checksum on W = [last_date - 14d, last_date] (closed-closed).
 
     Dates outside W are ignored (fetch margin before W; new tail after last_date).
     Value columns are compared with calibrated tolerances; missing/None on either side is skipped.
     Returns (is_valid, mismatch_type) where mismatch_type is None, 'date_mismatch',
-    or 'value_mismatch'.
+    'value_mismatch', or 'corporate_action'.
     """
     start = overlap_start_for(last_date)
     col_sql = ", ".join(("date", *spec.columns))
@@ -96,63 +104,97 @@ def validate_overlap(
         SELECT {col_sql}
         FROM {spec.bronze_table}
         WHERE product_id = $1 AND date >= $2 AND date <= $3
+        ORDER BY date ASC
         """,
         [product_id, start, last_date],
     ).fetchall()
 
-    existing_dates: set[datetime] = set()
-    existing_vals: dict[datetime, dict[str, Any]] = {}
-    for row in existing_rows:
-        d = row[0]
-        existing_dates.add(d)
-        existing_vals[d] = {col: row[i + 1] for i, col in enumerate(spec.columns)}
+    existing_dates = [row[0] for row in existing_rows]
+    existing_set = set(existing_dates)
+    existing_vals: dict[datetime, dict[str, Any]] = {
+        row[0]: {col: row[i + 1] for i, col in enumerate(spec.columns)} for row in existing_rows
+    }
 
     new_in_w = {d: vals for d, vals in new_points.items() if start <= d <= last_date}
     new_dates = set(new_in_w)
 
-    if existing_dates != new_dates:
+    if existing_set != new_dates:
         return False, "date_mismatch"
 
-    mismatched_dates: set[datetime] = set()
-    for d, new_vals in new_in_w.items():
+    mismatched_dates: list[datetime] = []
+    for d in sorted(new_in_w):
         old_vals = existing_vals[d]
+        new_vals = new_in_w[d]
+        diff_found = False
         for key in spec.value_columns:
             v1, v2 = old_vals.get(key), new_vals.get(key)
             if (
                 v1 is not None
                 and v2 is not None
-                and not math.isclose(float(v1), float(v2), rel_tol=REL_TOL, abs_tol=ABS_TOL)
+                and not math.isclose(float(v1), float(v2), rel_tol=PRICE_REL_TOL, abs_tol=PRICE_ABS_TOL)
             ):
-                mismatched_dates.add(d)
+                diff_found = True
                 break
+        if diff_found:
+            mismatched_dates.append(d)
 
     if not mismatched_dates:
         return True, None
 
-    # Discrepancies prior to last_date indicate a historical corporate action (split/dividend)
-    interior_mismatches = {d for d in mismatched_dates if d < last_date}
-    if interior_mismatches:
-        return False, "value_mismatch"
+    # Partition into Historical Core and Recent Settlement Horizon
+    recent_dates = (
+        set(existing_dates[-SETTLEMENT_TRADING_DAYS:])
+        if len(existing_dates) >= SETTLEMENT_TRADING_DAYS
+        else set(existing_dates)
+    )
+    core_dates = [d for d in existing_dates if d not in recent_dates]
+    core_mismatches = [d for d in mismatched_dates if d in core_dates]
 
-    # Mismatch is isolated to last_date (auction cross settlement drift)
-    # Ensure ALL mismatched pricing columns on last_date fall within the bounded seam envelope
-    old_seam = existing_vals[last_date]
-    new_seam = new_in_w[last_date]
+    # Helper: ratio uniformity test to detect multiplicative corporate actions (splits/dividends)
+    def _is_uniform_ratio_shift(dates: list[datetime]) -> bool:
+        if len(dates) < 2:
+            return False
+        ratios = []
+        for d in dates:
+            c_old = float(existing_vals[d]["close"])
+            c_new = float(new_in_w[d]["close"])
+            if c_old > 0:
+                ratios.append(c_new / c_old)
+        if len(ratios) < 2:
+            return False
+        mean_r = sum(ratios) / len(ratios)
+        variance = sum((r - mean_r) ** 2 for r in ratios) / len(ratios)
+        std_r = math.sqrt(variance)
+        return std_r <= 1e-3 and abs(mean_r - 1.0) > 1e-3
 
-    for key in spec.value_columns:
-        v1, v2 = old_seam.get(key), new_seam.get(key)
-        if v1 is not None and v2 is not None:
-            f1, f2 = float(v1), float(v2)
-            if not math.isclose(f1, f2, rel_tol=REL_TOL, abs_tol=ABS_TOL):
-                abs_diff = abs(f2 - f1)
-                rel_diff = abs_diff / abs(f1) if f1 != 0 else float("inf")
-                if abs_diff > ABS_TOL and rel_diff > REL_TOL:
-                    return False, "value_mismatch"
+    # Any discrepancy in historical core indicates a structural restatement / split
+    if core_mismatches:
+        return False, "corporate_action"
+
+    # Discrepancies are isolated to recent settlement horizon (last 4-5 trading days)
+    # Check if this recent adjustment is actually a uniform split that happened recently
+    recent_mismatches = [d for d in mismatched_dates if d in recent_dates]
+    if _is_uniform_ratio_shift(recent_mismatches):
+        return False, "corporate_action"
+
+    # Verify all differing fields in recent dates fall within bounded settlement envelope
+    for d in recent_mismatches:
+        old_bar = existing_vals[d]
+        new_bar = new_in_w[d]
+        for key in spec.value_columns:
+            v1, v2 = old_bar.get(key), new_bar.get(key)
+            if v1 is not None and v2 is not None:
+                f1, f2 = float(v1), float(v2)
+                if not math.isclose(f1, f2, rel_tol=PRICE_REL_TOL, abs_tol=PRICE_ABS_TOL):
+                    abs_diff = abs(f2 - f1)
+                    rel_diff = abs_diff / abs(f1) if f1 != 0 else float("inf")
+                    if abs_diff > SETTLEMENT_ABS_TOL and rel_diff > SETTLEMENT_REL_TOL:
+                        return False, "value_mismatch"
 
     logger.info(
-        "Product %d: accepted bounded seam revision on %s; overwriting with official settlement.",
+        "Product %d: accepted bounded settlement revision on %s; overwriting with official settlement.",
         product_id,
-        last_date.date(),
+        [d.strftime("%Y-%m-%d") for d in mismatched_dates],
     )
     return True, None
 
@@ -399,6 +441,41 @@ async def _fetch_historical(
     return bars or []
 
 
+def _has_historical_price_change(
+    conn: duckdb.DuckDBPyConnection,
+    spec: SeriesSpec,
+    product_id: int,
+    new_bars: dict[datetime, dict[str, Any]],
+    cutoff_date: datetime,
+) -> bool:
+    """Returns True if any historical bar (date < cutoff_date) differs between bronze and new_bars."""
+    col_sql = ", ".join(("date", *spec.value_columns))
+    rows = conn.execute(
+        f"""
+        SELECT {col_sql}
+        FROM {spec.bronze_table}
+        WHERE product_id = $1 AND date < $2
+        """,
+        [product_id, cutoff_date],
+    ).fetchall()
+
+    for row in rows:
+        d = row[0]
+        new_val = new_bars.get(d)
+        if new_val is None:
+            return True  # A bar was dropped or date changed
+        for i, col in enumerate(spec.value_columns):
+            v_old = row[i + 1]
+            v_new = new_val.get(col)
+            if (
+                v_old is not None
+                and v_new is not None
+                and not math.isclose(float(v_old), float(v_new), rel_tol=PRICE_REL_TOL, abs_tol=PRICE_ABS_TOL)
+            ):
+                return True
+    return False
+
+
 async def _fetch_and_store(
     worker: AsyncDbWorker,
     ib: Any,
@@ -407,7 +484,7 @@ async def _fetch_and_store(
     """Fetch and store prices for one product.
 
     Initial fetch pulls 30 Y. Incremental fetch calculates duration with
-    7-day overlap and 2-day margin, replacing and archiving on mismatch.
+    14-day overlap and 2-day margin, replacing and archiving on mismatch.
     """
     last_date = await worker.submit(_get_last_date, product.product_id)
     today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
@@ -427,7 +504,7 @@ async def _fetch_and_store(
         return
 
     gap_days = (today - last_date).days
-    duration = format_duration(gap_days + 9)  # 7 days overlap + 2 days fetch margin
+    duration = format_duration(gap_days + OVERLAP_CALENDAR_DAYS + FETCH_MARGIN_DAYS)
     bars = await _fetch_historical(ib, product, duration, end_datetime="")
     new_bars = _extract_bars(bars, max_date=yesterday)
 
@@ -440,7 +517,7 @@ async def _fetch_and_store(
 
     if not valid:
         logger.warning(
-            "Product %d: %s detected. Replacing with full refetch and archiving...",
+            "Product %d: %s detected. Refetching full 30Y history...",
             product.product_id,
             mismatch_type,
         )
@@ -467,20 +544,42 @@ async def _fetch_and_store(
             return
 
         if full_bars:
-            await worker.submit(
-                replace_series,
+            overlap_start = overlap_start_for(last_date)
+            hist_changed = await worker.submit(
+                _has_historical_price_change,
                 PRICES_SPEC,
                 product.product_id,
                 full_bars,
-                archive=True,
-                reason=mismatch_type,
+                overlap_start,
             )
+            if hist_changed:
+                await worker.submit(
+                    replace_series,
+                    PRICES_SPEC,
+                    product.product_id,
+                    full_bars,
+                    archive=True,
+                    reason=mismatch_type,
+                )
+                logger.info(
+                    "Product %d: corporate action confirmed; archived old series and replaced (%d bars)",
+                    product.product_id,
+                    len(full_bars),
+                )
+            else:
+                await worker.submit(
+                    replace_series,
+                    PRICES_SPEC,
+                    product.product_id,
+                    full_bars,
+                    archive=False,
+                )
+                logger.info(
+                    "Product %d: historical bars identical; replaced bronze WITHOUT cold storage archival (%d bars)",
+                    product.product_id,
+                    len(full_bars),
+                )
             await worker.submit(_record_price_status, product.product_id, "ok", None)
-            logger.info(
-                "Product %d: mismatch refetch archived and replaced (%d bars)",
-                product.product_id,
-                len(full_bars),
-            )
         else:
             await worker.submit(_record_price_status, product.product_id, "no_data", None)
             logger.warning(

@@ -3,12 +3,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-default_log = (
-    Path(__file__).resolve().parent.parent
-    / "data"
-    / "logs"
-    / "20260913_131727.log"
-)
+default_log = Path(__file__).resolve().parent.parent / "data" / "logs" / "20260913_131727.log"
 log_path = Path(sys.argv[1]) if len(sys.argv) > 1 else default_log
 
 counts = {
@@ -23,13 +18,11 @@ refetched_bars = 0
 bar_distribution = Counter()
 
 re_inc = re.compile(r"Product (\d+): incremental price update complete \((\d+) bars\)")
-re_refetch = re.compile(
-    r"Product (\d+): mismatch refetch archived and replaced \((\d+) bars\)"
-)
+re_refetch = re.compile(r"Product (\d+): mismatch refetch archived and replaced \((\d+) bars\)")
 re_price_target = re.compile(r"Price ingestion:\s+(\d+)\s+products to process")
 re_qual_target = re.compile(r"Contract qualification:\s+(\d+)\s+products to process")
 
-with open(log_path, "r", encoding="utf-8") as f:
+with open(log_path, encoding="utf-8") as f:
     for line in f:
         line = line.strip()
         if not line:
@@ -49,10 +42,7 @@ with open(log_path, "r", encoding="utf-8") as f:
                 m = re_qual_target.search(line)
                 if m:
                     counts["contracts"]["target_products"] = int(m.group(1))
-            elif (
-                "No contract details found" in line
-                or "No security definition has been found" in line
-            ):
+            elif "No contract details found" in line or "No security definition has been found" in line:
                 counts["contracts"]["missing_contracts"] += 1
 
         elif "etfportfolio.ingestion.gateway" in line:
