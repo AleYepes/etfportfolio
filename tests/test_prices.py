@@ -1,3 +1,4 @@
+import math
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -7,12 +8,14 @@ from ib_async import BarData
 
 from etfportfolio.core.config import settings
 from etfportfolio.core.db import AsyncDbWorker, apply_schema
-from etfportfolio.ingestion.gateway import IBConnectionError
-from etfportfolio.ingestion.pipeline import Ingest
-from etfportfolio.ingestion.prices import (
+from etfportfolio.ingest.gateway import IBConnectionError
+from etfportfolio.ingest.pipeline import Ingest
+from etfportfolio.ingest.prices import (
+    ABS_TOL,
+    MIN_REFETCH_RETENTION_RATIO,
     OVERLAP_CALENDAR_DAYS,
-    PRICE_REL_TOL,
     PRICES_SPEC,
+    REL_TOL,
     PriceSeriesStatus,
     _fetch_and_store,
     _load_price_series_status,
@@ -25,7 +28,7 @@ from etfportfolio.ingestion.prices import (
     upsert_series,
     validate_overlap,
 )
-from etfportfolio.ingestion.utils import ProductContract
+from etfportfolio.ingest.utils import ProductContract
 
 
 @pytest.fixture
@@ -354,10 +357,10 @@ def test_validate_overlap_prices(db_conn):
     assert valid is False
     assert reason == "value_mismatch"
 
-    # 4. Floating-point tolerance check (within PRICE_REL_TOL passes)
+    # 4. Floating-point tolerance check (within REL_TOL passes)
     tolerant_points = dict(new_points)
     tolerant_points[last_date] = dict(new_points[last_date])
-    tolerant_points[last_date]["close"] = tolerant_points[last_date]["close"] * (1 + 0.5 * PRICE_REL_TOL)
+    tolerant_points[last_date]["close"] = tolerant_points[last_date]["close"] * (1 + 0.5 * REL_TOL)
     valid, reason = validate_overlap(db_conn, PRICES_SPEC, 1001, tolerant_points, last_date)
     assert valid is True
     assert reason is None
@@ -431,14 +434,14 @@ def test_validate_overlap_seam_penny_shift_accepted(db_conn):
     }
     replace_series(db_conn, PRICES_SPEC, 2002, existing_points, archive=False)
 
-    # Official auction close shifts close by $0.01 to $50.01
+    # Official auction close shifts close within ABS_TOL
     new_points = {
         last_date - timedelta(days=1): dict(existing_points[last_date - timedelta(days=1)]),
         last_date: {
             "open": 50.0,
             "high": 51.0,
             "low": 49.5,
-            "close": 50.01,  # $0.01 shift <= SEAM_ABS_TOL ($0.05)
+            "close": 50.00 + ABS_TOL,  # shift within ABS_TOL
             "volume": 1000.0,
             "average": 50.1,
             "bar_count": 50,
@@ -475,7 +478,6 @@ def test_validate_overlap_interior_shift_triggers_mismatch(db_conn):
     }
     replace_series(db_conn, PRICES_SPEC, 2003, existing_points, archive=False)
 
-    # Interior date shifts by $0.05 (beyond PRICE_ABS_TOL $0.02)
     new_points = {
         interior_d: {
             "open": 50.0,
@@ -494,7 +496,7 @@ def test_validate_overlap_interior_shift_triggers_mismatch(db_conn):
 
 
 def test_validate_overlap_extreme_seam_shift_triggers_mismatch(db_conn):
-    """Spec 3: Extreme price shift on last_date exceeding SEAM_ABS_TOL and SEAM_REL_TOL triggers mismatch."""
+    """Spec 3: Extreme price shift on last_date exceeding ABS_TOL and REL_TOL triggers mismatch."""
     last_date = datetime(2026, 8, 30, 0, 0, 0)
     existing_points = {
         last_date - timedelta(days=1): {
@@ -525,7 +527,7 @@ def test_validate_overlap_extreme_seam_shift_triggers_mismatch(db_conn):
             "open": 50.0,
             "high": 51.0,
             "low": 49.5,
-            "close": 75.0,  # +$25.00 (> $0.05 and > 1%)
+            "close": 75.0,  # +$25.00 (> ABS_TOL and > REL_TOL)
             "volume": 1000.0,
             "average": 50.1,
             "bar_count": 50,
@@ -539,7 +541,7 @@ def test_validate_overlap_extreme_seam_shift_triggers_mismatch(db_conn):
 # --- Scenario: Anti-Truncation Safety Guard ---
 @pytest.mark.anyio
 async def test_fetch_and_store_anti_truncation_guard_preserves_bronze(tmp_path):
-    """Spec 4: If refetch returns fewer than 90% of existing bars, abort replacement and preserve bronze."""
+    """Spec 4: If refetch returns fewer than MIN_REFETCH_RETENTION_RATIO of existing bars, abort replacement and preserve bronze."""
     db_file = str(tmp_path / "test_anti_truncation.duckdb")
     conn = duckdb.connect(db_file)
     apply_schema(conn)
@@ -640,7 +642,8 @@ async def test_fetch_and_store_anti_truncation_guard_preserves_bronze(tmp_path):
     assert status_row is not None
     assert status_row[0] == "error"
     assert "Truncated refetch" in status_row[1]
-    assert "received 1 bars, expected >= 2250" in status_row[1]
+    expected_min = math.floor(2500 * MIN_REFETCH_RETENTION_RATIO)
+    assert f"received 1 bars, expected >= {expected_min}" in status_row[1]
 
     verify_conn.close()
 
@@ -766,7 +769,7 @@ async def test_run_price_ingestion_error_capture(tmp_path, monkeypatch):
     mock_ib.isConnected.return_value = True
     mock_ib.reqHistoricalDataAsync = AsyncMock(side_effect=RuntimeError("Gateway Timeout"))
 
-    with patch("etfportfolio.ingestion.prices.ib_connection") as mock_conn:
+    with patch("etfportfolio.ingest.prices.ib_connection") as mock_conn:
         mock_conn.return_value.__aenter__.return_value = mock_ib
         mock_conn.return_value.__aexit__.return_value = False
         count = await _run_price_ingestion(force=True)
@@ -801,7 +804,7 @@ async def test_run_price_ingestion_ib_connection_error_aborts(tmp_path, monkeypa
     mock_ib.isConnected.return_value = True
     mock_ib.reqHistoricalDataAsync = AsyncMock(side_effect=IBConnectionError("Connection lost"))
 
-    with patch("etfportfolio.ingestion.prices.ib_connection") as mock_conn:
+    with patch("etfportfolio.ingest.prices.ib_connection") as mock_conn:
         mock_conn.return_value.__aenter__.return_value = mock_ib
         mock_conn.return_value.__aexit__.return_value = False
         with pytest.raises(IBConnectionError, match="Connection lost"):

@@ -4,7 +4,7 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
-from etfportfolio.observations.utils import (
+from etfportfolio.prep.utils import (
     DimensionTuple,
     ExtractionResult,
     clean_credit_rating,

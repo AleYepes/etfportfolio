@@ -5,8 +5,8 @@ import duckdb
 import pytest
 
 from etfportfolio.core.db import apply_schema
-from etfportfolio.ingestion.snapshots import store_snapshot
-from etfportfolio.observations.pipeline import run_observations
+from etfportfolio.ingest.snapshots import store_snapshot
+from etfportfolio.prep.pipeline import run_observations
 
 
 @pytest.fixture

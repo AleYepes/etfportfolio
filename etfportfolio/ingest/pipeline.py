@@ -7,7 +7,7 @@ from etfportfolio.core.config import settings
 from etfportfolio.core.db import AsyncDbWorker
 from etfportfolio.core.logging import console
 from etfportfolio.core.progress import progress_bar
-from etfportfolio.ingestion import contracts, details, prices, products, session, themes
+from etfportfolio.ingest import contracts, details, prices, products, session, themes
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +22,8 @@ def _is_product_fully_fresh(
     When landing is fresh, gated endpoints won't fire (they require a landing
     change), so we only need to check ungated endpoints.
     """
-    from etfportfolio.ingestion import endpoints as ep_mod
-    from etfportfolio.ingestion.utils import is_fresh
+    from etfportfolio.ingest import endpoints as ep_mod
+    from etfportfolio.ingest.utils import is_fresh
 
     if not is_fresh(landing_cache.get(product_id), settings.freshness_window_hours):
         return False

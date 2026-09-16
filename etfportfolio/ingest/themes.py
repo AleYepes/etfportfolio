@@ -8,8 +8,8 @@ import httpx
 from etfportfolio.core.config import settings
 from etfportfolio.core.db import AsyncDbWorker
 from etfportfolio.core.logging import console
-from etfportfolio.ingestion import session
-from etfportfolio.ingestion.utils import is_fresh
+from etfportfolio.ingest import session
+from etfportfolio.ingest.utils import is_fresh
 
 logger = logging.getLogger(__name__)
 

@@ -4,14 +4,14 @@ import duckdb
 import pytest
 
 from etfportfolio.core.db import apply_schema
-from etfportfolio.ingestion.utils import (
+from etfportfolio.ingest.utils import (
     canonical_bytes,
     content_address,
     gc_preview_blob,
     is_fresh,
     store_blob,
 )
-from etfportfolio.observations.utils import decompress_payload
+from etfportfolio.prep.utils import decompress_payload
 
 
 def test_is_fresh():

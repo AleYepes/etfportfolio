@@ -2,7 +2,7 @@ import httpx
 import pytest
 import respx
 
-from etfportfolio.ingestion.session import fetch_with_retry
+from etfportfolio.ingest.session import fetch_with_retry
 
 
 @pytest.mark.anyio
@@ -40,7 +40,7 @@ async def test_fetch_with_retry_200_success():
 
 def test_reconcile_account_id(tmp_path):
     from etfportfolio.core.config import settings
-    from etfportfolio.ingestion.session import reconcile_account_id
+    from etfportfolio.ingest.session import reconcile_account_id
 
     env_file = tmp_path / ".env"
     env_file.write_text("ACCOUNT_ID=U123456\n", encoding="utf-8")
@@ -57,7 +57,7 @@ def test_load_series_status():
     import duckdb
 
     from etfportfolio.core.db import apply_schema
-    from etfportfolio.ingestion.prices import PriceSeriesStatus, _load_price_series_status
+    from etfportfolio.ingest.prices import PriceSeriesStatus, _load_price_series_status
 
     conn = duckdb.connect(":memory:")
     apply_schema(conn)

@@ -3,8 +3,8 @@ import pytest
 
 from etfportfolio.core.config import settings
 from etfportfolio.core.db import apply_schema
-from etfportfolio.ingestion.products import resolve_target_products
-from etfportfolio.ingestion.utils import ProductContract
+from etfportfolio.ingest.products import resolve_target_products
+from etfportfolio.ingest.utils import ProductContract
 
 
 @pytest.fixture

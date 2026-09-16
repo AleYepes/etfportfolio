@@ -35,7 +35,7 @@ async def ib_connection(client_id: int):
         logger.info("Connected to IB Gateway with clientId=%d", client_id)
         accounts = ib.managedAccounts()
         if accounts:
-            from etfportfolio.ingestion.session import reconcile_account_id
+            from etfportfolio.ingest.session import reconcile_account_id
 
             reconcile_account_id(accounts[0])
         yield ib

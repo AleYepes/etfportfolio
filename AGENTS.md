@@ -15,7 +15,7 @@ This project runs factor-series analyses on ETF data. At a high level, it must:
 - **Simplicity**: Clear, simple, testable code. No hidden global state. No speculative abstractions. Do not build for hypothetical future needs.
 - **Module Organization**:
   - Used in only one script → stay declared in that script.
-  - Shared across multiple scripts within a single directory (e.g., `ingestion/`, future `panel/`) → that directory's `utils.py`.
+  - Shared across multiple scripts within a single directory (e.g., `ingest/`, `prep/`) → that directory's `utils.py`.
   - Shared across multiple directories under `etfportfolio/` → `core/`.
 - **Replacement Over Deprecation**: Prefer replacing old functionality cleanly rather than accumulating deprecated alternatives.
 

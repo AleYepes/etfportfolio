@@ -6,8 +6,8 @@ from datetime import date
 from etfportfolio.core.db import db_connection
 from etfportfolio.core.logging import console
 from etfportfolio.core.progress import progress_bar
-from etfportfolio.observations.extractors import EXTRACTOR_REGISTRY
-from etfportfolio.observations.utils import DimensionTuple, MetricTuple, decompress_payload
+from etfportfolio.prep.extractors import EXTRACTOR_REGISTRY
+from etfportfolio.prep.utils import DimensionTuple, MetricTuple, decompress_payload
 
 logger = logging.getLogger(__name__)
 

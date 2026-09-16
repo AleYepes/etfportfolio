@@ -18,8 +18,8 @@ from etfportfolio.core.config import settings
 from etfportfolio.core.db import AsyncDbWorker
 from etfportfolio.core.logging import console
 from etfportfolio.core.progress import progress_bar
-from etfportfolio.ingestion.gateway import IBConnectionError, ib_connection
-from etfportfolio.ingestion.utils import ProductContract, is_fresh
+from etfportfolio.ingest.gateway import IBConnectionError, ib_connection
+from etfportfolio.ingest.utils import ProductContract, is_fresh
 
 logger = logging.getLogger(__name__)
 
@@ -498,7 +498,7 @@ async def _fetch_and_store(
 
 async def _run_price_ingestion(force: bool = False) -> int:
     async with AsyncDbWorker(settings.db_path) as worker:
-        from etfportfolio.ingestion.products import resolve_target_products
+        from etfportfolio.ingest.products import resolve_target_products
 
         products = await worker.submit(resolve_target_products)
         if not products:

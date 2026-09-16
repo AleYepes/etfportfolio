@@ -3,8 +3,8 @@ import sys
 import fire
 
 from etfportfolio.core.logging import configure_logging
-from etfportfolio.ingestion import pipeline as ingest_pipeline
-from etfportfolio.observations import cli as obs_cli
+from etfportfolio.ingest import pipeline as ingest_pipeline
+from etfportfolio.prep import cli as prep_pipeline
 
 
 def main() -> None:
@@ -18,7 +18,7 @@ def main() -> None:
     fire.Fire(
         {
             "ingest": ingest_pipeline.cli,
-            "prep": obs_cli.cli,
+            "prep": prep_pipeline.cli,
         },
         command=argv,
     )

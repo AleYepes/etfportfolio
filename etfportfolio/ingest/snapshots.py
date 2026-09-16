@@ -5,8 +5,8 @@ import duckdb
 import httpx
 
 from etfportfolio.core.db import AsyncDbWorker
-from etfportfolio.ingestion import endpoints, session
-from etfportfolio.ingestion.utils import content_address, store_blob
+from etfportfolio.ingest import endpoints, session
+from etfportfolio.ingest.utils import content_address, store_blob
 
 
 def store_snapshot(

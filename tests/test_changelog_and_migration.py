@@ -5,8 +5,8 @@ import duckdb
 import pytest
 
 from etfportfolio.core.db import apply_schema
-from etfportfolio.ingestion.details import load_endpoint_freshness_cache
-from etfportfolio.ingestion.snapshots import store_snapshot
+from etfportfolio.ingest.details import load_endpoint_freshness_cache
+from etfportfolio.ingest.snapshots import store_snapshot
 from scripts.migrate_snapshots_changelog import migrate
 
 

@@ -3,7 +3,7 @@ import pytest
 from ib_async import Contract, ContractDetails, TagValue
 
 from etfportfolio.core.db import apply_schema
-from etfportfolio.ingestion.contracts import (
+from etfportfolio.ingest.contracts import (
     _clean_val,
     _flatten_contract_details,
     upsert_contract,

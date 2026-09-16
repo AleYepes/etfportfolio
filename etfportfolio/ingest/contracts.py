@@ -13,8 +13,8 @@ from ib_async import Contract, ContractDetails
 from etfportfolio.core.config import settings
 from etfportfolio.core.db import AsyncDbWorker
 from etfportfolio.core.progress import progress_bar
-from etfportfolio.ingestion.gateway import IBConnectionError, ib_connection
-from etfportfolio.ingestion.utils import is_fresh
+from etfportfolio.ingest.gateway import IBConnectionError, ib_connection
+from etfportfolio.ingest.utils import is_fresh
 
 logger = logging.getLogger(__name__)
 

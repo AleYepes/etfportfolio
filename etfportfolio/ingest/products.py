@@ -9,8 +9,8 @@ from etfportfolio.core.config import settings
 from etfportfolio.core.db import AsyncDbWorker
 from etfportfolio.core.logging import console
 from etfportfolio.core.progress import progress_bar
-from etfportfolio.ingestion.session import build_async_client
-from etfportfolio.ingestion.utils import ProductContract, is_fresh
+from etfportfolio.ingest.session import build_async_client
+from etfportfolio.ingest.utils import ProductContract, is_fresh
 
 logger = logging.getLogger(__name__)
 

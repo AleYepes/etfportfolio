@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from etfportfolio.core.logging import console
-from etfportfolio.observations.pipeline import run_observations
+from etfportfolio.prep.pipeline import run_observations
 
 
 class ObservationsCLI:

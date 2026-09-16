@@ -2,7 +2,7 @@ from datetime import UTC, date, datetime
 
 import pytest
 
-from etfportfolio.observations.extractors import (
+from etfportfolio.prep.extractors import (
     extract_esg,
     extract_holdings,
     extract_lipper,
@@ -11,7 +11,7 @@ from etfportfolio.observations.extractors import (
     extract_ratios,
     extract_theme_weights,
 )
-from etfportfolio.observations.utils import (
+from etfportfolio.prep.utils import (
     clean_credit_rating,
     parse_effective_date,
     parse_manager_tenure,
