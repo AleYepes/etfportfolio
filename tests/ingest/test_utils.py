@@ -1,9 +1,5 @@
 from datetime import UTC, datetime, timedelta
 
-import duckdb
-import pytest
-
-from etfportfolio.core.db import apply_schema
 from etfportfolio.ingest.utils import (
     canonical_bytes,
     content_address,
@@ -74,21 +70,15 @@ def test_landing_stamp_rule():
     assert should_stamp(fetch_gated=True, gated_success=False) is False
 
 
-@pytest.fixture
-def db_conn():
-    conn = duckdb.connect(":memory:")
-    apply_schema(conn)
+def test_store_blob_and_gc(db_conn):
     # Insert test product into bronze.products
-    conn.execute(
+    db_conn.execute(
         """
         INSERT INTO bronze.products (product_id, symbol, created_at, updated_at)
         VALUES (1001, 'TEST', now(), now())
         """
     )
-    return conn
 
-
-def test_store_blob_and_gc(db_conn):
     digest, comp = content_address({"key": "value"})
     store_blob(db_conn, digest, comp)
     # Idempotent insert

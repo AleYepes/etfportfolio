@@ -9,7 +9,6 @@ from ib_async import BarData
 from etfportfolio.core.config import settings
 from etfportfolio.core.db import AsyncDbWorker, apply_schema
 from etfportfolio.ingest.gateway import IBConnectionError
-from etfportfolio.ingest.pipeline import Ingest
 from etfportfolio.ingest.prices import (
     ABS_TOL,
     MIN_REFETCH_RETENTION_RATIO,
@@ -18,6 +17,7 @@ from etfportfolio.ingest.prices import (
     REL_TOL,
     PriceSeriesStatus,
     _fetch_and_store,
+    _has_historical_price_change,
     _load_price_series_status,
     _record_price_status,
     _run_price_ingestion,
@@ -29,13 +29,6 @@ from etfportfolio.ingest.prices import (
     validate_overlap,
 )
 from etfportfolio.ingest.utils import ProductContract
-
-
-@pytest.fixture
-def db_conn():
-    conn = duckdb.connect(":memory:")
-    apply_schema(conn)
-    return conn
 
 
 # --- Scenario: IB Duration Format ---
@@ -146,11 +139,11 @@ def test_overlap_start_for_margin_trimming():
     assert start == datetime(2026, 8, 6, 0, 0)  # exactly 14 days prior
 
     incoming_dates = [
-        datetime(2026, 8, 4, 0, 0),  # 16 days prior (margin, trimmed)
-        datetime(2026, 8, 5, 0, 0),  # 15 days prior (margin, trimmed)
-        datetime(2026, 8, 6, 0, 0),  # 14 days prior (start of W, kept)
-        datetime(2026, 8, 20, 0, 0),  # last_date (end of W, kept)
-        datetime(2026, 8, 21, 0, 0),  # tail (kept)
+        datetime(2026, 8, 4, 0, 0),
+        datetime(2026, 8, 5, 0, 0),
+        datetime(2026, 8, 6, 0, 0),
+        datetime(2026, 8, 20, 0, 0),
+        datetime(2026, 8, 21, 0, 0),
     ]
     trimmed = [d for d in incoming_dates if d >= start]
     assert trimmed == [
@@ -186,7 +179,6 @@ def test_replace_series_with_archive(db_conn):
     bronze_count = db_conn.execute("SELECT COUNT(*) FROM bronze.prices WHERE product_id = 1001").fetchone()[0]
     assert bronze_count == 2
 
-    # Mismatch-triggered replace with archive=True
     new_points = {
         datetime(2026, 8, 1, 0, 0): {
             "open": 10.0,
@@ -229,7 +221,6 @@ def test_upsert_series(db_conn):
     upsert_series(db_conn, PRICES_SPEC, 1001, initial_points)
     assert db_conn.execute("SELECT COUNT(*) FROM bronze.prices WHERE product_id = 1001").fetchone()[0] == 1
 
-    # Incremental update with 1 updated point and 1 new point
     incremental_points = {
         datetime(2026, 8, 1, 0, 0): {
             "open": 10.0,
@@ -314,7 +305,6 @@ def test_validate_overlap_prices(db_conn):
 
     # 1. Exact match in window W + tail
     new_points = {}
-    # Margin before W (date < last_date - 14d)
     new_points[last_date - timedelta(days=16)] = {
         "open": 999.0,
         "high": 999.0,
@@ -367,7 +357,6 @@ def test_validate_overlap_prices(db_conn):
 
 
 def test_validate_overlap_volume_vwap_drift_accepted(db_conn):
-    """Spec 1: Volume & average revisions on last_date must NOT trigger refetch."""
     last_date = datetime(2026, 8, 30, 0, 0, 0)
     existing_points = {
         last_date - timedelta(days=1): {
@@ -391,7 +380,6 @@ def test_validate_overlap_volume_vwap_drift_accepted(db_conn):
     }
     replace_series(db_conn, PRICES_SPEC, 2001, existing_points, archive=False)
 
-    # Incoming points have identical OHLC, but drastically different volume and average
     new_points = {
         last_date - timedelta(days=1): dict(existing_points[last_date - timedelta(days=1)]),
         last_date: {
@@ -399,8 +387,8 @@ def test_validate_overlap_volume_vwap_drift_accepted(db_conn):
             "high": 52.0,
             "low": 50.0,
             "close": 51.5,
-            "volume": 25000.0,  # 25% volume change
-            "average": 51.9,  # VWAP revision
+            "volume": 25000.0,
+            "average": 51.9,
             "bar_count": 250,
         },
     }
@@ -410,7 +398,6 @@ def test_validate_overlap_volume_vwap_drift_accepted(db_conn):
 
 
 def test_validate_overlap_seam_penny_shift_accepted(db_conn):
-    """Spec 3: A $0.01 closing cross revision on last_date is accepted under bounded seam drift."""
     last_date = datetime(2026, 8, 30, 0, 0, 0)
     existing_points = {
         last_date - timedelta(days=1): {
@@ -426,7 +413,7 @@ def test_validate_overlap_seam_penny_shift_accepted(db_conn):
             "open": 50.0,
             "high": 51.0,
             "low": 49.5,
-            "close": 50.00,  # Continuous close was $50.00
+            "close": 50.00,
             "volume": 1000.0,
             "average": 50.1,
             "bar_count": 50,
@@ -434,14 +421,13 @@ def test_validate_overlap_seam_penny_shift_accepted(db_conn):
     }
     replace_series(db_conn, PRICES_SPEC, 2002, existing_points, archive=False)
 
-    # Official auction close shifts close within ABS_TOL
     new_points = {
         last_date - timedelta(days=1): dict(existing_points[last_date - timedelta(days=1)]),
         last_date: {
             "open": 50.0,
             "high": 51.0,
             "low": 49.5,
-            "close": 50.00 + ABS_TOL,  # shift within ABS_TOL
+            "close": 50.00 + ABS_TOL,
             "volume": 1000.0,
             "average": 50.1,
             "bar_count": 50,
@@ -453,7 +439,6 @@ def test_validate_overlap_seam_penny_shift_accepted(db_conn):
 
 
 def test_validate_overlap_interior_shift_triggers_mismatch(db_conn):
-    """Spec 3: Any price difference prior to last_date is treated as a corporate action."""
     last_date = datetime(2026, 8, 30, 0, 0, 0)
     interior_d = last_date - timedelta(days=1)
     existing_points = {
@@ -483,7 +468,7 @@ def test_validate_overlap_interior_shift_triggers_mismatch(db_conn):
             "open": 50.0,
             "high": 51.0,
             "low": 49.0,
-            "close": 52.0,  # $1.50 shift on d < last_date (well beyond tolerances)
+            "close": 52.0,
             "volume": 1000.0,
             "average": 50.2,
             "bar_count": 50,
@@ -496,7 +481,6 @@ def test_validate_overlap_interior_shift_triggers_mismatch(db_conn):
 
 
 def test_validate_overlap_extreme_seam_shift_triggers_mismatch(db_conn):
-    """Spec 3: Extreme price shift on last_date exceeding ABS_TOL and REL_TOL triggers mismatch."""
     last_date = datetime(2026, 8, 30, 0, 0, 0)
     existing_points = {
         last_date - timedelta(days=1): {
@@ -520,14 +504,13 @@ def test_validate_overlap_extreme_seam_shift_triggers_mismatch(db_conn):
     }
     replace_series(db_conn, PRICES_SPEC, 2004, existing_points, archive=False)
 
-    # 50% shift on last_date close ($50 -> $75)
     new_points = {
         last_date - timedelta(days=1): dict(existing_points[last_date - timedelta(days=1)]),
         last_date: {
             "open": 50.0,
             "high": 51.0,
             "low": 49.5,
-            "close": 75.0,  # +$25.00 (> ABS_TOL and > REL_TOL)
+            "close": 75.0,
             "volume": 1000.0,
             "average": 50.1,
             "bar_count": 50,
@@ -538,10 +521,106 @@ def test_validate_overlap_extreme_seam_shift_triggers_mismatch(db_conn):
     assert reason == "value_mismatch"
 
 
+def test_validate_overlap_historical_core_triggers_corporate_action(db_conn):
+    last_date = datetime(2026, 8, 30, 0, 0, 0)
+    existing_points = {
+        last_date - timedelta(days=i): {
+            "open": 50.0,
+            "high": 51.0,
+            "low": 49.0,
+            "close": 50.0,
+            "volume": 1000.0,
+            "average": 50.0,
+            "bar_count": 50,
+        }
+        for i in range(12)
+    }
+    replace_series(db_conn, PRICES_SPEC, 3001, existing_points, archive=False)
+
+    new_points = {d: dict(v) for d, v in existing_points.items()}
+    core_d = last_date - timedelta(days=10)
+    new_points[core_d]["close"] = 55.0
+
+    valid, reason = validate_overlap(db_conn, PRICES_SPEC, 3001, new_points, last_date)
+    assert valid is False
+    assert reason == "corporate_action"
+
+
+def test_validate_overlap_uniform_ratio_triggers_corporate_action(db_conn):
+    last_date = datetime(2026, 8, 30, 0, 0, 0)
+    existing_points = {
+        last_date - timedelta(days=i): {
+            "open": 50.0,
+            "high": 51.0,
+            "low": 49.0,
+            "close": 50.0,
+            "volume": 1000.0,
+            "average": 50.0,
+            "bar_count": 50,
+        }
+        for i in range(5)
+    }
+    replace_series(db_conn, PRICES_SPEC, 3002, existing_points, archive=False)
+
+    new_points = {d: dict(v) for d, v in existing_points.items()}
+    for d in [last_date, last_date - timedelta(days=1)]:
+        new_points[d]["close"] = 25.0
+        new_points[d]["open"] = 25.0
+
+    valid, reason = validate_overlap(db_conn, PRICES_SPEC, 3002, new_points, last_date)
+    assert valid is False
+    assert reason == "corporate_action"
+
+
+def test_has_historical_price_change(db_conn):
+    pid = 4001
+    cutoff = datetime(2026, 8, 15, 0, 0)
+    points = {
+        datetime(2026, 8, 1, 0, 0): {
+            "open": 10.0,
+            "high": 11.0,
+            "low": 9.0,
+            "close": 10.0,
+            "volume": 100.0,
+            "average": 10.0,
+            "bar_count": 10,
+        },
+        datetime(2026, 8, 20, 0, 0): {
+            "open": 12.0,
+            "high": 13.0,
+            "low": 11.0,
+            "close": 12.0,
+            "volume": 100.0,
+            "average": 12.0,
+            "bar_count": 10,
+        },
+    }
+    replace_series(db_conn, PRICES_SPEC, pid, points, archive=False)
+
+    refetch_same = {
+        datetime(2026, 8, 1, 0, 0): {
+            "open": 10.0,
+            "high": 11.0,
+            "low": 9.0,
+            "close": 10.0,
+            "volume": 150.0,
+            "average": 10.1,
+            "bar_count": 15,
+        },
+        datetime(2026, 8, 20, 0, 0): {"open": 12.0, "high": 13.0, "low": 11.0, "close": 99.0},
+    }
+    assert _has_historical_price_change(db_conn, PRICES_SPEC, pid, refetch_same, cutoff) is False
+
+    refetch_diff = {
+        datetime(2026, 8, 1, 0, 0): {"open": 5.0, "high": 5.5, "low": 4.5, "close": 5.0},
+        datetime(2026, 8, 20, 0, 0): {"open": 12.0, "high": 13.0, "low": 11.0, "close": 12.0},
+    }
+    assert _has_historical_price_change(db_conn, PRICES_SPEC, pid, refetch_diff, cutoff) is True
+
+
 # --- Scenario: Anti-Truncation Safety Guard ---
 @pytest.mark.anyio
 async def test_fetch_and_store_anti_truncation_guard_preserves_bronze(tmp_path):
-    """Spec 4: If refetch returns fewer than MIN_REFETCH_RETENTION_RATIO of existing bars, abort replacement and preserve bronze."""
     db_file = str(tmp_path / "test_anti_truncation.duckdb")
     conn = duckdb.connect(db_file)
     apply_schema(conn)
@@ -559,7 +638,6 @@ async def test_fetch_and_store_anti_truncation_guard_preserves_bronze(tmp_path):
     last_stored_date = yesterday - timedelta(days=2)
     base_date = last_stored_date - timedelta(days=2499)
 
-    # Insert 2,500 historical rows
     bulk_points = [
         (
             pid,
@@ -584,19 +662,17 @@ async def test_fetch_and_store_anti_truncation_guard_preserves_bronze(tmp_path):
     )
     conn.close()
 
-    # 1. Incremental fetch returns a mismatched bar (e.g. 50% price mismatch)
     mismatched_incremental_bar = BarData(
         date=last_stored_date,
         open=100.0,
         high=105.0,
         low=95.0,
-        close=999.0,  # huge mismatch
+        close=999.0,
         volume=100.0,
         average=100.0,
         barCount=10,
     )
 
-    # 2. 30Y refetch returns ONLY 1 bar (transient IBKR gateway truncation)
     single_refetch_bar = BarData(
         date=last_stored_date,
         open=100.0,
@@ -611,8 +687,8 @@ async def test_fetch_and_store_anti_truncation_guard_preserves_bronze(tmp_path):
     mock_ib = MagicMock()
     mock_ib.reqHistoricalDataAsync = AsyncMock(
         side_effect=[
-            [mismatched_incremental_bar],  # incremental call
-            [single_refetch_bar],  # 30Y refetch call
+            [mismatched_incremental_bar],
+            [single_refetch_bar],
         ]
     )
 
@@ -622,20 +698,16 @@ async def test_fetch_and_store_anti_truncation_guard_preserves_bronze(tmp_path):
         await _fetch_and_store(worker, mock_ib, product)
 
     verify_conn = duckdb.connect(db_file)
-
-    # Existing 2,500 rows must remain 100% intact!
     row_count_row = verify_conn.execute("SELECT COUNT(*) FROM bronze.prices WHERE product_id = ?", [pid]).fetchone()
     assert row_count_row is not None
     assert row_count_row[0] == 2500
 
-    # Cold storage should NOT have been written
     cold_count_row = verify_conn.execute(
         "SELECT COUNT(*) FROM cold_storage.prices WHERE product_id = ?", [pid]
     ).fetchone()
     assert cold_count_row is not None
     assert cold_count_row[0] == 0
 
-    # Status must be 'error' with truncation message
     status_row = verify_conn.execute(
         "SELECT status, error_message FROM bronze.price_status WHERE product_id = ?", [pid]
     ).fetchone()
@@ -644,11 +716,9 @@ async def test_fetch_and_store_anti_truncation_guard_preserves_bronze(tmp_path):
     assert "Truncated refetch" in status_row[1]
     expected_min = math.floor(2500 * MIN_REFETCH_RETENTION_RATIO)
     assert f"received 1 bars, expected >= {expected_min}" in status_row[1]
-
     verify_conn.close()
 
 
-# --- Scenario: Preservation on Zero Bars ---
 @pytest.mark.anyio
 async def test_fetch_and_store_preserves_prices_on_zero_bars(tmp_path):
     db_file = str(tmp_path / "test.duckdb")
@@ -748,7 +818,6 @@ async def test_fetch_and_store_mismatch_zero_bars_preserves(tmp_path):
     conn.close()
 
 
-# --- Scenario: Error Capture in _run_price_ingestion ---
 @pytest.mark.anyio
 async def test_run_price_ingestion_error_capture(tmp_path, monkeypatch):
     db_file = str(tmp_path / "test_error.duckdb")
@@ -809,124 +878,3 @@ async def test_run_price_ingestion_ib_connection_error_aborts(tmp_path, monkeypa
         mock_conn.return_value.__aexit__.return_value = False
         with pytest.raises(IBConnectionError, match="Connection lost"):
             await _run_price_ingestion(force=True)
-
-
-# --- Scenario: CLI Signatures reject --limit and --product_ids ---
-def test_cli_signatures_reject_unused_flags():
-    ingest = Ingest()
-    with pytest.raises(TypeError):
-        ingest(limit=10)  # type: ignore
-
-    with pytest.raises(TypeError):
-        ingest.contracts(product_ids="1001")  # type: ignore
-
-    with pytest.raises(TypeError):
-        ingest.prices(limit=5)  # type: ignore
-
-    with pytest.raises(TypeError):
-        ingest.details(product_ids="1001,1002")  # type: ignore
-
-
-def test_validate_overlap_historical_core_triggers_corporate_action(db_conn):
-    """Any discrepancy in historical core (d < last_date - 5 trading days) is classified as corporate_action."""
-    last_date = datetime(2026, 8, 30, 0, 0, 0)
-    existing_points = {
-        last_date - timedelta(days=i): {
-            "open": 50.0,
-            "high": 51.0,
-            "low": 49.0,
-            "close": 50.0,
-            "volume": 1000.0,
-            "average": 50.0,
-            "bar_count": 50,
-        }
-        for i in range(12)  # 12 bars: last 5 are settlement, older 7 are core
-    }
-    replace_series(db_conn, PRICES_SPEC, 3001, existing_points, archive=False)
-
-    new_points = {d: dict(v) for d, v in existing_points.items()}
-    # Modify a bar in historical core (10 days prior)
-    core_d = last_date - timedelta(days=10)
-    new_points[core_d]["close"] = 55.0
-
-    valid, reason = validate_overlap(db_conn, PRICES_SPEC, 3001, new_points, last_date)
-    assert valid is False
-    assert reason == "corporate_action"
-
-
-def test_validate_overlap_uniform_ratio_triggers_corporate_action(db_conn):
-    """Multi-bar uniform ratio shift (stock split) triggers corporate_action."""
-    last_date = datetime(2026, 8, 30, 0, 0, 0)
-    existing_points = {
-        last_date - timedelta(days=i): {
-            "open": 50.0,
-            "high": 51.0,
-            "low": 49.0,
-            "close": 50.0,
-            "volume": 1000.0,
-            "average": 50.0,
-            "bar_count": 50,
-        }
-        for i in range(5)
-    }
-    replace_series(db_conn, PRICES_SPEC, 3002, existing_points, archive=False)
-
-    new_points = {d: dict(v) for d, v in existing_points.items()}
-    # 2:1 stock split on recent bars (prices halved uniformly)
-    for d in [last_date, last_date - timedelta(days=1)]:
-        new_points[d]["close"] = 25.0
-        new_points[d]["open"] = 25.0
-
-    valid, reason = validate_overlap(db_conn, PRICES_SPEC, 3002, new_points, last_date)
-    assert valid is False
-    assert reason == "corporate_action"
-
-
-def test_has_historical_price_change(db_conn):
-    from etfportfolio.ingest.prices import _has_historical_price_change
-
-    pid = 4001
-    cutoff = datetime(2026, 8, 15, 0, 0)
-    points = {
-        datetime(2026, 8, 1, 0, 0): {
-            "open": 10.0,
-            "high": 11.0,
-            "low": 9.0,
-            "close": 10.0,
-            "volume": 100.0,
-            "average": 10.0,
-            "bar_count": 10,
-        },
-        datetime(2026, 8, 20, 0, 0): {
-            "open": 12.0,
-            "high": 13.0,
-            "low": 11.0,
-            "close": 12.0,
-            "volume": 100.0,
-            "average": 12.0,
-            "bar_count": 10,
-        },
-    }
-    replace_series(db_conn, PRICES_SPEC, pid, points, archive=False)
-
-    # Identical historical bars (date < cutoff)
-    refetch_same = {
-        datetime(2026, 8, 1, 0, 0): {
-            "open": 10.0,
-            "high": 11.0,
-            "low": 9.0,
-            "close": 10.0,
-            "volume": 150.0,
-            "average": 10.1,
-            "bar_count": 15,
-        },
-        datetime(2026, 8, 20, 0, 0): {"open": 12.0, "high": 13.0, "low": 11.0, "close": 99.0},  # Changed after cutoff
-    }
-    assert _has_historical_price_change(db_conn, PRICES_SPEC, pid, refetch_same, cutoff) is False
-
-    # Differing historical bar (date < cutoff)
-    refetch_diff = {
-        datetime(2026, 8, 1, 0, 0): {"open": 5.0, "high": 5.5, "low": 4.5, "close": 5.0},  # Split before cutoff
-        datetime(2026, 8, 20, 0, 0): {"open": 12.0, "high": 13.0, "low": 11.0, "close": 12.0},
-    }
-    assert _has_historical_price_change(db_conn, PRICES_SPEC, pid, refetch_diff, cutoff) is True

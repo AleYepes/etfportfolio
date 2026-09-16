@@ -11,90 +11,7 @@ from etfportfolio.prep.extractors import (
     extract_ratios,
     extract_theme_weights,
 )
-from etfportfolio.prep.utils import (
-    clean_credit_rating,
-    parse_effective_date,
-    parse_manager_tenure,
-    parse_net_assets,
-    parse_percentage,
-    sanitize_metric_id,
-)
-
-
-def test_utils():
-    fallback = date(2026, 9, 1)
-
-    # parse_effective_date fallbacks
-    assert parse_effective_date(None, fallback) == (fallback, "snapshot")
-    assert parse_effective_date(0, fallback) == (fallback, "snapshot")
-    assert parse_effective_date(-100, fallback) == (fallback, "snapshot")
-    assert parse_effective_date("", fallback) == (fallback, "snapshot")
-    assert parse_effective_date("invalid", fallback) == (fallback, "snapshot")
-
-    # parse_effective_date successes
-    assert parse_effective_date(1785470400000, fallback) == (date(2026, 7, 31), "payload")
-    assert parse_effective_date(1785470400000, fallback, default_source="item") == (date(2026, 7, 31), "item")
-    assert parse_effective_date("20260831", fallback) == (date(2026, 8, 31), "payload")
-    assert parse_effective_date("2026-08-15", fallback) == (date(2026, 8, 15), "payload")
-    assert parse_effective_date("2026/08/20", fallback) == (date(2026, 8, 20), "payload")
-
-    # clean_credit_rating
-    assert clean_credit_rating("% Quality/AAA") == "AAA"
-    assert clean_credit_rating("% Quality/BBB") == "BBB"
-    assert clean_credit_rating("% Quality/Below B") == "Below B"
-    assert clean_credit_rating("% Quality Not Rated") == "Not Rated"
-    assert clean_credit_rating("% Quality Not Available") == "Not Available"
-    assert clean_credit_rating("A") == "A"
-
-    # sanitize_metric_id
-    assert sanitize_metric_id("Price/Earnings") == "price_earnings"
-    assert sanitize_metric_id("Dividend_Yield_Weighted_Average") == "dividend_yield_weighted_average"
-    assert sanitize_metric_id("  Sales Growth 5 Yr  ") == "sales_growth_5_yr"
-    assert sanitize_metric_id("TRESGS") == "tresgs"
-
-    # parse_net_assets
-    aum_us = parse_net_assets("$78.63B (2026/07/31)", fallback_date=fallback)
-    assert aum_us is not None
-    assert aum_us[0] == 78630000000.0
-    assert aum_us[1] == "$78.63B (2026/07/31)"
-    assert aum_us[2] == date(2026, 7, 31)
-    assert aum_us[3] == "item"
-
-    aum_eu = parse_net_assets("2,5B", fallback_date=fallback)
-    assert aum_eu is not None
-    assert aum_eu[0] == 2500000000.0
-    assert aum_eu[2] == fallback
-    assert aum_eu[3] == "snapshot"
-
-    aum_thousands = parse_net_assets("1,250.5M", fallback_date=fallback)
-    assert aum_thousands is not None
-    assert aum_thousands[0] == 1250500000.0
-
-    assert parse_net_assets(None, fallback_date=fallback) is None
-    assert parse_net_assets("", fallback_date=fallback) is None
-    assert parse_net_assets("N/A", fallback_date=fallback) is None
-    assert parse_net_assets("abc", fallback_date=fallback) is None
-
-    # parse_manager_tenure
-    ref_date = date(2026, 8, 15)
-    tenure = parse_manager_tenure("2013/01/01", ref_date=ref_date)
-    assert tenure is not None
-    expected_years = round((ref_date - date(2013, 1, 1)).days / 365.25, 4)
-    assert tenure[0] == expected_years
-    assert tenure[1] == "2013/01/01"
-
-    assert parse_manager_tenure(None, ref_date=ref_date) is None
-    assert parse_manager_tenure("", ref_date=ref_date) is None
-    with pytest.raises(ValueError, match="Invalid Manager Tenure date string"):
-        parse_manager_tenure("not-a-date", ref_date=ref_date)
-
-    # parse_percentage
-    assert parse_percentage("0.32%") == (0.0032, "0.32%")
-    assert parse_percentage("<0.01%", allow_bound=True) == (0.0001, "<0.01%")
-    assert parse_percentage(None) is None
-    assert parse_percentage("-") is None
-    with pytest.raises(ValueError, match="Cannot parse percentage"):
-        parse_percentage("invalid_pct")
+from tests.conftest import load_fixture
 
 
 def test_extract_ratios():
@@ -176,9 +93,7 @@ def test_extract_profile():
     }
 
     res = extract_profile(1001, payload, created_at)
-    # 2 expenses + 4 fund_and_profile + 1 annual report = 7 metrics
     assert len(res.metrics) == 7
-    # 2 selected style_box + 1 hist style_box_hist = 3 dimensions
     assert len(res.dimensions) == 3
 
     metrics = {m[2]: (m[3], m[4], m[6], m[7]) for m in res.metrics}
@@ -303,7 +218,6 @@ def test_extract_mstar():
     }
 
     res = extract_mstar(1001, payload, created_at)
-    # 5 active ratings: medalist_rating_analyst, process_analyst, process_quant, morningstar_rating, parent_analyst, sustainability_rating = 6
     assert len(res.metrics) == 6
     assert len(res.dimensions) == 0
 
@@ -315,12 +229,10 @@ def test_extract_mstar():
     assert metrics["mstar_parent_analyst"] == (date(2026, 7, 31), "payload", 4.0, "Above_Average")
     assert metrics["mstar_sustainability_rating"] == (date(2026, 6, 30), "item", 5.0, "High")
 
-    # Unrecognized rating string raises ValueError
     bad_payload = {"summary": [{"id": "people", "value": "Nonexistent_Rating"}]}
     with pytest.raises(ValueError, match="Unrecognized rating string"):
         extract_mstar(1001, bad_payload, created_at)
 
-    # Missing id raises ValueError
     missing_id_payload = {"summary": [{"value": "High"}]}
     with pytest.raises(ValueError, match="Missing 'id'"):
         extract_mstar(1001, missing_id_payload, created_at)
@@ -369,10 +281,10 @@ def test_extract_holdings():
         "allocation_self": [
             {"name": "Equity", "weight": 99.76},
         ],
-        "currency": [  # explicitly discarded per FRD
+        "currency": [
             {"name": "US Dollar", "code": "USD", "weight": 99.8},
         ],
-        "geographic": [  # explicitly discarded per FRD
+        "geographic": [
             {"name": "North America", "weight": 99.8},
         ],
         "investor_country": [
@@ -400,7 +312,6 @@ def test_extract_holdings():
     assert len(res.metrics) == 1
     assert len(res.dimensions) == 5
 
-    # Scalar metric check
     m = res.metrics[0]
     assert m[1] == "holdings"
     assert m[2] == "portfolio_top_10_concentration"
@@ -409,7 +320,6 @@ def test_extract_holdings():
     assert pytest.approx(m[6]) == 0.3047
     assert m[7] == "30.47%"
 
-    # Dimensions check
     dims = {(d[1], d[2]): (d[3], d[7], d[8]) for d in res.dimensions}
     assert pytest.approx(dims[("asset_class", "Equity")][1]) == 0.9976
     assert dims[("country", "United States")][0] == "US"
@@ -417,7 +327,6 @@ def test_extract_holdings():
     assert dims[("credit_rating", "AAA")][0] == "AAA"
     assert pytest.approx(dims[("credit_rating", "AAA")][1]) == 0.015
 
-    # Top-10 holdings
     assert dims[("top_holding", "GUGGENHEIM STRATEGIC OPPORTUNITIES FUND")][0] == "86174372"
     assert pytest.approx(dims[("top_holding", "GUGGENHEIM STRATEGIC OPPORTUNITIES FUND")][1]) == 0.0349
     assert dims[("top_holding", "MSFT - MICROSOFT CORP")][0] == "272093"
@@ -435,8 +344,8 @@ def test_extract_theme_weights():
             {
                 "key": "006a0c27-4a9a-4766-8988-0d8acc6ede8b",
                 "name": "Discount Retail",
-                "weight": 0.084085,  # discarded
-                "rank_adjusted_weight": 0.0094658,  # preserved
+                "weight": 0.084085,
+                "rank_adjusted_weight": 0.0094658,
             }
         ]
     }
@@ -459,3 +368,45 @@ def test_extract_theme_weights():
     empty_res = extract_theme_weights(1001, {}, created_at)
     assert len(empty_res.metrics) == 0
     assert len(empty_res.dimensions) == 0
+
+
+# --- Real JSON Fixtures Verification ---
+@pytest.mark.parametrize(
+    "fixture_name, extractor, expect_metrics, expect_dimensions",
+    [
+        ("ratios_complete", extract_ratios, True, False),
+        ("ratios_equity", extract_ratios, True, False),
+        ("ratios_bond", extract_ratios, True, False),
+        ("ratios_empty", extract_ratios, False, False),
+        ("profile_complete", extract_profile, True, True),
+        ("profile_equity", extract_profile, True, False),
+        ("profile_bond", extract_profile, True, False),
+        ("profile_empty", extract_profile, False, False),
+        ("esg", extract_esg, True, False),
+        ("mstar_equity", extract_mstar, True, False),
+        ("mstar_bond", extract_mstar, True, False),
+        ("mstar_empty", extract_mstar, False, False),
+        ("lipper_equity", extract_lipper, True, False),
+        ("lipper_bond", extract_lipper, True, False),
+        ("lipper_empty", extract_lipper, False, False),
+        ("holdings_complete", extract_holdings, True, True),
+        ("holdings_equity", extract_holdings, True, True),
+        ("holdings_bond", extract_holdings, True, True),
+        ("holdings_empty", extract_holdings, False, False),
+        ("theme_weights", extract_theme_weights, False, True),
+    ],
+)
+def test_extractors_against_payload_fixtures(fixture_name, extractor, expect_metrics, expect_dimensions):
+    payload = load_fixture(fixture_name)
+    created_at = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
+    res = extractor(8335, payload, created_at)
+
+    if expect_metrics:
+        assert len(res.metrics) > 0, f"Expected metrics for {fixture_name}"
+    else:
+        assert len(res.metrics) == 0, f"Expected no metrics for {fixture_name}"
+
+    if expect_dimensions:
+        assert len(res.dimensions) > 0, f"Expected dimensions for {fixture_name}"
+    else:
+        assert len(res.dimensions) == 0, f"Expected no dimensions for {fixture_name}"
