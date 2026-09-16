@@ -1,22 +1,22 @@
-# Agent Guidelines & Overview
+## Overview
 
-This project runs factor-series analyses on ETF data. At a high level, it must:
+This project is intended for ETF factor-series analytics:
+- ingest ETF data (IBKR + supplementary sources) in a DuckDB,
+- build monthly LOCF panels of fundamentals following a medallion architecture,
+- derive weighted factor-return series from each panel metric,
+- regress ETF returns on selected factors,
+- compute efficient-frontier portfolios.
 
-- fetch ETF data from IBKR and supplementary data from other sources
-- follow a medallion architecture via DuckDB schemas (`bronze`, `silver`, `gold`, and `cold_storage`)
-- construct monthly LOCF panels for ETF fundamental metrics
-- build weighted factor return series from each fundamental metric
-- select a subset of factors as independent variables
-- regress ETF returns on factor returns
-- calculate efficient-frontier portfolios
+## Code
 
-## Architecture & Coding Principles
+- Write simple, testable code; No hidden global state, no speculative abstractions.
+- Placement guides:
+  - Used in one script: kept in that script.
+  - Shared among package scripts: `<pkg>/utils.py`.
+  - Shared across packages: `core/`.
+- Delete obsolete logic and tests outright; do not add compatibility shims or fallback layers.
 
-- **Simplicity**: Clear, simple, testable code. No hidden global state. No speculative abstractions. Do not build for hypothetical future needs.
-- **Module Organization**:
-  - Used in only one script → stay declared in that script.
-  - Shared across multiple scripts within a single directory (e.g., `ingest/`, `prep/`) → that directory's `utils.py`.
-  - Shared across multiple directories under `etfportfolio/` → `core/`.
-- **Replacement Over Deprecation**: Prefer replacing old functionality cleanly rather than accumulating deprecated alternatives.
+## Tests
 
-> FYI: This repo uses a `.venv/`
+- Every `etfportfolio/<pkg>/<mod>.py` must have a matching `tests/<pkg>/test_<mod>.py`.
+- Reuse `tests/conftest.py`
