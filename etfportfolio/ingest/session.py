@@ -201,10 +201,11 @@ def _load_cookies_from_storage_state(path: Path) -> dict[str, str]:
         return {}
 
 
-def build_async_client(timeout: float = 30.0) -> httpx.AsyncClient:
+def build_async_client(timeout: float = 30.0, cookies: dict[str, str] | None = None) -> httpx.AsyncClient:
     """Builds an httpx.AsyncClient preloaded with session cookies and standard headers."""
-    session_path = Path(settings.session_state_path)
-    cookies = _load_cookies_from_storage_state(session_path)
+    if cookies is None:
+        session_path = Path(settings.session_state_path)
+        cookies = _load_cookies_from_storage_state(session_path)
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -607,18 +608,7 @@ async def login(timeout_s: float = 300.0) -> None:
                         if "name" in c and "value" in c and c["value"] is not None
                     }
 
-                    async with httpx.AsyncClient(
-                        base_url=settings.ibkr_base_url.rstrip("/"),
-                        headers={
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                            "Accept": "application/json, text/plain, */*",
-                            "Referer": f"{settings.ibkr_base_url}/portal/",
-                            "X-Requested-With": "XMLHttpRequest",
-                        },
-                        cookies=cookies,
-                        timeout=10.0,
-                        follow_redirects=True,
-                    ) as test_client:
+                    async with build_async_client(timeout=10.0, cookies=cookies) as test_client:
                         if not await validate_client_session(test_client):
                             raise RuntimeError(
                                 "Browser indicated login success, but session probe returned unauthenticated."

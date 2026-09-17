@@ -170,13 +170,38 @@ def test_pipeline_execution_and_idempotency(obs_test_db):
     assert processed_force == 6
 
     conn = duckdb.connect(obs_test_db)
-    proc_cnt = conn.execute("SELECT COUNT(*) FROM silver.processed_snapshots").fetchone()[0]
-    assert proc_cnt == 6
-    met_cnt = conn.execute("SELECT COUNT(*) FROM silver.product_metrics").fetchone()[0]
-    assert met_cnt == 5
-    dim_cnt = conn.execute("SELECT COUNT(*) FROM silver.product_dimensions").fetchone()[0]
-    assert dim_cnt == 2
+    proc_row = conn.execute("SELECT COUNT(*) FROM silver.processed_snapshots").fetchone()
+    assert proc_row is not None
+    assert proc_row[0] == 6
+
+    met_row = conn.execute("SELECT COUNT(*) FROM silver.product_metrics").fetchone()
+    assert met_row is not None
+    assert met_row[0] == 5
+
+    dim_row = conn.execute("SELECT COUNT(*) FROM silver.product_dimensions").fetchone()
+    assert dim_row is not None
+    assert dim_row[0] == 2
     conn.close()
+
+
+def test_pipeline_unregistered_extractor_raises(tmp_path: Path):
+    db_file = str(tmp_path / "unknown_extractor.duckdb")
+    conn = duckdb.connect(db_file)
+    apply_schema(conn)
+
+    t = datetime(2026, 9, 1, 12, 0, 0, tzinfo=UTC)
+    store_snapshot(
+        conn,
+        1234,
+        "/unregistered/unknown/prefix/",
+        "slug",
+        {"data": 123},
+        fetched_at=t,
+    )
+    conn.close()
+
+    with pytest.raises(ValueError, match="Unregistered extractor for url_prefix: /unregistered/unknown/prefix/"):
+        run_observations(force=False, db_path=db_file)
 
 
 def test_pipeline_in_memory_deduplication(tmp_path: Path):

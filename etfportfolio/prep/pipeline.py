@@ -6,10 +6,14 @@ from datetime import date
 from etfportfolio.core.db import db_connection
 from etfportfolio.core.logging import console
 from etfportfolio.core.progress import progress_bar
+from etfportfolio.ingest.endpoints import ENDPOINTS
 from etfportfolio.prep.extractors import EXTRACTOR_REGISTRY
 from etfportfolio.prep.utils import DimensionTuple, MetricTuple, decompress_payload
 
 logger = logging.getLogger(__name__)
+
+URL_PREFIX_TO_NAME: dict[str, str] = {ep.url_prefix: ep.name for ep in ENDPOINTS}
+EXCLUDED_ENDPOINTS: frozenset[str] = frozenset({"landing"})
 
 BATCH_SIZE = 100
 
@@ -106,26 +110,33 @@ def run_observations(force: bool = False, db_path: str | None = None) -> int:
                         processed_ids.append((snapshot_id,))
                         continue
 
-                    extractor = EXTRACTOR_REGISTRY.get(url_prefix)
-                    if extractor is not None:
-                        result = extractor(product_id, data, created_at)
-                        for m in result.metrics:
-                            metric_pk = (m[0], m[1], m[2], m[3])
-                            # Inter-snapshot collision within batch: newer fetched_at overwrites
-                            if metric_pk in metrics_staged:
-                                if m[5] >= metrics_staged[metric_pk][5]:
-                                    metrics_staged[metric_pk] = m
-                            else:
-                                metrics_staged[metric_pk] = m
+                    ep_name = URL_PREFIX_TO_NAME.get(url_prefix)
+                    if ep_name in EXCLUDED_ENDPOINTS:
+                        processed_ids.append((snapshot_id,))
+                        continue
 
-                        for d in result.dimensions:
-                            dim_pk = (d[0], d[1], d[2], d[4])
-                            # Inter-snapshot collision within batch: newer fetched_at overwrites
-                            if dim_pk in dimensions_staged:
-                                if d[6] >= dimensions_staged[dim_pk][6]:
-                                    dimensions_staged[dim_pk] = d
-                            else:
+                    extractor = EXTRACTOR_REGISTRY.get(ep_name) if ep_name else None
+                    if extractor is None:
+                        raise ValueError(f"Unregistered extractor for url_prefix: {url_prefix}")
+
+                    result = extractor(product_id, data, created_at)
+                    for m in result.metrics:
+                        metric_pk = (m[0], m[1], m[2], m[3])
+                        # Inter-snapshot collision within batch: newer fetched_at overwrites
+                        if metric_pk in metrics_staged:
+                            if m[5] >= metrics_staged[metric_pk][5]:
+                                metrics_staged[metric_pk] = m
+                        else:
+                            metrics_staged[metric_pk] = m
+
+                    for d in result.dimensions:
+                        dim_pk = (d[0], d[1], d[2], d[4])
+                        # Inter-snapshot collision within batch: newer fetched_at overwrites
+                        if dim_pk in dimensions_staged:
+                            if d[6] >= dimensions_staged[dim_pk][6]:
                                 dimensions_staged[dim_pk] = d
+                        else:
+                            dimensions_staged[dim_pk] = d
 
                     processed_ids.append((snapshot_id,))
 

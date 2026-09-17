@@ -31,7 +31,9 @@ def test_apply_schema_is_idempotent(db_conn):
     apply_schema(db_conn)
 
     # Sequences should still exist and work
-    seq_val = db_conn.execute("SELECT nextval('bronze.snapshots_id_seq')").fetchone()[0]
+    row = db_conn.execute("SELECT nextval('bronze.snapshots_id_seq')").fetchone()
+    assert row is not None
+    seq_val = row[0]
     assert seq_val >= 1
 
 
@@ -41,13 +43,15 @@ def test_db_connection_context_manager(tmp_path: Path):
         conn.execute(
             "INSERT INTO bronze.products (product_id, symbol, created_at, updated_at) VALUES (1, 'AAA', now(), now())"
         )
-        count = conn.execute("SELECT COUNT(*) FROM bronze.products").fetchone()[0]
-        assert count == 1
+        row = conn.execute("SELECT COUNT(*) FROM bronze.products").fetchone()
+        assert row is not None
+        assert row[0] == 1
 
     # Verify closure and persistence
     verify_conn = duckdb.connect(db_file)
-    count = verify_conn.execute("SELECT COUNT(*) FROM bronze.products").fetchone()[0]
-    assert count == 1
+    row = verify_conn.execute("SELECT COUNT(*) FROM bronze.products").fetchone()
+    assert row is not None
+    assert row[0] == 1
     verify_conn.close()
 
 
@@ -81,3 +85,11 @@ async def test_async_db_worker_fifo_and_exceptions(tmp_path: Path):
         # Ensure worker continues processing after an exception
         symbols = await worker.submit(fetch_symbols)
         assert symbols == ["SYM10", "SYM20"]
+
+
+@pytest.mark.anyio
+async def test_async_db_worker_startup_failure(tmp_path: Path):
+    invalid_db_path = str(tmp_path / "non_existent_dir" / "\0_invalid.duckdb")
+    with pytest.raises((duckdb.Error, ValueError, OSError)):
+        async with AsyncDbWorker(invalid_db_path):
+            pass

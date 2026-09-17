@@ -58,33 +58,44 @@ class AsyncDbWorker:
         self._queue: queue.Queue = queue.Queue()
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._conn: duckdb.DuckDBPyConnection | None = None
-
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-        self._conn = duckdb.connect(db_path)
-        apply_schema(self._conn)
+        self._ready_event = threading.Event()
+        self._init_error: Exception | None = None
 
         self._thread.start()
 
     def _run(self) -> None:
-        """Worker thread loop: process tasks until sentinel."""
-        while True:
-            item = self._queue.get()
-            if item is None:  # sentinel
-                break
+        """Worker thread loop: acquire connection, process tasks until sentinel."""
+        try:
+            Path(self._db_path).parent.mkdir(parents=True, exist_ok=True)
+            self._conn = duckdb.connect(self._db_path)
+            apply_schema(self._conn)
+        except Exception as exc:
+            logger.exception("Error during AsyncDbWorker initialization")
+            self._init_error = exc
+            self._ready_event.set()
+            return
+        finally:
+            self._ready_event.set()
 
-            func, args, kwargs, future = item
-            try:
-                result = func(self._conn, *args, **kwargs)
-                if future is not None:
-                    self._loop.call_soon_threadsafe(future.set_result, result)
-            except Exception as exc:  # noqa: BLE001
-                logger.exception("Error in AsyncDbWorker task")
-                if future is not None:
-                    self._loop.call_soon_threadsafe(future.set_exception, exc)
+        try:
+            while True:
+                item = self._queue.get()
+                if item is None:  # sentinel
+                    break
 
-        if self._conn is not None:
-            self._conn.close()
-            self._conn = None
+                func, args, kwargs, future = item
+                try:
+                    result = func(self._conn, *args, **kwargs)
+                    if future is not None:
+                        self._loop.call_soon_threadsafe(future.set_result, result)
+                except Exception as exc:  # noqa: BLE001
+                    logger.exception("Error in AsyncDbWorker task")
+                    if future is not None:
+                        self._loop.call_soon_threadsafe(future.set_exception, exc)
+        finally:
+            if self._conn is not None:
+                self._conn.close()
+                self._conn = None
 
     async def submit(self, func, *args, **kwargs):
         """Submit a task and wait for its result."""
@@ -99,6 +110,9 @@ class AsyncDbWorker:
             await asyncio.to_thread(self._thread.join)
 
     async def __aenter__(self):
+        await asyncio.to_thread(self._ready_event.wait)
+        if self._init_error is not None:
+            raise self._init_error
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):

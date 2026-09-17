@@ -10,11 +10,11 @@ from etfportfolio.core.config import settings
 from etfportfolio.core.db import AsyncDbWorker, apply_schema
 from etfportfolio.ingest.gateway import IBConnectionError
 from etfportfolio.ingest.prices import (
-    ABS_TOL,
     MIN_REFETCH_RETENTION_RATIO,
     OVERLAP_CALENDAR_DAYS,
+    PRICE_ABS_TOL,
+    PRICE_REL_TOL,
     PRICES_SPEC,
-    REL_TOL,
     PriceSeriesStatus,
     _fetch_and_store,
     _has_historical_price_change,
@@ -347,10 +347,10 @@ def test_validate_overlap_prices(db_conn):
     assert valid is False
     assert reason == "value_mismatch"
 
-    # 4. Floating-point tolerance check (within REL_TOL passes)
+    # 4. Floating-point tolerance check (within PRICE_REL_TOL passes)
     tolerant_points = dict(new_points)
     tolerant_points[last_date] = dict(new_points[last_date])
-    tolerant_points[last_date]["close"] = tolerant_points[last_date]["close"] * (1 + 0.5 * REL_TOL)
+    tolerant_points[last_date]["close"] = tolerant_points[last_date]["close"] * (1 + 0.5 * PRICE_REL_TOL)
     valid, reason = validate_overlap(db_conn, PRICES_SPEC, 1001, tolerant_points, last_date)
     assert valid is True
     assert reason is None
@@ -427,7 +427,7 @@ def test_validate_overlap_seam_penny_shift_accepted(db_conn):
             "open": 50.0,
             "high": 51.0,
             "low": 49.5,
-            "close": 50.00 + ABS_TOL,
+            "close": 50.00 + PRICE_ABS_TOL,
             "volume": 1000.0,
             "average": 50.1,
             "bar_count": 50,

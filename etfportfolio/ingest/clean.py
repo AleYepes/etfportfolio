@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import logging
 from datetime import timedelta
+from typing import Any
 
 import duckdb
 
 from etfportfolio.core.config import settings
 from etfportfolio.core.db import db_connection
 from etfportfolio.core.logging import console
-from etfportfolio.ingest.prices import PRICE_ABS_TOL, PRICE_REL_TOL, SETTLEMENT_TRADING_DAYS
+from etfportfolio.ingest.prices import PRICE_ABS_TOL, PRICE_REL_TOL, PRICES_SPEC, SETTLEMENT_TRADING_DAYS
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,8 @@ def clean_cold_storage(conn: duckdb.DuckDBPyConnection) -> int:
     """Purges redundant runs in cold_storage.prices.
 
     A cold storage run is redundant if all historical bars older than
-    SETTLEMENT_TRADING_DAYS match bronze.prices within tolerance.
+    SETTLEMENT_TRADING_DAYS match bronze.prices within tolerance across all
+    PRICES_SPEC.value_columns (open, high, low, close).
     Corporate actions (splits/dividends) alter prices across years of history,
     whereas false-positive archives differ only on recent settlement days or not at all.
 
@@ -25,6 +27,26 @@ def clean_cold_storage(conn: duckdb.DuckDBPyConnection) -> int:
     """
     runs = conn.execute("SELECT DISTINCT product_id, run_id FROM cold_storage.prices").fetchall()
     deleted_rows = 0
+
+    col_conditions = []
+    for col in PRICES_SPEC.value_columns:
+        col_conditions.append(
+            f"(c.{col} IS NULL AND b.{col} IS NOT NULL) OR "
+            f"(c.{col} IS NOT NULL AND b.{col} IS NULL) OR "
+            f"(c.{col} IS NOT NULL AND b.{col} IS NOT NULL AND (abs(c.{col} - b.{col}) > ? OR abs(c.{col} - b.{col}) / nullif(abs(c.{col}), 0) > ?))"
+        )
+    value_cols_predicate = " OR\n        ".join(col_conditions)
+
+    mismatch_sql = f"""
+        SELECT count(*)
+        FROM cold_storage.prices c
+        LEFT JOIN bronze.prices b ON c.product_id = b.product_id AND c.date = b.date
+        WHERE c.product_id = ? AND c.run_id = ? AND c.date <= ?
+        AND (
+            b.date IS NULL OR
+            {value_cols_predicate}
+        )
+    """
 
     for pid, run_id in runs:
         # Find maximum date in this archived run
@@ -39,41 +61,19 @@ def clean_cold_storage(conn: duckdb.DuckDBPyConnection) -> int:
         cutoff_date = max_date - timedelta(days=SETTLEMENT_TRADING_DAYS + 2)
 
         # Check if any historical bar (date <= cutoff_date) differs between cold_storage and bronze
-        # If count of mismatches is 0, the run is not a corporate action
-        mismatches = conn.execute(
-            """
-            SELECT count(*)
-            FROM cold_storage.prices c
-            LEFT JOIN bronze.prices b ON c.product_id = b.product_id AND c.date = b.date
-            WHERE c.product_id = ? AND c.run_id = ? AND c.date <= ?
-            AND (
-                b.date IS NULL OR
-                abs(c.open - b.open) > ? OR abs(c.open - b.open) / nullif(abs(c.open), 0) > ? OR
-                abs(c.high - b.high) > ? OR abs(c.high - b.high) / nullif(abs(c.high), 0) > ? OR
-                abs(c.low - b.low) > ? OR abs(c.low - b.low) / nullif(abs(c.low), 0) > ? OR
-                abs(c.close - b.close) > ? OR abs(c.close - b.close) / nullif(abs(c.close), 0) > ?
-            )
-            """,
-            [
-                pid,
-                run_id,
-                cutoff_date,
-                PRICE_ABS_TOL,
-                PRICE_REL_TOL,
-                PRICE_ABS_TOL,
-                PRICE_REL_TOL,
-                PRICE_ABS_TOL,
-                PRICE_REL_TOL,
-                PRICE_ABS_TOL,
-                PRICE_REL_TOL,
-            ],
-        ).fetchone()[0]
+        params: list[Any] = [pid, run_id, cutoff_date]
+        for _ in PRICES_SPEC.value_columns:
+            params.extend([PRICE_ABS_TOL, PRICE_REL_TOL])
+
+        mismatch_row = conn.execute(mismatch_sql, params).fetchone()
+        mismatches = mismatch_row[0] if mismatch_row is not None else 0
 
         if mismatches == 0:
-            count = conn.execute(
+            del_row = conn.execute(
                 "DELETE FROM cold_storage.prices WHERE product_id = ? AND run_id = ?",
                 [pid, run_id],
-            ).fetchone()[0]
+            ).fetchone()
+            count = del_row[0] if del_row is not None else 0
             deleted_rows += count
             logger.info("Product %d (run %s): deleted %d redundant cold storage rows.", pid, run_id, count)
 

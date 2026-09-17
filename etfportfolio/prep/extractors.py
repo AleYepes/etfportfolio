@@ -645,11 +645,11 @@ def extract_theme_weights(
 
 
 EXTRACTOR_REGISTRY: dict[str, Callable[[int, dict[str, Any], datetime], ExtractionResult]] = {
-    "/tws.proxy/fundamentals/mf_ratios_fundamentals/": extract_ratios,
-    "/tws.proxy/fundamentals/mf_profile_and_fees/": extract_profile,
-    "/tws.proxy/impact/esg/": extract_esg,
-    "/tws.proxy/mstar/fund/detail?conid=": extract_mstar,
-    "/tws.proxy/fundamentals/mf_lip_ratings/": extract_lipper,
-    "/tws.proxy/fundamentals/mf_holdings/": extract_holdings,
-    "/tws.proxy/knowledge-graph/ui/fund?conid=": extract_theme_weights,
+    "ratios": extract_ratios,
+    "profile": extract_profile,
+    "esg": extract_esg,
+    "mstar": extract_mstar,
+    "lipper": extract_lipper,
+    "holdings": extract_holdings,
+    "theme_weights": extract_theme_weights,
 }

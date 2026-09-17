@@ -150,28 +150,6 @@ CREATE TABLE IF NOT EXISTS bronze.themes (
     last_checked_at TIMESTAMP
 );
 
-CREATE OR REPLACE VIEW silver.products AS
-SELECT
-    p.product_id,
-    COALESCE(c.name, p.name) AS name,
-    COALESCE(c.symbol, p.symbol) AS symbol,
-    COALESCE(c.local_symbol, p.local_symbol) AS local_symbol,
-    COALESCE(c.sec_type, p.product_type, 'STK') AS sec_type,
-    COALESCE(c.exchange_id, 'SMART') AS exchange_id,
-    COALESCE(c.primary_exchange_id, p.exchange_id) AS primary_exchange_id,
-    COALESCE(c.currency, p.currency) AS currency,
-    c.trading_class,
-    c.valid_exchanges,
-    c.stock_type,
-    COALESCE(c.isin, p.isin) AS isin,
-    COALESCE(c.cusip, p.cusip) AS cusip,
-    c.time_zone_id,
-    c.min_tick,
-    COALESCE(c.created_at, p.created_at) AS created_at,
-    GREATEST(c.updated_at, p.updated_at) AS updated_at
-FROM bronze.products p
-JOIN bronze.contracts c ON p.product_id = c.product_id;
-
 CREATE TABLE IF NOT EXISTS silver.product_metrics (
     product_id             INTEGER NOT NULL,
     source                 VARCHAR NOT NULL,
@@ -201,3 +179,29 @@ CREATE TABLE IF NOT EXISTS silver.processed_snapshots (
     snapshot_id            BIGINT PRIMARY KEY,
     processed_at           TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE OR REPLACE VIEW silver.products AS
+SELECT
+    c.product_id,
+    c.name,
+    c.symbol,
+    c.local_symbol,
+    c.sec_type,
+    COALESCE(c.exchange_id, 'SMART') AS exchange_id,
+    c.primary_exchange_id,
+    c.currency,
+    c.trading_class,
+    c.valid_exchanges,
+    c.stock_type,
+    c.isin,
+    c.cusip,
+    c.time_zone_id,
+    c.min_tick,
+    c.created_at,
+    c.updated_at
+FROM bronze.contracts c
+WHERE c.product_id IN (SELECT DISTINCT product_id FROM bronze.prices)
+  AND (
+      c.product_id IN (SELECT DISTINCT product_id FROM silver.product_metrics)
+      OR c.product_id IN (SELECT DISTINCT product_id FROM silver.product_dimensions)
+  );

@@ -10,10 +10,6 @@ from etfportfolio.ingest.utils import content_address, gc_preview_blob, store_bl
 logger = logging.getLogger(__name__)
 
 
-def _content_address(conn: duckdb.DuckDBPyConnection, payload: dict) -> tuple[int, bytes]:
-    return content_address(payload)
-
-
 def _select_preview_hash(conn: duckdb.DuckDBPyConnection, product_id: int) -> int | None:
     row = conn.execute(
         "SELECT hash FROM bronze.snapshot_previews WHERE product_id = $1",
@@ -86,7 +82,7 @@ async def fetch_and_gate(
     _, _, full_url = ep.resolve(product_id=product_id)
     _, payload = await session.fetch_with_retry(client, full_url)
 
-    digest, compressed = await worker.submit(_content_address, payload or {})
+    digest, compressed = content_address(payload or {})
 
     old_hash = await worker.submit(_select_preview_hash, product_id)
     changed = old_hash is None or old_hash != digest

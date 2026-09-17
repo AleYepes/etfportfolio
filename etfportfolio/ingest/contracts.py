@@ -187,7 +187,8 @@ def upsert_contract(
 
     columns = list(data.keys()) + ["created_at", "updated_at"]
     placeholders = ", ".join([f"${i + 1}" for i in range(len(columns))])
-    values = list(data.values()) + [datetime.now(UTC), datetime.now(UTC)]
+    now = datetime.now(UTC)
+    values = list(data.values()) + [now, now]
 
     insert_sql = f"""
     INSERT INTO bronze.contracts ({", ".join(columns)})

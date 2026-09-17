@@ -36,8 +36,6 @@ SETTLEMENT_ABS_TOL = 0.10  # $0.10 max absolute drift for recent settlement prin
 SETTLEMENT_TRADING_DAYS = 5  # Last 4-5 trading days horizon for settlement drift
 
 MIN_REFETCH_RETENTION_RATIO = 0.90  # Refetch must contain >= 90% of existing bars
-REL_TOL = PRICE_REL_TOL  # Backward compatibility alias
-ABS_TOL = PRICE_ABS_TOL  # Backward compatibility alias
 
 
 @dataclass(frozen=True)

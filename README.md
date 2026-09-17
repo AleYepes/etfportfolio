@@ -35,14 +35,6 @@ uv run python main.py ingest themes                         # Unofficial investm
 uv run python main.py ingest details                        # Unofficial fundamental data
 ```
 
-#### Optional Ingestion **Flags**
-
-```bash
-uv run python main.py ingest --limit 10
-uv run python main.py ingest --product-ids "756733,8335"    # Comma-separated string
-uv run python main.py ingest --force                        # Force refresh; bypass freshness windows
-```
-
 ### 2. Panel creation for downstream analysis - *coming soon to a repo near you*
 
 ## Development & Testing
