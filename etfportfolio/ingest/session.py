@@ -19,6 +19,7 @@ class SessionInvalidError(Exception):
     """Raised when IBKR returns the session-invalid signature."""
 
 
+DEFAULT_ENV_PATH = Path(".env")
 _ACCOUNTS_ACESWS_PATH_RE = re.compile(r"/portal\.proxy/v1/portal/acesws/([^/?]+)")
 _ACCOUNTS_PORTFOLIO2_PATH_RE = re.compile(r"/portal\.proxy/v1/portal/portfolio2/([^/?]+)")
 _ACCOUNT_ID_RE = re.compile(r"^(?:U|DU|DF|F)?\d+$")
@@ -228,7 +229,7 @@ def reconcile_account_id(account_id: str, env_path: Path | None = None) -> bool:
 
     Returns True to proceed, False to restart the login flow.
     """
-    target_env = env_path or Path(".env")
+    target_env = env_path or DEFAULT_ENV_PATH
     env_account_id = (settings.account_id or "").strip()
 
     if env_account_id and env_account_id != account_id:
@@ -273,7 +274,7 @@ def _write_account_id(account_id: str, target_env: Path) -> None:
 
 def _write_credentials(username: str, password: str, env_path: Path | None = None) -> None:
     """Writes IBKR_USERNAME and IBKR_PASSWORD to .env and updates settings in-process."""
-    target_env = env_path or Path(".env")
+    target_env = env_path or DEFAULT_ENV_PATH
     lines: list[str] = []
     if target_env.exists():
         with contextlib.suppress(Exception):

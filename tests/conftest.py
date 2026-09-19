@@ -24,8 +24,10 @@ def load_fixture(name: str) -> dict | list:
 def isolate_test_environment(tmp_path, monkeypatch):
     """Guarantees tests do not touch live user sessions, network, or .env files."""
     test_session_file = tmp_path / "test_session_state.json"
+    test_env_file = tmp_path / ".env"
     monkeypatch.setattr(settings, "session_state_path", str(test_session_file))
     monkeypatch.setattr(settings, "account_id", "U123456")
+    monkeypatch.setattr("etfportfolio.ingest.session.DEFAULT_ENV_PATH", test_env_file)
 
     # Prevent Playwright browser login from accidentally executing in tests
     with patch("etfportfolio.ingest.session.login", new_callable=AsyncMock):
