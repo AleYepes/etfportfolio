@@ -90,6 +90,7 @@ def run_observations(force: bool = False, db_path: str | None = None) -> int:
         if force:
             conn.execute("BEGIN TRANSACTION")
             try:
+                conn.execute("DELETE FROM silver.monthly_panel")
                 conn.execute("DELETE FROM silver.processed_snapshots")
                 conn.execute("DELETE FROM silver.product_metrics")
                 conn.execute("DELETE FROM silver.product_dimensions")
