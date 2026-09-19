@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any
@@ -8,6 +9,7 @@ from etfportfolio.prep.utils import (
     DimensionTuple,
     ExtractionResult,
     clean_credit_rating,
+    disambiguate_aum_currency,
     parse_effective_date,
     parse_manager_tenure,
     parse_net_assets,
@@ -52,12 +54,27 @@ _MSTAR_SUSTAINABILITY_MAP = {
     "low": 1.0,
 }
 
+_SKIP_RATING_TOKENS = frozenset(
+    {
+        "under_review",
+        "under review",
+        "not_applicable",
+        "not applicable",
+        "na",
+        "n/a",
+        "-",
+        "",
+    }
+)
+
 _LIPPER_HORIZONS = {
     "overall": "overall",
     "3_year": "3yr",
     "5_year": "5yr",
     "10_year": "10yr",
 }
+
+_LIPPER_TIEBREAK = ("United States", "Germany", "UK", "Canada", "Japan", "Australia")
 
 _HOLDINGS_BREAKDOWNS = (
     ("allocation_self", "asset_class"),
@@ -70,6 +87,68 @@ _HOLDINGS_BREAKDOWNS = (
 
 _VALID_STYLE_X_TAGS = {"value", "core", "growth"}
 _VALID_STYLE_Y_TAGS = {"large", "multi", "mid", "small"}
+
+# Ratios delivered as percentage points; convert to decimal fractions.
+_RATIOS_PERCENTAGE_METRICS = frozenset(
+    {
+        "eps_growth_1yr",
+        "eps_growth_3yr",
+        "eps_growth_5yr",
+        "sales_growth_1_year",
+        "sales_growth_3_year",
+        "sales_growth_5_yr",
+        "sales_per_share_growth_1_year",
+        "sales_per_share_growth_3_year",
+        "operating_cash_flow_growth_rate_3yr",
+        "return_on_assets_1yr",
+        "return_on_assets_3yr",
+        "return_on_equity_1yr",
+        "return_on_equity_3yr",
+        "return_on_investment_1yr",
+        "return_on_investment_3yr",
+        "return_on_capital",
+        "return_on_capital_3yr",
+        "dividend_yield_weighted_average",
+        "dividendpayoutratio5yr",
+        "dividend_per_share_1yr",
+        "dividend_per_share_3yr",
+        "yield_to_maturity",
+        "average_coupon",
+        "relative_strength",
+    }
+)
+
+_COUNTRY_CODE_REMAPS: dict[str, str | None] = {
+    "Croatia": "HR",
+    "Bulgaria": "BG",
+    "Guam": "GU",
+    "Uzbekistan": "UZ",
+    "Unidentified": None,
+}
+
+_INDUSTRY_NAME_REMAPS = {
+    "Telecommunication Services-Discontinued eff 09/19/2020": "Communication Services",
+}
+
+_MATURITY_CODE_MAP = {
+    "% Maturity Less than 1 Year": "mat_lt_1y",
+    "% Maturity 1 to 3 Years": "mat_1_to_3y",
+    "% Maturity 3 to 5 Years": "mat_3_to_5y",
+    "% Maturity 5 to 10 Years": "mat_5_to_10y",
+    "% Maturity 10 to 20 Years": "mat_10_to_20y",
+    "% Maturity 20 to 30 Years": "mat_20_to_30y",
+    "% Maturity Greater than 30 Years": "mat_gt_30y",
+    "% Maturity Other": "mat_other",
+}
+
+_INT_RE = re.compile(r"\d{1,3}(?:,\d{3})+|\d+")
+
+
+def _regex_int(raw: str) -> int:
+    matches = _INT_RE.findall(raw)
+    if not matches:
+        return 0
+    return max(int(m.replace(",", "")) for m in matches)
 
 
 def extract_ratios(
@@ -99,9 +178,21 @@ def extract_ratios(
 
             metric_id = sanitize_metric_id(tag)
             val_float = float(value)
+            if metric_id in _RATIOS_PERCENTAGE_METRICS:
+                val_float = val_float / 100.0
             raw_value = str(item.get("value_fmt") if item.get("value_fmt") is not None else value)
             result.metrics.append(
-                (product_id, "ratios", metric_id, eff_date, eff_source, snapshot_created_at, val_float, raw_value)
+                (
+                    product_id,
+                    "ratios",
+                    metric_id,
+                    eff_date,
+                    eff_source,
+                    snapshot_created_at,
+                    val_float,
+                    raw_value,
+                    None,
+                )
             )
 
     return result
@@ -164,6 +255,9 @@ def extract_profile(
     product_id: int,
     payload: dict[str, Any],
     snapshot_created_at: datetime,
+    product_currency: str | None = None,
+    listing_exchange: str | None = None,
+    country: str | None = None,
 ) -> ExtractionResult:
     result = ExtractionResult()
     if not payload:
@@ -188,6 +282,7 @@ def extract_profile(
                     snapshot_created_at,
                     float(ratio),
                     raw_val,
+                    None,
                 )
             )
         elif name == "Non-Management Expenses":
@@ -201,6 +296,7 @@ def extract_profile(
                     snapshot_created_at,
                     float(ratio),
                     raw_val,
+                    None,
                 )
             )
 
@@ -225,11 +321,14 @@ def extract_profile(
                         snapshot_created_at,
                         ter_val,
                         raw_str,
+                        None,
                     )
                 )
         elif name_tag == "Management_Approach" or name == "Management Approach":
             raw_str = str(val).strip()
             approach = raw_str.lower()
+            if approach in _SKIP_RATING_TOKENS:
+                continue
             if approach == "passive":
                 approach_val = 1.0
             elif approach == "active":
@@ -246,12 +345,19 @@ def extract_profile(
                     snapshot_created_at,
                     approach_val,
                     raw_str,
+                    None,
                 )
             )
         elif name_tag == "Total_Net_Assets_Month_End" or name.startswith("Total Net Assets"):
             parsed_aum = parse_net_assets(val, fallback_date=snapshot_date)
             if parsed_aum is not None:
                 aum_val, raw_str, aum_date, aum_source = parsed_aum
+                currency = disambiguate_aum_currency(
+                    raw_str,
+                    product_currency=product_currency,
+                    listing_exchange=listing_exchange,
+                    country=country,
+                )
                 result.metrics.append(
                     (
                         product_id,
@@ -262,6 +368,7 @@ def extract_profile(
                         snapshot_created_at,
                         aum_val,
                         raw_str,
+                        currency,
                     )
                 )
         elif name_tag == "Manager_Tenure" or name == "Manager Tenure":
@@ -278,6 +385,7 @@ def extract_profile(
                         snapshot_created_at,
                         tenure_years,
                         raw_str,
+                        None,
                     )
                 )
 
@@ -303,6 +411,7 @@ def extract_profile(
                                 snapshot_created_at,
                                 fee_val,
                                 raw_str,
+                                None,
                             )
                         )
 
@@ -340,6 +449,7 @@ def extract_esg(
                 snapshot_created_at,
                 float(coverage),
                 str(coverage),
+                None,
             )
         )
 
@@ -358,6 +468,7 @@ def extract_esg(
                     snapshot_created_at,
                     float(node_val),
                     str(node_val),
+                    None,
                 )
             )
 
@@ -376,6 +487,7 @@ def extract_esg(
                         snapshot_created_at,
                         float(child_val),
                         str(child_val),
+                        None,
                     )
                 )
 
@@ -397,6 +509,9 @@ def extract_mstar(
         default_source="payload",
     )
 
+    analyst_count = 0
+    foundational_seen = False
+
     for pillar in payload.get("summary", []):
         pillar_id = pillar.get("id")
         if not pillar_id:
@@ -405,6 +520,16 @@ def extract_mstar(
         pillar_key = pillar_id.strip().lower()
         if pillar_key in ("category", "category_index"):
             continue
+
+        is_quant = bool(pillar.get("q") is True or pillar_key.startswith("q_"))
+        base_metric = pillar_key[2:] if pillar_key.startswith("q_") else pillar_key
+        if base_metric == "quantitative_rating":
+            base_metric = "medalist_rating"
+
+        if base_metric in ("people", "process", "parent"):
+            foundational_seen = True
+            if not is_quant:
+                analyst_count += 1
 
         raw_val = pillar.get("value")
         if raw_val is None:
@@ -415,17 +540,15 @@ def extract_mstar(
             continue
 
         norm_val = val_str.lower()
-        if norm_val in ("under_review", "not_applicable", "not applicable", "under review", "na", "n/a"):
+        if norm_val in _SKIP_RATING_TOKENS:
             continue
 
-        is_quant = bool(pillar.get("q") is True or pillar_key.startswith("q_"))
-        base_metric = pillar_key[2:] if pillar_key.startswith("q_") else pillar_key
-        if base_metric == "quantitative_rating":
-            base_metric = "medalist_rating"
-
-        if base_metric in ("medalist_rating", "people", "process", "parent"):
+        if base_metric == "medalist_rating":
+            metric_id = "mstar_medalist_rating"
+            mapping = _MSTAR_MEDALIST_MAP
+        elif base_metric in ("people", "process", "parent"):
             metric_id = f"mstar_{base_metric}_{'quant' if is_quant else 'analyst'}"
-            mapping = _MSTAR_MEDALIST_MAP if base_metric == "medalist_rating" else _MSTAR_PILLAR_MAP
+            mapping = _MSTAR_PILLAR_MAP
         elif base_metric == "morningstar_rating":
             metric_id = f"mstar_{base_metric}"
             mapping = _MSTAR_STAR_MAP
@@ -449,10 +572,63 @@ def extract_mstar(
             eff_date, eff_source = top_level_date, top_level_source
 
         result.metrics.append(
-            (product_id, "mstar", metric_id, eff_date, eff_source, snapshot_created_at, score, val_str)
+            (
+                product_id,
+                "mstar",
+                metric_id,
+                eff_date,
+                eff_source,
+                snapshot_created_at,
+                score,
+                val_str,
+                None,
+            )
+        )
+
+    if foundational_seen:
+        result.metrics.append(
+            (
+                product_id,
+                "mstar",
+                "mstar_analyst_coverage_pct",
+                top_level_date,
+                top_level_source,
+                snapshot_created_at,
+                analyst_count / 3.0,
+                f"{analyst_count}/3 analyst pillars",
+                None,
+            )
         )
 
     return result
+
+
+def _lipper_universe_peer_count(universe: dict[str, Any]) -> int:
+    max_n = 0
+    for horizon_key in _LIPPER_HORIZONS:
+        for item in universe.get(horizon_key, []):
+            rating = item.get("rating")
+            if not isinstance(rating, dict):
+                continue
+            n = _regex_int(str(rating.get("name") or ""))
+            if n > max_n:
+                max_n = n
+    return max_n
+
+
+def _select_lipper_universe(universes: list[dict[str, Any]]) -> dict[str, Any]:
+    if len(universes) == 1:
+        return universes[0]
+
+    def sort_key(u: dict[str, Any]) -> tuple[int, int]:
+        name = u.get("name") or ""
+        try:
+            tie = _LIPPER_TIEBREAK.index(name)
+        except ValueError:
+            tie = len(_LIPPER_TIEBREAK)
+        return (_lipper_universe_peer_count(u), -tie)
+
+    return max(universes, key=sort_key)
 
 
 def extract_lipper(
@@ -465,39 +641,42 @@ def extract_lipper(
     if not universes:
         return result
 
-    for u in universes:
-        country_name = sanitize_metric_id(u.get("name") or "global")
-        eff_date, eff_source = parse_effective_date(
-            u.get("as_of_date"),
-            fallback_date=snapshot_created_at.date(),
-            default_source="item",
-        )
+    universe = _select_lipper_universe(universes)
+    universe_name = universe.get("name") or "global"
+    universe_n = _lipper_universe_peer_count(universe)
+    eff_date, eff_source = parse_effective_date(
+        universe.get("as_of_date"),
+        fallback_date=snapshot_created_at.date(),
+        default_source="item",
+    )
 
-        for horizon_key, horizon_suffix in _LIPPER_HORIZONS.items():
-            for item in u.get(horizon_key, []):
-                tag = item.get("name_tag")
-                if not tag:
-                    continue
-                rating = item.get("rating")
-                if not isinstance(rating, dict):
-                    continue
-                val = rating.get("value")
-                if val is None:
-                    continue
+    for horizon_key, horizon_suffix in _LIPPER_HORIZONS.items():
+        for item in universe.get(horizon_key, []):
+            tag = item.get("name_tag")
+            if not tag:
+                continue
+            rating = item.get("rating")
+            if not isinstance(rating, dict):
+                continue
+            val = rating.get("value")
+            if val is None:
+                continue
 
-                metric_id = f"lipper_{sanitize_metric_id(tag)}_{horizon_suffix}_{country_name}"
-                result.metrics.append(
-                    (
-                        product_id,
-                        "lipper",
-                        metric_id,
-                        eff_date,
-                        eff_source,
-                        snapshot_created_at,
-                        float(val),
-                        str(val),
-                    )
+            fund_count = _regex_int(str(rating.get("name") or "")) or universe_n
+            metric_id = f"lipper_{sanitize_metric_id(tag)}_{horizon_suffix}"
+            result.metrics.append(
+                (
+                    product_id,
+                    "lipper",
+                    metric_id,
+                    eff_date,
+                    eff_source,
+                    snapshot_created_at,
+                    float(val),
+                    f"{val} ({universe_name}: {fund_count} funds)",
+                    None,
                 )
+            )
 
     return result
 
@@ -532,10 +711,10 @@ def extract_holdings(
                     snapshot_created_at,
                     conc_val,
                     raw_str,
+                    None,
                 )
             )
 
-    # Exclude currency and geographic to eliminate collinearity with investor_country
     for field_name, dim_type in _HOLDINGS_BREAKDOWNS:
         for item in payload.get(field_name, []):
             raw_name = item.get("name")
@@ -548,15 +727,24 @@ def extract_holdings(
 
             weight = float(weight_val) / 100.0
             raw_str = str(item.get("formatted_weight", f"{weight_val}%"))
+            dim_name = raw_name.strip()
 
             if dim_type == "credit_rating":
                 dim_name = clean_credit_rating(raw_name)
-                dim_code = dim_name
+                dim_code: str | None = dim_name
             elif dim_type == "country":
-                dim_name = raw_name.strip()
-                dim_code = item.get("country_code")
+                if dim_name in _COUNTRY_CODE_REMAPS:
+                    dim_code = _COUNTRY_CODE_REMAPS[dim_name]
+                else:
+                    dim_code = item.get("country_code")
+            elif dim_type == "industry":
+                dim_name = _INDUSTRY_NAME_REMAPS.get(dim_name, dim_name)
+                dim_code = None
+            elif dim_type == "maturity":
+                dim_code = _MATURITY_CODE_MAP.get(dim_name)
+            elif dim_type == "debt_type":
+                dim_code = item.get("code")
             else:
-                dim_name = raw_name.strip()
                 dim_code = None
 
             result.dimensions.append(
@@ -573,33 +761,11 @@ def extract_holdings(
                 )
             )
 
-    for item in payload.get("top_10", []):
-        name = item.get("name")
-        if not name:
-            continue
-
-        ticker = item.get("ticker")
-        dim_name = f"{ticker.strip()} - {name.strip()}" if ticker and str(ticker).strip() else name.strip()
-        conids = item.get("conids", [])
-        dim_code = ",".join(str(c) for c in conids) if conids else None
-
-        assets_pct = item.get("assets_pct")
-        parsed = parse_percentage(assets_pct, allow_bound=True)
-        if parsed is not None:
-            pct_val, raw_str = parsed
-            result.dimensions.append(
-                (
-                    product_id,
-                    "top_holding",
-                    dim_name,
-                    dim_code,
-                    eff_date,
-                    eff_source,
-                    snapshot_created_at,
-                    pct_val,
-                    raw_str,
-                )
-            )
+    if result.dimensions:
+        coalesced: dict[tuple[int, str, str, object], DimensionTuple] = {}
+        for dim in result.dimensions:
+            coalesced[(dim[0], dim[1], dim[2], dim[4])] = dim
+        result.dimensions = list(coalesced.values())
 
     return result
 
@@ -615,7 +781,22 @@ def extract_theme_weights(
 
     eff_date = snapshot_created_at.date()
 
-    # Raw weight is discarded to prevent multicollinearity with rank_adjusted_weight
+    coverage = payload.get("coverage")
+    if coverage is not None:
+        result.metrics.append(
+            (
+                product_id,
+                "theme_weights",
+                "theme_coverage",
+                eff_date,
+                "snapshot",
+                snapshot_created_at,
+                float(coverage),
+                str(coverage),
+                None,
+            )
+        )
+
     for theme in payload.get("themes", []):
         theme_id = theme.get("key")
         name = theme.get("name")

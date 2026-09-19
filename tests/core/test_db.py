@@ -22,6 +22,21 @@ def test_apply_schema_creates_schemas_and_tables(db_conn):
     assert "snapshot_previews" in tables
     assert "product_metrics" in tables
     assert "product_dimensions" in tables
+    assert "monthly_panel" in tables
+
+
+def test_product_metrics_has_currency_column(db_conn):
+    cols = [
+        r[0]
+        for r in db_conn.execute(
+            """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'silver' AND table_name = 'product_metrics'
+            """
+        ).fetchall()
+    ]
+    assert "currency" in cols
 
 
 def test_apply_schema_is_idempotent(db_conn):

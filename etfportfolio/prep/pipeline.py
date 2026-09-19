@@ -7,7 +7,7 @@ from etfportfolio.core.db import db_connection
 from etfportfolio.core.logging import console
 from etfportfolio.core.progress import progress_bar
 from etfportfolio.ingest.endpoints import ENDPOINTS
-from etfportfolio.prep.extractors import EXTRACTOR_REGISTRY
+from etfportfolio.prep.extractors import EXTRACTOR_REGISTRY, extract_profile
 from etfportfolio.prep.utils import DimensionTuple, MetricTuple, decompress_payload
 
 logger = logging.getLogger(__name__)
@@ -19,13 +19,14 @@ BATCH_SIZE = 100
 
 INSERT_METRICS_SQL = """
 INSERT INTO silver.product_metrics (
-    product_id, source, metric_id, effective_date, effective_date_source, fetched_at, value, raw_value
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    product_id, source, metric_id, effective_date, effective_date_source, fetched_at, value, raw_value, currency
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (product_id, source, metric_id, effective_date) DO UPDATE SET
     value = EXCLUDED.value,
     raw_value = EXCLUDED.raw_value,
     effective_date_source = EXCLUDED.effective_date_source,
-    fetched_at = EXCLUDED.fetched_at;
+    fetched_at = EXCLUDED.fetched_at,
+    currency = EXCLUDED.currency;
 """
 
 INSERT_DIMENSIONS_SQL = """
@@ -44,6 +45,44 @@ INSERT_WATERMARK_SQL = """
 INSERT INTO silver.processed_snapshots (snapshot_id, processed_at)
 VALUES (?, CURRENT_TIMESTAMP);
 """
+
+
+def _load_product_meta(conn, product_ids: list[int]) -> dict[int, tuple[str | None, str | None, str | None]]:
+    """Return {product_id: (currency, listing_exchange, country)} from bronze."""
+    if not product_ids:
+        return {}
+
+    placeholders = ", ".join("?" for _ in product_ids)
+    meta: dict[int, tuple[str | None, str | None, str | None]] = {}
+
+    product_rows = conn.execute(
+        f"""
+        SELECT product_id, currency, exchange_id, country
+        FROM bronze.products
+        WHERE product_id IN ({placeholders})
+        """,
+        product_ids,
+    ).fetchall()
+    for pid, currency, exchange_id, country in product_rows:
+        meta[pid] = (currency, exchange_id, country)
+
+    contract_rows = conn.execute(
+        f"""
+        SELECT product_id, currency, primary_exchange_id, exchange_id
+        FROM bronze.contracts
+        WHERE product_id IN ({placeholders})
+        """,
+        product_ids,
+    ).fetchall()
+    for pid, currency, primary_exchange_id, exchange_id in contract_rows:
+        prev = meta.get(pid, (None, None, None))
+        meta[pid] = (
+            currency or prev[0],
+            primary_exchange_id or exchange_id or prev[1],
+            prev[2],
+        )
+
+    return meta
 
 
 def run_observations(force: bool = False, db_path: str | None = None) -> int:
@@ -92,6 +131,9 @@ def run_observations(force: bool = False, db_path: str | None = None) -> int:
                 ).fetchall()
                 payload_map = dict(blob_rows)
 
+                product_ids = list({row[1] for row in chunk})
+                product_meta = _load_product_meta(conn, product_ids)
+
                 metrics_staged: dict[tuple[int, str, str, date], MetricTuple] = {}
                 dimensions_staged: dict[tuple[int, str, str, date], DimensionTuple] = {}
                 processed_ids: list[tuple[int]] = []
@@ -119,7 +161,18 @@ def run_observations(force: bool = False, db_path: str | None = None) -> int:
                     if extractor is None:
                         raise ValueError(f"Unregistered extractor for url_prefix: {url_prefix}")
 
-                    result = extractor(product_id, data, created_at)
+                    if extractor is extract_profile:
+                        currency, exchange, country = product_meta.get(product_id, (None, None, None))
+                        result = extract_profile(
+                            product_id,
+                            data,
+                            created_at,
+                            product_currency=currency,
+                            listing_exchange=exchange,
+                            country=country,
+                        )
+                    else:
+                        result = extractor(product_id, data, created_at)
                     for m in result.metrics:
                         metric_pk = (m[0], m[1], m[2], m[3])
                         # Inter-snapshot collision within batch: newer fetched_at overwrites

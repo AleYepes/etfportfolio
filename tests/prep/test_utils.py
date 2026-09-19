@@ -6,6 +6,7 @@ from etfportfolio.ingest.utils import content_address
 from etfportfolio.prep.utils import (
     clean_credit_rating,
     decompress_payload,
+    disambiguate_aum_currency,
     parse_effective_date,
     parse_manager_tenure,
     parse_net_assets,
@@ -30,6 +31,7 @@ def test_parse_effective_date():
     assert parse_effective_date("20260831", fallback) == (date(2026, 8, 31), "payload")
     assert parse_effective_date("2026-08-15", fallback) == (date(2026, 8, 15), "payload")
     assert parse_effective_date("2026/08/20", fallback) == (date(2026, 8, 20), "payload")
+    assert parse_effective_date("1785470400000", fallback) == (date(2026, 7, 31), "payload")
 
 
 def test_clean_credit_rating():
@@ -46,6 +48,9 @@ def test_sanitize_metric_id():
     assert sanitize_metric_id("Dividend_Yield_Weighted_Average") == "dividend_yield_weighted_average"
     assert sanitize_metric_id("  Sales Growth 5 Yr  ") == "sales_growth_5_yr"
     assert sanitize_metric_id("TRESGS") == "tresgs"
+    assert sanitize_metric_id("EPS_growth_1yr") == "eps_growth_1yr"
+    assert sanitize_metric_id("LT_Debt_Shareholders_Equity") == "lt_debt_shareholders_equity"
+    assert sanitize_metric_id("DividendPayoutRatio5yr") == "dividendpayoutratio5yr"
 
 
 def test_parse_net_assets():
@@ -68,10 +73,36 @@ def test_parse_net_assets():
     assert aum_thousands is not None
     assert aum_thousands[0] == 1250500000.0
 
+    aum_zero = parse_net_assets("CAD0 (2020/08/31)", fallback_date=fallback)
+    assert aum_zero is not None
+    assert aum_zero[0] == 0.0
+    assert aum_zero[2] == date(2020, 8, 31)
+    assert aum_zero[3] == "item"
+
+    aum_micro = parse_net_assets("$19.08", fallback_date=fallback)
+    assert aum_micro is not None
+    assert aum_micro[0] == 19.08
+
     assert parse_net_assets(None, fallback_date=fallback) is None
     assert parse_net_assets("", fallback_date=fallback) is None
     assert parse_net_assets("N/A", fallback_date=fallback) is None
     assert parse_net_assets("abc", fallback_date=fallback) is None
+
+
+def test_disambiguate_aum_currency():
+    assert disambiguate_aum_currency("$78.63B (2026/07/31)") == "USD"
+    assert disambiguate_aum_currency("$10.0M", product_currency="CAD") == "CAD"
+    assert disambiguate_aum_currency("$10.0M", listing_exchange="TSE") == "CAD"
+    assert disambiguate_aum_currency("$10.0M", listing_exchange="TSX") == "CAD"
+    assert disambiguate_aum_currency("$10.0M", country="Canada") == "CAD"
+    assert disambiguate_aum_currency("CAD0 (2020/08/31)") == "CAD"
+    assert disambiguate_aum_currency("€2.5B") == "EUR"
+    assert disambiguate_aum_currency("£1.2B") == "GBP"
+    assert disambiguate_aum_currency("¥100.0B") == "JPY"
+    assert disambiguate_aum_currency("₹50.0B") == "INR"
+    assert disambiguate_aum_currency("AUD1.5B") == "AUD"
+    assert disambiguate_aum_currency("CHF 800M") == "CHF"
+    assert disambiguate_aum_currency("$1.0B", product_currency="EUR") == "USD"
 
 
 def test_parse_manager_tenure():
@@ -81,6 +112,10 @@ def test_parse_manager_tenure():
     expected_years = round((ref_date - date(2013, 1, 1)).days / 365.25, 4)
     assert tenure[0] == expected_years
     assert tenure[1] == "2013/01/01"
+
+    tenure_year = parse_manager_tenure("2013", ref_date=ref_date)
+    assert tenure_year is not None
+    assert tenure_year[0] == round((ref_date - date(2013, 1, 1)).days / 365.25, 4)
 
     assert parse_manager_tenure(None, ref_date=ref_date) is None
     assert parse_manager_tenure("", ref_date=ref_date) is None

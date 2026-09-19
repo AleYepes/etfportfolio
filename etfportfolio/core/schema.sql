@@ -159,8 +159,12 @@ CREATE TABLE IF NOT EXISTS silver.product_metrics (
     fetched_at             TIMESTAMP WITH TIME ZONE NOT NULL,
     value                  DOUBLE NOT NULL,
     raw_value              VARCHAR NOT NULL,
+    currency               VARCHAR,
     PRIMARY KEY (product_id, source, metric_id, effective_date)
 );
+
+-- Idempotent add for databases created before the currency column existed.
+ALTER TABLE silver.product_metrics ADD COLUMN IF NOT EXISTS currency VARCHAR;
 
 CREATE TABLE IF NOT EXISTS silver.product_dimensions (
     product_id             INTEGER NOT NULL,
@@ -173,6 +177,15 @@ CREATE TABLE IF NOT EXISTS silver.product_dimensions (
     value                  DOUBLE NOT NULL,
     raw_value              VARCHAR NOT NULL,
     PRIMARY KEY (product_id, dimension_type, dimension_name, effective_date)
+);
+
+CREATE TABLE IF NOT EXISTS silver.monthly_panel (
+    product_id   INTEGER NOT NULL,
+    as_of_date   DATE NOT NULL,
+    asset_class  VARCHAR NOT NULL,
+    feature_id   VARCHAR NOT NULL,
+    value        DOUBLE NOT NULL,
+    PRIMARY KEY (product_id, as_of_date, feature_id)
 );
 
 CREATE TABLE IF NOT EXISTS silver.processed_snapshots (
