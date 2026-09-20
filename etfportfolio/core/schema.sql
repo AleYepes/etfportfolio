@@ -163,9 +163,6 @@ CREATE TABLE IF NOT EXISTS silver.product_metrics (
     PRIMARY KEY (product_id, source, metric_id, effective_date)
 );
 
--- Idempotent add for databases created before the currency column existed.
-ALTER TABLE silver.product_metrics ADD COLUMN IF NOT EXISTS currency VARCHAR;
-
 CREATE TABLE IF NOT EXISTS silver.product_dimensions (
     product_id             INTEGER NOT NULL,
     dimension_type         VARCHAR NOT NULL,

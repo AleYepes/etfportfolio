@@ -116,10 +116,25 @@ The directory structure of the target project looks like this:
 │   │   ├── progress.py
 │   │   └── schema.sql
 │   ├── ingest/
+│   │   ├── __init__.py
+│   │   ├── clean.py
+│   │   ├── contracts.py
+│   │   ├── details.py
+│   │   ├── endpoints.py
+│   │   ├── gateway.py
+│   │   ├── landing.py
+│   │   ├── pipeline.py
+│   │   ├── prices.py
+│   │   ├── products.py
+│   │   ├── session.py
+│   │   ├── snapshots.py
+│   │   ├── themes.py
+│   │   └── utils.sql
 │   └── prep/
 │       ├── __init__.py
 │       ├── cli.py
 │       ├── extractors.py
+│       ├── panels.py
 │       ├── pipeline.py
 │       └── utils.py
 ├── scripts/

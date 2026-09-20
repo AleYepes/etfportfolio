@@ -11,9 +11,9 @@ This project is intended for ETF factor-series analytics:
 
 - Write simple, testable code; No hidden global state, no speculative abstractions.
 - Placement guides:
-  - Used in one script: kept in that script.
-  - Shared among package scripts: `<pkg>/utils.py`.
-  - Shared across packages: `core/`.
+  - Used in one module: keep in that module `etfportfolio/<pkg>/<mod>.py`.
+  - Shared between modules in a package: `etfportfolio/<pkg>/utils.py`.
+  - Shared across packages: `etfportfolio/core/*`.
 - Delete obsolete logic and tests outright; do not add compatibility shims or fallback layers.
 
 ## Tests
