@@ -179,6 +179,11 @@ CREATE TABLE IF NOT EXISTS silver.product_dimensions (
     PRIMARY KEY (product_id, dimension_type, dimension_name, effective_date)
 );
 
+CREATE TABLE IF NOT EXISTS silver.processed_snapshots (
+    snapshot_id            BIGINT PRIMARY KEY,
+    processed_at           TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS silver.monthly_panel (
     product_id   INTEGER NOT NULL,
     as_of_date   DATE NOT NULL,
@@ -186,11 +191,6 @@ CREATE TABLE IF NOT EXISTS silver.monthly_panel (
     feature_id   VARCHAR NOT NULL,
     value        DOUBLE NOT NULL,
     PRIMARY KEY (product_id, as_of_date, feature_id)
-);
-
-CREATE TABLE IF NOT EXISTS silver.processed_snapshots (
-    snapshot_id            BIGINT PRIMARY KEY,
-    processed_at           TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE OR REPLACE VIEW silver.products AS

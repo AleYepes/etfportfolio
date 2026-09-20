@@ -7,7 +7,7 @@ from etfportfolio.core.config import settings
 from etfportfolio.core.db import AsyncDbWorker
 from etfportfolio.core.logging import console
 from etfportfolio.core.progress import progress_bar
-from etfportfolio.ingest import contracts, details, prices, products, session, themes
+from etfportfolio.ingest import clean, contracts, details, prices, products, session, themes
 
 logger = logging.getLogger(__name__)
 
@@ -169,6 +169,14 @@ async def _run_full(force: bool = False) -> None:
             await _run_details_phase(worker, client, account_id, target_ids, force)
     finally:
         await client.aclose()
+
+    console.info("=== Phase 7: Data cleaning ===")
+    try:
+        clean.run_clean()
+        console.info("Data cleaning complete.")
+    except Exception as e:
+        logger.error("Clean phase failed: %s", e)
+        raise
 
     console.info("=== Ingestion complete ===")
 

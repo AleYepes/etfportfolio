@@ -1,0 +1,799 @@
+alex@Alexs-Mac-mini etfportfolio % uv run scripts/catalog_silver_tables.py                  
+Connected to DuckDB: /Users/alex/Documents/etfportfolio/data/etf.duckdb (READ_ONLY)
+
+╭─────────────────────────────────────────────────────────╮
+│ 1. Silver Medallion Invariants & Macro Health           │
+│ PK, NOT NULL, finite values, date-source domain, schema │
+╰─────────────────────────────────────────────────────────╯
+  [PASS] PK uniqueness in silver.product_metrics (0 duplicate groups)
+  [PASS] PK uniqueness in silver.product_dimensions (0 duplicate groups)
+  [PASS] value/raw_value NOT NULL in product_metrics (null value=0, null raw=0)
+  [PASS] No NaN/Inf in product_metrics.value (0 non-finite values)
+  [PASS] value/raw_value NOT NULL in product_dimensions (null value=0, null raw=0)
+  [PASS] No NaN/Inf in product_dimensions.value (0 non-finite values)
+  [PASS] effective_date_source ∈ {payload, item, snapshot} (0 out-of-domain rows)
+  [PASS] Temporal causality invariant (effective_date <= fetched_at::DATE) (0 future-dated records)
+  [PASS] Relational product integrity (all product_ids in bronze.contracts) (0 orphan product_ids)
+  [PASS] No cross-source metric_id collisions (0 duplicate groups across sources (panel PK safety))
+  [APPLIED] silver.product_metrics.currency column exists (present)
+                        Silver Footprint (contracts=22,737, priced silver.products=20,435)                         
+                                                                                                                   
+  Layer                                     Rows   Products   Univ %   Features   % Payload   % Item   % Snapshot  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  silver.product_metrics               1,943,448     20,563    90.4%        103      73.25%   19.88%        6.87%  
+  silver.product_dimensions (All)      8,034,349     18,946    83.3%        767        7.2%     0.0%        92.8%  
+    -- Non-Theme (excl. top_holding)     603,271     18,937    83.3%        276      95.85%     0.0%        4.15%  
+    -- Theme Dimensions (UUIDs)        7,431,078     11,025    48.5%        491        0.0%     0.0%       100.0%  
+                                                                                                                   
+                        Date Provenance by Metrics Source                         
+                                                                                  
+  Source             Rows   Products   Metrics   % Payload   % Item   % Snapshot  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  ratios          817,680     16,643        47      100.0%     0.0%         0.0%  
+  esg             562,178     11,769        17      100.0%     0.0%         0.0%  
+  lipper          263,009     11,691        20        0.0%   100.0%         0.0%  
+  profile         145,702     20,088         7        0.0%    26.8%        73.2%  
+  mstar           101,312     16,462        10       13.2%    83.3%         3.5%  
+  holdings         30,309     18,913         1      100.0%     0.0%         0.0%  
+  theme_weights    23,258     11,025         1        0.0%     0.0%       100.0%  
+                                                                                  
+  [PASS] Expected metric sources present (observed=['esg', 'holdings', 'lipper', 'mstar', 'profile', 'ratios', 'theme_weights']; missing=[])
+
+╭─────────────────────────────────────────────────────╮
+│ 2. Session 4.1: Profile, Fees, Currency & Style Box │
+│ /fundamentals/mf_profile_and_fees/                  │
+╰─────────────────────────────────────────────────────╯
+  [PASS] Profile closed set of 7 scalar metrics (extra=∅ missing=∅)
+                                           AUM (total_net_assets_local) Tail Statistics                                            
+                                                                                                                                   
+     Obs   Products    Min          P25        Median           P75                  Max   Zero   Micro (<1k)   Neg   % Item date  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  34,137     19,223   0.00   22,560,000   134,380,000   800,060,000   33,640,000,000,000      1             4     0           100  
+                                                                                                                                   
+  [PASS] Liquidated-fund zero AUM retained (1 fund(s) at 0.0)
+  [PASS] Multi-trillion local-currency mega-AUM retained (max=33,640,000,000,000)
+  [PASS] No negative AUM (0 negatives)
+  [PASS] AUM date provenance is item-level report date (100.0% item)
+                                   Largest AUM records (local currency)                                   
+                                                                                                          
+  Product ID   Symbol   Name                    Date                      Value   Raw                     
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+    39015900   1306     NEXT FUNDS TOPIX ETF    2026-07-31   33,640,000,000,000   ¥33.64T (2026/07/31)    
+    76006841   069500   SAMSUNG KODEX 200 ETF   2026-08-31   24,920,000,000,000   KRW24.92T (2026/08/31)  
+    76006841   069500   SAMSUNG KODEX 200 ETF   2026-07-31   19,810,000,000,000   KRW19.81T (2026/07/31)  
+    54987234   1321     NF NIKKEI 225 ETF       2026-07-31   17,150,000,000,000   ¥17.15T (2026/07/31)    
+                                                                                                          
+                           AUM currency prefix tokens (26 distinct)                           
+                                                                                              
+  Token      Obs   Products               Min                  Max   Example                  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  $       21,634     11,824                19    1,050,000,000,000   $47.93M (2026/07/31)     
+  €        4,241      2,330               963       22,610,000,000   €178.55M (2026/07/31)    
+  CAD      3,240      1,637                 0       35,160,000,000   CAD140.96M (2026/07/31)  
+  £          985        522             1,930       16,510,000,000   £23.03M (2026/07/31)     
+  AUD        974        502           474,440       26,900,000,000   AUD214.08M (2026/07/31)  
+  ₹          676        345        13,890,000    2,160,000,000,000   ₹102.33B (2026/07/31)    
+  ¥          571        512        80,150,000   33,640,000,000,000   ¥22.99B (2026/07/31)     
+  CNY        488        479        23,290,000       94,870,000,000   CNY5.96B (2026/06/30)    
+  TWD        340        340        76,530,000    2,280,000,000,000   TWD26.36B (2026/07/31)   
+  HKD        338        171         5,610,000      142,580,000,000   HKD22.33B (2026/07/31)   
+  CHF        244        236            58,460        8,140,000,000   CHF3.44M (2026/07/31)    
+  BRL        169        169         2,980,000       15,040,000,000   BRL7.14B (2026/07/31)    
+  SGD         74         42           823,390        5,190,000,000   SGD5.19B (2024/01/31)    
+  MXN         40         40           174,170      120,670,000,000   MXN85.61B (2026/07/31)   
+  KRW         28         14    10,700,000,000   24,920,000,000,000   KRW147.99B (2026/08/31)  
+  MYR         22         10         1,420,000        1,800,000,000   MYR2.66M (2026/07/31)    
+  AED         16         11         6,820,000          239,140,000   AED32.1M (2022/11/15)    
+  CNH         16          8         9,230,000          548,220,000   CNH58.78M (2026/08/31)   
+  SEK         14         13        94,940,000       19,820,000,000   SEK1.19B (2026/07/31)    
+  ZAR         10          5     1,240,000,000       25,490,000,000   ZAR1.28B (2026/08/31)    
+  ILS          6          6         6,700,000          112,700,000   ILS59.1M (2026/07/31)    
+  SAR          3          3        10,130,000           25,900,000   SAR10.13M (2018/07/12)   
+  HUF          2          1    18,680,000,000       19,690,000,000   HUF19.69B (2026/08/31)   
+  NOK          2          1     1,900,000,000        1,980,000,000   NOK1.98B (2026/08/31)    
+  VND          2          1   114,840,000,000      128,510,000,000   VND128.51B (2026/07/31)  
+  DKK          2          1     5,640,000,000        5,860,000,000   DKK5.86B (2026/08/31)    
+                                                                                              
+  [PASS] AUM prefix token set matches the 26 FRD tokens (extra=∅ missing=∅)
+       Dollar-prefix AUM vs contract currency       
+               (disambiguation input)               
+                                                    
+  Contract Ccy   Records    ETFs   Sample Exchange  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  USD             15,030   7,729   BATS             
+  EUR              2,554   1,287   IBIS             
+  GBP              2,364   1,186   LSEETF           
+  MXN              1,028   1,028   MEXI             
+  CHF                452     452   EBS              
+  HKD                 64      32   SEHK             
+  ILS                 37      37   TASE             
+  SGD                 28      14   SGX              
+  JPY                 27      27   EBS              
+  CAD                 23      12   TSE              
+  SEK                 13      13   SFB              
+  AED                  8       4   ADX              
+  CNH                  4       2   SEHK             
+  INR                  2       1   NSE              
+                                                    
+  [APPLIED] AUM rows have ISO currency populated (0 NULL of 34137)
+  [APPLIED] $ + CAD contract currency → currency='CAD' (0 mismatches)
+  [APPLIED] Currency symbol prefixes map correctly (€/£/¥/₹) (0 symbol mismatches)
+  [PENDING] $ prefix on non-Canadian contracts maps to USD (32 mismatched non-USD rows (covers UCITS, Mexican, Asian listings))
+  [APPLIED] Non-AUM metrics leave currency NULL (0 non-null rows outside AUM)
+                                  Expense ratios (decimal fraction of AUM)                                  
+                                                                                                            
+  Metric                         Obs   Min        p5   Median      p95       Max   Zero   >5%   >20%   Neg  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  audited_net_expense_ratio    4,911   0.0   0.00066    0.005   0.0099   0.05091     37     1      0     0  
+  total_expense_ratio         17,119   0.0    0.0008   0.0054    0.013    0.1349     35    27      0     0  
+                                                                                                            
+  [PASS] Zero-fee waivers retained (TER = 0) (35 zeros (FRD snapshot: 35))
+  [PASS] BDC AFFE TER outliers retained unclamped (>5%) (27 obs, max=13.49%)
+  [PASS] TER stored as decimal fraction (max ≤ 0.20, not percentage points) (max=0.1349, >20%=0, neg=0)
+  [PASS] Audited net expense ratio zero-fee waivers retained (37 zeros (FRD snapshot: 37))
+  [PASS] Audited net expense ratio stored as decimal fraction (0 <= value <= 0.20) (min=0.0, max=0.05091, >20%=0, neg=0)
+  [PASS] Audited net expense ratio date provenance is Annual Report item date (100.0% item date)
+        SEC AFFE BDC exemplars (PBDC, FBDC)         
+                                                    
+  Symbol   Name                     Value   Raw     
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  PBDC     PUTNAM BDC INCOME ETF   13.49%   13.49%  
+  PBDC     PUTNAM BDC INCOME ETF   13.49%   13.49%  
+  PBDC     PUTNAM BDC INCOME ETF   13.49%   13.49%  
+  FBDC     FT CONF BDC ETF         12.44%   12.44%  
+  FBDC     FT CONF BDC ETF         12.44%   12.44%  
+  FBDC     FT CONF BDC ETF         12.44%   12.44%  
+                                                    
+                         Expense allocation sum-to-1.0 and fee-waiver subsidies                         
+                                                                                                        
+   Pairs   Sum=1.0000   % =1.0    Min mgt   Max mgt   Min non   Max non   Neg mgt   Neg non   Zero non  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  12,419       12,419   100.0%   -95.0531    1.9584   -0.9584   96.0531       195        85      6,420  
+                                                                                                        
+  [PASS] Management + non-management allocation sums to 1.0 (100.0% of paired snapshots)
+  [PASS] Negative fee-waiver allocations retained (min mgt=-95.05, max non=96.05)
+  [PASS] Non-management zero-allocation count near FRD 6,330 (observed 6,420 (FRD: 6,330))
+  [PASS] Manager tenure ≥ 0 and max > 30y (range=[0.0110, 33.95])
+  [PASS] Manager tenure raw_value contains parseable start date string (YYYY/MM/DD) (0 unparseable date strings in raw_value)
+      is_passive discrete map      
+                                   
+  Flag   Meaning      Obs       %  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+   0.0   Active    15,947   39.3%  
+   1.0   Passive   24,645   60.7%  
+                                   
+  [PASS] is_passive strictly {0.0, 1.0} (no unknown Management_Approach values)
+            Morningstar style-box coordinates             
+                                                          
+  Code           Name           Selected    Hist    ETFs  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  mid_core       Mid Core          1,328   7,958   5,019  
+  multi_core     Multi Core          538   3,347   2,152  
+  mid_growth     Mid Growth          731   3,242   2,077  
+  multi_growth   Multi Growth        413   2,627   1,663  
+  large_core     Large Core          190   2,623   1,551  
+  multi_value    Multi Value          73     614     379  
+  small_growth   Small Growth        382     379     346  
+  small_value    Small Value          99     269     184  
+  small_core     Small Core          113     124     108  
+                                                          
+  [PASS] Style box emits the 9 observed coordinates (no extras) (unexpected=∅ missing=∅)
+  [PASS] Three style-box cells unused (large_value/growth, mid_value) (unused=['large_growth', 'large_value', 'mid_value'])
+  [PASS] Style-box / hist overlap exists (panel must prefer style_box) (1648 product-dates carry both; precedence is a panel-layer rule, not
+a silver constraint)
+  [PASS] Style box coordinate dimension values strictly equal 1.0 (0 non-1.0 rows)
+  [PASS] Style box coordinate uniqueness (at most 1 active cell per date) (0 multi-coordinate dates)
+
+╭───────────────────────────────────────╮
+│ 3. Session 4.2: Ratios Fundamentals   │
+│ /fundamentals/mf_ratios_fundamentals/ │
+╰───────────────────────────────────────╯
+  [PASS] 47 distinct ratios metric_ids (observed 47)
+  [PASS] 100% payload date provenance for ratios (100.0% payload)
+  [APPLIED] Growth/return/yield metrics converted from percentage points to decimals (/100) (regime: decimal; unscaled metrics=0/24)
+  [PASS] Unscaled ratios metrics retain native scale (not divided by 100) (PE=28.5, Quality=7.16, Maturity=7.34y, TA/TE=4.24)
+                   Valuation multiples: provider caps & negatives                    
+                                                                                     
+  Metric                 Obs     Min   Median       p99       Max    Neg   Cap hits  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  price_book          19,227     0.5     6.34     16.71      25.0      0         47  
+  price_cash          19,159     1.7    21.01     48.23      60.0      0         30  
+  price_earnings      19,242    0.67     28.5     54.45      60.0      0         77  
+  price_sales         19,170    0.09      6.2     21.29      50.0      0          8  
+  price_to_dividend   19,100    7.29   161.94   1268.43   5018.75      0          0  
+  relative_strength   19,271   -0.49     0.02      0.32      1.55   4780          0  
+                                                                                     
+  [PASS] No negative P/E, P/B, P/S, P/Cash, P/Div (strictly non-negative multiples)
+  [PASS] Provider-side valuation caps still bind and are not exceeded (records sit on ceilings and none exceed caps)
+                                       Growth rates (decimal; EPS clip [-0.5, 1.0])                                       
+                                                                                                                          
+  Metric                                   Obs       Min   Median      p99        Max   Hits -0.5   Hits 1.0   Explosive  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  eps_growth_1yr                        19,267      -0.5   0.2283   0.8123        1.0          29         66           0  
+  eps_growth_3yr                        19,182      -0.5   0.1594   0.4925        1.0           4         18           0  
+  operating_cash_flow_growth_rate_3yr   19,190    -0.396   0.1941    0.742     3.2178           0          0           0  
+  sales_growth_1_year                   19,250   -0.1846   0.1316   0.4874        1.0           0          5           0  
+  sales_per_share_growth_1_year         19,250   -0.2859   0.1471   4.6278   198.6217           0          0         103  
+                                                                                                                          
+  [PASS] EPS growth 1yr hits provider clip bounds and stays within [-50, 100] (29 at -0.5, 66 at 1.0; range=[-0.5, 1.0])
+          Extreme ratio outliers (split-corp / restructuring) — retained, not clamped          
+                                                                                               
+  Metric                      Symbol   Name                                Value   Raw         
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  total_assets_total_equity   SPLT     BROMPTON SPLIT CORP PREF       263,821.09   263821.09   
+  total_assets_total_equity   SPLT     BROMPTON SPLIT CORP PREF       262,934.50   262934.5    
+  total_assets_total_equity   CLSA     BROMPTON SPLIT CORP ENHANCED   185,486.79   185486.79   
+  total_assets_total_equity   CLSA     BROMPTON SPLIT CORP ENHANCED   184,287.98   184287.98   
+  return_on_equity_3yr        SPLT     BROMPTON SPLIT CORP PREF        29,711.73   2971172.92  
+  return_on_equity_3yr        SPLT     BROMPTON SPLIT CORP PREF        29,611.88   2961188.06  
+  total_assets_total_equity   BMAX     BROMPTON ENH MULTI-ASSET ETF    27,217.89   27217.89    
+  total_assets_total_equity   BMAX     BROMPTON ENH MULTI-ASSET ETF    24,980.56   24980.56    
+  return_on_equity_3yr        CLSA     BROMPTON SPLIT CORP ENHANCED    20,889.74   2088973.7   
+  return_on_equity_3yr        CLSA     BROMPTON SPLIT CORP ENHANCED    20,754.73   2075472.69  
+  return_on_equity_3yr        BMAX     BROMPTON ENH MULTI-ASSET ETF     3,064.88   306488.25   
+  return_on_equity_3yr        BMAX     BROMPTON ENH MULTI-ASSET ETF     2,812.90   281290.27   
+                                                                                               
+  [PASS] Astronomical leverage/ROE outliers retained in Silver (12 rows shown; winsorize is panel-layer only)
+                                   Dividend metrics                                   
+                                                                                      
+  Metric                               Obs       Min   Median       Max   Neg   Zero  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  dividend_per_share_3yr            19,004   -0.3703   0.1312    1.7269   296      0  
+  dividendpayoutratio5yr            19,106    0.0061   0.5007   44.7322     0      0  
+  dividend_yield_weighted_average   16,487   -0.0008   0.0157    0.1579     1     23  
+  dividend_per_share_1yr            19,053      -1.0   0.1519    2.2824   623      0  
+                                                                                      
+  [PASS] Dividend yield wtd-avg has the documented 1-neg / ~21-zero tail (1 neg, 23 zeros (FRD: 1 / 21))
+  average_quality letter grade vs continuous   
+                     score                     
+                                               
+  Grade     Obs    Min   Median    Max   Mean  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  -          33   10.0     10.0   10.0   10.0  
+  AAA       137    9.0      9.0    9.0    9.0  
+  AA      1,699    8.0      8.0    9.0   8.12  
+  A       1,948    7.0      7.6    8.0   7.53  
+  BBB     1,927    6.0     6.63    7.0   6.57  
+  BB        556    5.0     5.54    6.0   5.56  
+  B         715    4.0     4.52    5.0   4.54  
+  CCC        16   3.06     3.81    4.0   3.73  
+  CC          1    3.0      3.0    3.0    3.0  
+                                               
+  [PASS] average_quality raw_value closed letter-grade set (unexpected=∅)
+  [PASS] Unrated '-' grade maps to score 10.0 (commodity/crypto) (33 records (FRD: 33) — retain in Silver, NULL at panel)
+    Negative FI characteristics (convertibles /     
+                    derivatives)                    
+                                                    
+  Metric               Neg obs       Min   Max neg  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  effective_maturity         5   -5.1251   -0.2177  
+  yield_to_maturity         30   -0.0873   -0.0006  
+  nominal_maturity           4   -0.9624   -0.2177  
+                                                    
+  [PASS] Negative YTM retained (convertible-bond ETFs) (30 obs (FRD: 24))
+  [PASS] YTM provider cap retained (10.0 percentage points / 0.10 decimal) (15 at cap, max=0.1)
+   Fixed-income metrics on latest-snapshot   
+     equity-dominant ETFs (equity > 50%)     
+                                             
+  FI Metric            Equity-dominant ETFs  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  average_coupon                        206  
+  average_quality                       207  
+  yield_to_maturity                     261  
+  nominal_maturity                      262  
+  effective_maturity                    262  
+                                             
+  [PASS] Equity-dominant ETFs also report FI metrics (balanced/multi-asset) (per-metric unique ETFs 206–262 (FRD snapshot band 206–258; 
+original script SUMed equity across dates and compared ANY-of-5 to 200–300))
+  Diagnostic: original SUM-across-dates query still returns 330 (the 305 that tripped the 200–300 band).
+ Z-score inventory (explicit ids — includes 
+         latest_composite_z_score)          
+                                            
+  Metric                               Obs  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  average_final_composite_zscore    16,487  
+  latest_composite_z_score          16,487  
+  latest_dividend_yield_zscore      16,487  
+  latest_price_sales_zscore         16,483  
+  latest_price_to_book_zscore       16,487  
+  latest_price_to_earnings_zscore   16,485  
+  latest_return_on_equity_zscore    16,487  
+  latest_sps_growth_zscore          16,487  
+  weighted_final_composite_zscore   16,487  
+                                            
+  [PASS] All 9 named z-score metrics present (missing=∅)
+  [PASS] Z-score majority obs matches dividend_yield_weighted_average (equity peer universe) (9 metrics; obs 16483–16487; div-yield=16,487. 
+P/E and P/S are allowed a few dropouts (FRD: 15,089 / 15,087 vs 15,091).)
+
+╭──────────────────────────────────────╮
+│ 4. Session 4.3: Holdings Allocations │
+│ /fundamentals/mf_holdings/           │
+╰──────────────────────────────────────╯
+                                      portfolio_top_10_concentration                                       
+                                                                                                           
+     Obs   Products      Min      P25   Median      P75       Max    >1.0   % >1   Neg   Zero   % Payload  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  30,309     18,913   0.0078   0.2528   0.4468   0.7982   17.6872   1,077   3.55     0      0       100.0  
+                                                                                                           
+  [PASS] Leveraged concentration > 1.0 retained (1077 snapshots > 1.0, max=17.69 (FRD: 990 / 17.69))
+  [PASS] Concentration has no negatives or zeros (neg=0 zero=0)
+  [PASS] Holdings concentration date provenance is payload (100.0% payload)
+                                    Allocation sum-to-1.0 (decimal weights)                                    
+                                                                                                               
+  Dimension       Snapshots   Exact ±0.1%   Valid ±2%   Lev >105%   Under <95%       Min      Max   w/ shorts  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  asset_class        30,307        100.0%      100.0%           0            0       1.0      1.0       7,400  
+  country            30,307        62.99%      73.64%          98        5,934    0.0297   2.1306       3,280  
+  industry           21,059        19.45%      75.12%         583        2,904   -0.4331   3.3881          45  
+  debt_type           9,643         9.79%      44.24%         184        3,735    -0.333   17.354          30  
+  credit_rating       9,643        13.82%      52.25%         216        3,312    -0.333   17.354          41  
+  maturity            9,639        13.68%       52.1%         214        3,307    -0.333   17.354          47  
+                                                                                                               
+  [PASS] Asset class sums to 1.0 on every product-date (100.0% within ±0.1%)
+  [PASS] Asset class closed set of 4 categories (['Cash', 'Equity', 'Fixed Income', 'Other'])
+  [PASS] Negative Cash (repo) and Other (short swaps) retained (Cash neg=2,311, Other neg=5,440 (FRD: 2,080 / 5,037))
+ Inverse leveraged exemplar RKLZ (by effective_date)  
+                                                      
+  Date         Asset class        Value   Raw         
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  2026-08-31   Cash            420.8692   42086.92%   
+  2026-08-31   Cash            420.8692   42086.92%   
+  2026-08-31   Fixed Income      1.1053   110.53%     
+  2026-08-31   Fixed Income      1.1053   110.53%     
+  2026-08-31   Other          -420.9745   -42097.45%  
+  2026-08-31   Other          -420.9745   -42097.45%  
+  2026-07-31   Cash              5.4115   541.15%     
+  2026-07-31   Fixed Income      0.1876   18.76%      
+  2026-07-31   Other            -4.5991   -459.91%    
+                                                      
+Country ISO anomalies (collision, alpha-3, missing codes)
+                                                         
+  Name           Code       Rows   Median wgt   Max wgt  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  Unidentified   [NULL]   19,044       0.0069     4.704  
+  Guam           GU          126       0.0032     0.047  
+  Costa Rica     CR           26       0.0039    0.0384  
+  Uzbekistan     UZ            6       0.0126    0.0297  
+  Bulgaria       BG            5       0.0128    0.0576  
+  Croatia        HR            1       0.0121    0.0121  
+                                                         
+  [PASS] Provider emits CR for both Costa Rica and Croatia (pre-remap baseline) (Remap applied (Croatia=HR, Costa Rica=CR verified))
+  [APPLIED] Country ISO remaps applied (HR/BG/GU/UZ; Unidentified code is NULL) (all target countries remapped)
+  [PASS] Country name cardinality near 107 (110 names (FRD: 107))
+  [PASS] Industry has 14 sector names (14: ['Academic & Educational Services', 'Basic Materials', 'Communication Services', 'Consumer 
+Cyclicals', 'Consumer Non-Cyclicals', 'Energy', 'Financials', 'Healthcare', 'Industrials', 'Non Classified Equity', 'Not Classified - Non 
+Equity', 'Real Estate', 'Technology', 'Utilities'])
+  [PASS] Industry residual buckets present (missing=∅)
+  [APPLIED] Industry discontinued telecom category remapped to 'Communication Services' (remapped to Communication Services)
+  [PASS] Credit rating has 12 tiers (incl. Not Rated / Not Available) (['A', 'AA', 'AAA', 'B', 'BB', 'BBB', 'C', 'CC', 'CCC', 'D', 'Not 
+Available', 'Not Rated'])
+  [APPLIED] Credit rating dimension_code matches cleaned letter grade (all credit ratings mapped to grade codes)
+  [PASS] Maturity has exactly 8 duration buckets (['% Maturity 1 to 3 Years', '% Maturity 10 to 20 Years', '% Maturity 20 to 30 Years', '% 
+Maturity 3 to 5 Years', '% Maturity 5 to 10 Years', '% Maturity Greater than 30 Years', '% Maturity Less than 1 Year', '% Maturity Other'])
+  [APPLIED] Maturity buckets dimension_code standardized to concise slugs (mat_*) (all maturity buckets mapped to mat_* slugs)
+            Debt-type 110 → 9 cluster coverage             
+                                                           
+  Cluster                       Types     Rows   Σ weight  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  debt_corporate_senior            22   16,177   2,825.48  
+  debt_unsecured_general           16   15,539     591.58  
+  debt_sovereign                   23   11,420   2,920.96  
+  debt_agency_supranational         2    4,081     175.72  
+  debt_corporate_subordinated      10    3,698      44.02  
+  debt_securitized_mbs             12    3,024     352.49  
+  debt_municipal                    7    2,308     280.98  
+  debt_securitized_abs              9    2,276     227.32  
+  debt_specialty_derivatives        9    1,105     163.77  
+                                                           
+  [PASS] All live debt_type names map into the 9 FRD clusters (110 distinct names; unmapped types=0)
+  [PASS] top_holding sparsity justifies prune (>50% singleton names) (pruned (verified 0 rows remaining))
+  [APPLIED] top_holding extraction dropped (0 top_holding rows)
+
+╭────────────────────────────────────────────────────╮
+│ 5. Session 4.4: Morningstar & Lipper               │
+│ /mstar/fund/detail & /fundamentals/mf_lip_ratings/ │
+╰────────────────────────────────────────────────────╯
+ Morningstar date provenance  
+                              
+  Source        Obs        %  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  payload    13,414   13.24%  
+  snapshot    3,546     3.5%  
+  item       84,352   83.26%  
+                              
+  [FAIL] Morningstar dates are item publish_date (>99.9%) (83.26% item)
+  [PASS] Morningstar distinct metric_ids near 10 (10 metrics)
+  [PASS] Morningstar ordinal ratings are discrete integers in [1, 5] (9 ordinal metrics; off-scale=∅)
+  [APPLIED] Unified mstar_medalist_rating metric extracted (bug-fix metric) (10768 rows / 10749 products (still split into _analyst/_quant 
+if 0 — see pillar composition table below))
+  [APPLIED] mstar_analyst_coverage_pct extracted (analyst_count / 3 over people/process/parent) (16957 rows / 10750 products)
+  [PASS] analyst_coverage_pct values fall on the 4 valid fractions {0, 1/3, 2/3, 1} (min=0.0 max=1.0 off-grid=0)
+  [PASS] Morningstar rating raw_value to numeric value mapping valid (0 mismapped rows)
+      Medalist pillar composition (latest      
+      people/process/parent per product)       
+                                               
+  Profile   Category            Funds       %  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  A-Q-A     Hybrid              4,120   38.3%  
+  Q-Q-A     Hybrid              2,604   24.2%  
+  A-A-A     Pure Analyst (3A)   2,405   22.4%  
+  Q-Q-Q     Pure Quant (3Q)     1,414   13.2%  
+  Q-A-A     Hybrid                137    1.3%  
+  Q-A-Q     Hybrid                 46    0.4%  
+  A-A-Q     Hybrid                 12    0.1%  
+  A-Q-Q     Hybrid                 11    0.1%  
+                                               
+  [PASS] Medalist ratings are majority hybrid analyst/quant (hybrid=64.4%)
+                           Lipper factor explosion                            
+                                                                              
+  Variants   Geos   Products      Rows   Unparsed rows   Unparsed metric_ids  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+        20      1     11,691   263,009               0                     0  
+                                                                              
+  [PASS] Lipper ≈ 568 variants across 37 universes (pre-reduction) (reduced to 20 canonical metrics)
+  [PASS] Every lipper metric_id parses tag/horizon/geo (0 unparsed metric_ids)
+  [APPLIED] Lipper Max-Peer-Count universe reduction applied (568 geo variants -> 20 canonical metric_ids) (20 distinct lipper metric_ids 
+(target: 20 canonical `lipper_{tag}_{horizon}` ids))
+  [PASS] Lipper scores are strictly discrete integers in [1, 5] (0 non-integer or out-of-bounds rows; range=[1.0, 5.0])
+  [PASS] Lipper tax efficiency is strictly US-only (zero non-US records) (20132 canonical tax rows (0 non-US))
+ Lipper expense quintile  
+  (low-variance anomaly)  
+                          
+  Score      Obs       %  
+ ━━━━━━━━━━━━━━━━━━━━━━━━ 
+    5.0   37,363   72.2%  
+    4.0    8,447   16.3%  
+    3.0    3,464    6.7%  
+    2.0    1,643    3.2%  
+    1.0      853    1.6%  
+                          
+  [WARN] Lipper expense score clusters at 5.0 (>80%) (72.2% at 5.0)
+Top Lipper geographic
+      universes      
+   (max-peer-count   
+  reduction input)   
+                     
+  Universe     ETFs  
+ ━━━━━━━━━━━━━━━━━━━ 
+             11,691  
+                     
+  [PASS] Most Lipper metric variants are single-shot (no product-level history) (Reduced to 20 canonical metrics with rich longitudinal 
+history (20 with history))
+
+╭─────────────────────────────────────────╮
+│ 6. Session 4.5: Themes & Refinitiv ESG  │
+│ /knowledge-graph/ui/fund & /impact/esg/ │
+╰─────────────────────────────────────────╯
+  [APPLIED] theme_coverage extracted into silver.product_metrics (23258 rows (FRD: add coverage from payload.coverage))
+            Theme loadings are overlapping (no sum-to-1.0)             
+                                                                       
+  Fund-dates   Min n   Median n   Max n    Min Σ   Median Σ     Max Σ  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+      23,258       1        364     491   0.0518     7.3298   110.865  
+                                                                       
+  [PASS] Theme weight sums near FRD distribution (median 7.30, max 110.87) (median Σ=7.33 (FRD 7.30), max Σ=110.86 (FRD 110.87))
+  [PASS] 491 distinct child theme UUIDs (491 codes)
+               Theme weight bounds               
+                                                 
+  Condition    Rows   Funds       Min       Max  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  value < 0   4,547      23   -0.0863   -0.0000  
+  value > 1   2,174      95    1.0003    2.0007  
+                                                 
+  [WARN] Negative theme weights near FRD count (long/short) (4547 rows / 23 funds (FRD: 3,153 / 20))
+  [PASS] Leveraged theme weights (> 1.0) near FRD count (2174 rows / 95 funds (FRD: 1,877 / 94))
+  [PASS] Theme UUIDs join bronze.themes with 0 orphans and 19 parents (orphans=0, parents=19)
+  [PASS] Only child themes stored (no parent ids in product_dimensions) (0 parent-id rows)
+  [PASS] Theme effective dates are snapshot-sourced (no payload date) (100.0% snapshot)
+  [PASS] ESG taxonomy has 17 metrics (16 scores + coverage) (17 metrics)
+  [PASS] ESG scores are integers (no fractional TRESG values) (0 fractional score rows)
+  [PASS] All 16 TRESG score ids plus esg_coverage present (missing=∅)
+  [PASS] ESG scores lie in [0, 10] (0 out of range; min=0.0 max=10.0)
+  [PASS] Aggregate ESG scores tresgs/tresgcs/tresgsos never reach 0 (tresgsos min=1.0, tresgcs min=1.0, tresgs min=1.0)
+    esg_coverage (quality gate; >1.0 is leveraged, not an error)     
+                                                                     
+     Obs        Min   Median        Max   >1.0 rows   >1.0 products  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  33,058   0.700037   0.9422   2.713724         420             147  
+                                                                     
+  [WARN] esg_coverage > 1.0 near FRD count (leveraged ETPs, retained unclipped) (420 rows / 147 products (FRD: 281 / 139))
+  [PASS] All observed esg_coverage ≥ 0.7 quality gate (min=0.700037)
+  [WARN] ESG payloads with scores but missing coverage match FRD (9 payloads / 3 funds) (12 payloads across 3 products (FRD: 9 / 3))
+                 Refinitiv ESG score distributions                 
+                                                                   
+  Metric          Obs   Min   Median    Max   Mean      σ   Zeros  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  tresgccs     33,070   0.0      5.0   10.0   5.44   2.11     237  
+  tresgcgbds   33,070   0.0      6.0    9.0   6.18   1.01      46  
+  tresgcgs     33,070   0.0      6.0    9.0   6.03    0.9      15  
+  tresgcgsrs   33,070   0.0      5.0    9.0   5.18   0.97     104  
+  tresgcgvss   33,070   0.0      7.0    9.0   6.68   1.28      49  
+  tresgcs      33,070   1.0      5.0    8.0   4.91   0.88       0  
+  tresgeners   33,070   0.0      7.0    9.0   6.48   1.25      29  
+  tresgenpis   33,070   0.0      4.0    9.0   4.19   1.42     536  
+  tresgenrrs   33,070   0.0      7.0    9.0   6.76   1.42      46  
+  tresgens     33,070   0.0      6.0    9.0    5.8   1.23      38  
+  tresgs       33,070   1.0      6.0    8.0   6.06   0.91       0  
+  tresgsocos   33,070   0.0      7.0    9.0   6.73   0.86       3  
+  tresgsohrs   33,070   0.0      6.0    9.0   5.96   1.31      54  
+  tresgsoprs   33,070   0.0      6.0    9.0   5.67   1.07       3  
+  tresgsos     33,070   1.0      6.0    9.0   6.26   0.99       0  
+  tresgsowos   33,070   0.0      6.0    9.0   6.39   1.24      15  
+                                                                   
+  [PASS] tresgs tight (σ<1) vs controversies wide (σ>2) (tresgs σ=0.91 tresgccs σ=2.11)
+  [PASS] ESG dates are payload asOfDate (YYYYMMDD) (100.0% payload)
+    Theme/ESG coverage by latest-snapshot dominant asset class     
+                                                                   
+  Class          Universe   w/ Themes   % Themes   w/ ESG   % ESG  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  Fixed Income      4,512         883      19.6%      965   21.4%  
+  Equity           11,830      10,127      85.6%   10,785   91.2%  
+                                                                   
+  [PASS] Themes/ESG are equity-dominant (>80% vs <25% FI) (Eq themes 85.6% ESG 91.2%; FI themes 19.6% ESG 21.4%)
+          ESG / theme product overlap          
+                                               
+  ESG only (no themes)   Themes only (no ESG)  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+                   903                    159  
+                                               
+  [PASS] ESG-only and theme-only product counts near FRD (904 / 161) (ESG-only=903 (FRD 904), themes-only=159 (FRD 161))
+
+╭────────────────────────────────────────────────────────────────────────────────╮
+│ 7. Cadence & LOCF staleness                                                    │
+│ Payload/item dates only in the mixed table; snapshot series audited separately │
+╰────────────────────────────────────────────────────────────────────────────────╯
+                       Payload/item cadence (snapshot-sourced metrics excluded — they measure crawl, not reporting)                        
+                                                                                                                                           
+  Source     Metrics w/ Δ   Transitions   Median     p75     p95     Max   % ~month   % =7d   FRD LOCF                                     
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  esg                  17       362,108       7d   1470d   1470d   1477d       0.0%   57.1%   Weekly → 90d cap                             
+  ratios               47       302,078      31d     31d     31d    853d      99.1%    0.0%   Monthly → 180d cap                           
+  lipper               20       110,670      31d     31d     31d     31d     100.0%    0.0%   Monthly → 180d cap                           
+  mstar                 7        21,021      31d     31d     31d   1308d      99.7%    0.0%   Mixed monthly/event → 540d cap               
+  profile               2        15,210      31d     31d     31d    792d      98.0%    0.0%   Mixed monthly/annual → 180d AUM / 540d fees  
+  holdings              1        11,396      31d     31d     31d    853d      99.0%    0.0%   Monthly → 180d cap                           
+                                                                                                                                           
+  [FAIL] ESG weekly cadence (median 7d, ~100% of deltas exactly 7d) (median=7d, 57.1% of deltas exactly 7d (FRD: 100.0%))
+  [PASS] Ratios monthly cadence (median 31d, >99% near month-end) (median=31d, 99.1% in {28,29,30,31}d (FRD: >99.2% at exactly 31d))
+ Snapshot-sourced profile attributes (crawl cadence, not issuer  
+                           reporting)                            
+                                                                 
+  Metric                 Transitions   Median Δ   p95 Δ   Max Δ  
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  is_passive                  20,504        8.0    10.0      16  
+  manager_tenure_years        12,676        7.0    10.0      16  
+  total_expense_ratio         10,882        7.0     9.0      14  
+                                                                 
+  [PASS] Snapshot TER/tenure/approach crawl weekly (median ~7d) (medians=[8.0, 7.0, 7.0] (FRD: 7.0–7.3d))
+  [FAIL] Holdings asset_class monthly cadence (31d mode) (98.8% exactly 31d (n=11,395))
+  [PASS] Audited net expense ratio annual cadence (median 365d) (median=365.0d over 296 transitions)
+  [PASS] Lipper monthly cadence (100% of deltas exactly 31d) (median=31d, 100.0% at 31d over 110,670 transitions)
+  [WARN] Theme snapshot deltas in the 2–10 day crawl window (or monthly if collapsed) (n=12,233 median=13.0d min=2 max=16 (FRD LOCF cap 
+180d))
+
+╭────────────────────────────────────────────────────╮
+│ 7b. Panel Construction Readiness                   │
+│ FRD §5 Master Checklist — last item, not yet built │
+╰────────────────────────────────────────────────────╯
+  [PASS] No namespace collisions between metric_ids and dimension feature codes (namespaces disjoint)
+  [APPLIED] silver.monthly_panel built (33,517,864 rows)
+
+╭─────────────────────────────────────────────────────────────────────────╮
+│ 8. Scorecard                                                            │
+│ INVARIANT fail → exit 1; EMPIRICAL drift → WARN; SPEC pending → PENDING │
+╰─────────────────────────────────────────────────────────────────────────╯
+                                      FRD audit  invariants 41/44  empirical 53/58  spec 16/17 applied                                      
+                                                                                                                                            
+  Sev         Section      Check                                               Status    Details                                            
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 
+  INVARIANT   FRD §2.1     PK uniqueness in silver.product_metrics             PASS      0 duplicate groups                                 
+  INVARIANT   FRD §2.2     PK uniqueness in silver.product_dimensions          PASS      0 duplicate groups                                 
+  INVARIANT   FRD §1.2     value/raw_value NOT NULL in product_metrics         PASS      null value=0, null raw=0                           
+  INVARIANT   FRD §1.2     No NaN/Inf in product_metrics.value                 PASS      0 non-finite values                                
+  INVARIANT   FRD §1.2     value/raw_value NOT NULL in product_dimensions      PASS      null value=0, null raw=0                           
+  INVARIANT   FRD §1.2     No NaN/Inf in product_dimensions.value              PASS      0 non-finite values                                
+  INVARIANT   FRD §2.1     effective_date_source ∈ {payload, item, snapshot}   PASS      0 out-of-domain rows                               
+  INVARIANT   FRD §1.2     Temporal causality invariant (effective_date <=     PASS      0 future-dated records                             
+                           fetched_at::DATE)                                                                                                
+  INVARIANT   FRD §2.1     Relational product integrity (all product_ids in    PASS      0 orphan product_ids                               
+                           bronze.contracts)                                                                                                
+  INVARIANT   FRD §2.1     No cross-source metric_id collisions                PASS      0 duplicate groups across sources (panel PK        
+                                                                                         safety)                                            
+  SPEC        FRD §2.1     silver.product_metrics.currency column exists       APPLIED   present                                            
+  EMPIRICAL   FRD §4       Expected metric sources present                     PASS      observed=['esg', 'holdings', 'lipper', 'mstar',    
+                                                                                         'profile', 'ratios', 'theme_weights']; mis         
+  EMPIRICAL   FRD §4.1     Profile closed set of 7 scalar metrics              PASS      extra=∅ missing=∅                                  
+  EMPIRICAL   FRD §4.1.1   Liquidated-fund zero AUM retained                   PASS      1 fund(s) at 0.0                                   
+  EMPIRICAL   FRD §4.1.1   Multi-trillion local-currency mega-AUM retained     PASS      max=33,640,000,000,000                             
+  INVARIANT   FRD §4.1.2   No negative AUM                                     PASS      0 negatives                                        
+  EMPIRICAL   FRD §4.1.1   AUM date provenance is item-level report date       PASS      100.0% item                                        
+  EMPIRICAL   FRD §4.1.2   AUM prefix token set matches the 26 FRD tokens      PASS      extra=∅ missing=∅                                  
+  SPEC        FRD §4.1.2   AUM rows have ISO currency populated                APPLIED   0 NULL of 34137                                    
+  SPEC        FRD §4.1.2   $ + CAD contract currency → currency='CAD'          APPLIED   0 mismatches                                       
+  SPEC        FRD §4.1.2   Currency symbol prefixes map correctly (€/£/¥/₹)    APPLIED   0 symbol mismatches                                
+  SPEC        FRD §4.1.2   $ prefix on non-Canadian contracts maps to USD      PENDING   32 mismatched non-USD rows (covers UCITS,          
+                                                                                         Mexican, Asian listings)                           
+  SPEC        FRD §2.1     Non-AUM metrics leave currency NULL                 APPLIED   0 non-null rows outside AUM                        
+  EMPIRICAL   FRD §4.1.1   Zero-fee waivers retained (TER = 0)                 PASS      35 zeros (FRD snapshot: 35)                        
+  EMPIRICAL   FRD §4.1.2   BDC AFFE TER outliers retained unclamped (>5%)      PASS      27 obs, max=13.49%                                 
+  INVARIANT   FRD §4.1.2   TER stored as decimal fraction (max ≤ 0.20, not     PASS      max=0.1349, >20%=0, neg=0                          
+                           percentage points)                                                                                               
+  EMPIRICAL   FRD §4.1.1   Audited net expense ratio zero-fee waivers          PASS      37 zeros (FRD snapshot: 37)                        
+                           retained                                                                                                         
+  INVARIANT   FRD §4.1.2   Audited net expense ratio stored as decimal         PASS      min=0.0, max=0.05091, >20%=0, neg=0                
+                           fraction (0 <= value <= 0.20)                                                                                    
+  EMPIRICAL   FRD §4.1.2   Audited net expense ratio date provenance is        PASS      100.0% item date                                   
+                           Annual Report item date                                                                                          
+  INVARIANT   FRD §4.1.2   Management + non-management allocation sums to      PASS      100.0% of paired snapshots                         
+                           1.0                                                                                                              
+  EMPIRICAL   FRD §4.1.2   Negative fee-waiver allocations retained            PASS      min mgt=-95.05, max non=96.05                      
+  EMPIRICAL   FRD §4.1.1   Non-management zero-allocation count near FRD       PASS      observed 6,420 (FRD: 6,330)                        
+                           6,330                                                                                                            
+  INVARIANT   FRD §4.1.2   Manager tenure ≥ 0 and max > 30y                    PASS      range=[0.0110, 33.95]                              
+  INVARIANT   FRD §4.1.2   Manager tenure raw_value contains parseable start   PASS      0 unparseable date strings in raw_value            
+                           date string (YYYY/MM/DD)                                                                                         
+  INVARIANT   FRD §4.1.2   is_passive strictly {0.0, 1.0}                      PASS      no unknown Management_Approach values              
+  EMPIRICAL   FRD §4.1.2   Style box emits the 9 observed coordinates (no      PASS      unexpected=∅ missing=∅                             
+                           extras)                                                                                                          
+  EMPIRICAL   FRD §4.1.1   Three style-box cells unused (large_value/growth,   PASS      unused=['large_growth', 'large_value',             
+                           mid_value)                                                    'mid_value']                                       
+  EMPIRICAL   FRD §4.1.2   Style-box / hist overlap exists (panel must         PASS      1648 product-dates carry both; precedence is a     
+                           prefer style_box)                                             panel-layer rule, not a silver constraint          
+  INVARIANT   FRD §4.1.2   Style box coordinate dimension values strictly      PASS      0 non-1.0 rows                                     
+                           equal 1.0                                                                                                        
+  INVARIANT   FRD §4.1.2   Style box coordinate uniqueness (at most 1 active   PASS      0 multi-coordinate dates                           
+                           cell per date)                                                                                                   
+  EMPIRICAL   FRD §4.2     47 distinct ratios metric_ids                       PASS      observed 47                                        
+  INVARIANT   FRD §4.2.1   100% payload date provenance for ratios             PASS      100.0% payload                                     
+  SPEC        FRD §4.2.2   Growth/return/yield metrics converted from          APPLIED   regime: decimal; unscaled metrics=0/24             
+                           percentage points to decimals (/100)                                                                             
+  INVARIANT   FRD §4.2.2   Unscaled ratios metrics retain native scale (not    PASS      PE=28.5, Quality=7.16, Maturity=7.34y, TA/TE=4.24  
+                           divided by 100)                                                                                                  
+  INVARIANT   FRD §4.2.1   No negative P/E, P/B, P/S, P/Cash, P/Div            PASS      strictly non-negative multiples                    
+  EMPIRICAL   FRD §4.2.1   Provider-side valuation caps still bind and are     PASS      records sit on ceilings and none exceed caps       
+                           not exceeded                                                                                                     
+  EMPIRICAL   FRD §4.2.1   EPS growth 1yr hits provider clip bounds and        PASS      29 at -0.5, 66 at 1.0; range=[-0.5, 1.0]           
+                           stays within [-50, 100]                                                                                          
+  EMPIRICAL   FRD §4.2.1   Astronomical leverage/ROE outliers retained in      PASS      12 rows shown; winsorize is panel-layer only       
+                           Silver                                                                                                           
+  EMPIRICAL   FRD §4.2.1   Dividend yield wtd-avg has the documented 1-neg /   PASS      1 neg, 23 zeros (FRD: 1 / 21)                      
+                           ~21-zero tail                                                                                                    
+  EMPIRICAL   FRD §4.2.1   average_quality raw_value closed letter-grade set   PASS      unexpected=∅                                       
+  EMPIRICAL   FRD §4.2.1   Unrated '-' grade maps to score 10.0                PASS      33 records (FRD: 33) — retain in Silver, NULL at   
+                           (commodity/crypto)                                            panel                                              
+  EMPIRICAL   FRD §4.2.1   Negative YTM retained (convertible-bond ETFs)       PASS      30 obs (FRD: 24)                                   
+  EMPIRICAL   FRD §4.2.1   YTM provider cap retained (10.0 percentage points   PASS      15 at cap, max=0.1                                 
+                           / 0.10 decimal)                                                                                                  
+  EMPIRICAL   FRD §4.2.1   Equity-dominant ETFs also report FI metrics         PASS      per-metric unique ETFs 206–262 (FRD snapshot band  
+                           (balanced/multi-asset)                                        206–258; original script SUMed equity ac           
+  INVARIANT   FRD §4.2.1   All 9 named z-score metrics present                 PASS      missing=∅                                          
+  EMPIRICAL   FRD §4.2.1   Z-score majority obs matches                        PASS      9 metrics; obs 16483–16487; div-yield=16,487. P/E  
+                           dividend_yield_weighted_average (equity peer                  and P/S are allowed a few dropouts (FRD:           
+                           universe)                                                                                                        
+  EMPIRICAL   FRD §4.3.1   Leveraged concentration > 1.0 retained              PASS      1077 snapshots > 1.0, max=17.69 (FRD: 990 /        
+                                                                                         17.69)                                             
+  INVARIANT   FRD §4.3.1   Concentration has no negatives or zeros             PASS      neg=0 zero=0                                       
+  EMPIRICAL   FRD §4.3.1   Holdings concentration date provenance is payload   PASS      100.0% payload                                     
+  INVARIANT   FRD §4.3.1   Asset class sums to 1.0 on every product-date       PASS      100.0% within ±0.1%                                
+  INVARIANT   FRD §4.3.1   Asset class closed set of 4 categories              PASS      ['Cash', 'Equity', 'Fixed Income', 'Other']        
+  EMPIRICAL   FRD §4.3.1   Negative Cash (repo) and Other (short swaps)        PASS      Cash neg=2,311, Other neg=5,440 (FRD: 2,080 /      
+                           retained                                                      5,037)                                             
+  EMPIRICAL   FRD §4.3.2   Provider emits CR for both Costa Rica and Croatia   PASS      Remap applied (Croatia=HR, Costa Rica=CR           
+                           (pre-remap baseline)                                          verified)                                          
+  SPEC        FRD §4.3.2   Country ISO remaps applied (HR/BG/GU/UZ;            APPLIED   all target countries remapped                      
+                           Unidentified code is NULL)                                                                                       
+  EMPIRICAL   FRD §4.3.1   Country name cardinality near 107                   PASS      110 names (FRD: 107)                               
+  EMPIRICAL   FRD §4.3.1   Industry has 14 sector names                        PASS      14: ['Academic & Educational Services', 'Basic     
+                                                                                         Materials', 'Communication Services', 'Cons        
+  EMPIRICAL   FRD §4.3.1   Industry residual buckets present                   PASS      missing=∅                                          
+  SPEC        FRD §4.3.2   Industry discontinued telecom category remapped     APPLIED   remapped to Communication Services                 
+                           to 'Communication Services'                                                                                      
+  EMPIRICAL   FRD §4.3.1   Credit rating has 12 tiers (incl. Not Rated / Not   PASS      ['A', 'AA', 'AAA', 'B', 'BB', 'BBB', 'C', 'CC',    
+                           Available)                                                    'CCC', 'D', 'Not Available', 'Not Rated']          
+  SPEC        FRD §4.3.2   Credit rating dimension_code matches cleaned        APPLIED   all credit ratings mapped to grade codes           
+                           letter grade                                                                                                     
+  EMPIRICAL   FRD §4.3.1   Maturity has exactly 8 duration buckets             PASS      ['% Maturity 1 to 3 Years', '% Maturity 10 to 20   
+                                                                                         Years', '% Maturity 20 to 30 Years', '% M          
+  SPEC        FRD §4.3.2   Maturity buckets dimension_code standardized to     APPLIED   all maturity buckets mapped to mat_* slugs         
+                           concise slugs (mat_*)                                                                                            
+  EMPIRICAL   FRD §4.3.2   All live debt_type names map into the 9 FRD         PASS      110 distinct names; unmapped types=0               
+                           clusters                                                                                                         
+  EMPIRICAL   FRD §4.3.2   top_holding sparsity justifies prune (>50%          PASS      pruned (verified 0 rows remaining)                 
+                           singleton names)                                                                                                 
+  SPEC        FRD §2.3     top_holding extraction dropped                      APPLIED   0 top_holding rows                                 
+  INVARIANT   FRD §4.4.1   Morningstar dates are item publish_date (>99.9%)    FAIL      83.26% item                                        
+  EMPIRICAL   FRD §4.4     Morningstar distinct metric_ids near 10             PASS      10 metrics                                         
+  INVARIANT   FRD §4.4.2   Morningstar ordinal ratings are discrete integers   PASS      9 ordinal metrics; off-scale=∅                     
+                           in [1, 5]                                                                                                        
+  SPEC        FRD §4.4.2   Unified mstar_medalist_rating metric extracted      APPLIED   10768 rows / 10749 products (still split into      
+                           (bug-fix metric)                                              _analyst/_quant if 0 — see pillar compositio       
+  SPEC        FRD §4.4.2   mstar_analyst_coverage_pct extracted                APPLIED   16957 rows / 10750 products                        
+                           (analyst_count / 3 over people/process/parent)                                                                   
+  INVARIANT   FRD §4.4.2   analyst_coverage_pct values fall on the 4 valid     PASS      min=0.0 max=1.0 off-grid=0                         
+                           fractions {0, 1/3, 2/3, 1}                                                                                       
+  INVARIANT   FRD §4.4.2   Morningstar rating raw_value to numeric value       PASS      0 mismapped rows                                   
+                           mapping valid                                                                                                    
+  EMPIRICAL   FRD §4.4.1   Medalist ratings are majority hybrid                PASS      hybrid=64.4%                                       
+                           analyst/quant                                                                                                    
+  EMPIRICAL   FRD §4.4.1   Lipper ≈ 568 variants across 37 universes           PASS      reduced to 20 canonical metrics                    
+                           (pre-reduction)                                                                                                  
+  INVARIANT   FRD §4.4.1   Every lipper metric_id parses tag/horizon/geo       PASS      0 unparsed metric_ids                              
+  SPEC        FRD §4.4.2   Lipper Max-Peer-Count universe reduction applied    APPLIED   20 distinct lipper metric_ids (target: 20          
+                           (568 geo variants -> 20 canonical metric_ids)                 canonical `lipper_{tag}_{horizon}` ids)            
+  INVARIANT   FRD §4.4.2   Lipper scores are strictly discrete integers in     PASS      0 non-integer or out-of-bounds rows; range=[1.0,   
+                           [1, 5]                                                        5.0]                                               
+  INVARIANT   FRD §4.4.1   Lipper tax efficiency is strictly US-only (zero     PASS      20132 canonical tax rows (0 non-US)                
+                           non-US records)                                                                                                  
+  EMPIRICAL   FRD §4.4.1   Lipper expense score clusters at 5.0 (>80%)         WARN      72.2% at 5.0                                       
+  EMPIRICAL   FRD §4.4.3   Most Lipper metric variants are single-shot (no     PASS      Reduced to 20 canonical metrics with rich          
+                           product-level history)                                        longitudinal history (20 with history)             
+  SPEC        FRD §4.5.1   theme_coverage extracted into                       APPLIED   23258 rows (FRD: add coverage from                 
+                           silver.product_metrics                                        payload.coverage)                                  
+  EMPIRICAL   FRD §4.5.1   Theme weight sums near FRD distribution (median     PASS      median Σ=7.33 (FRD 7.30), max Σ=110.86 (FRD        
+                           7.30, max 110.87)                                             110.87)                                            
+  EMPIRICAL   FRD §4.5.1   491 distinct child theme UUIDs                      PASS      491 codes                                          
+  EMPIRICAL   FRD §4.5.1   Negative theme weights near FRD count               WARN      4547 rows / 23 funds (FRD: 3,153 / 20)             
+                           (long/short)                                                                                                     
+  EMPIRICAL   FRD §4.5.1   Leveraged theme weights (> 1.0) near FRD count      PASS      2174 rows / 95 funds (FRD: 1,877 / 94)             
+  INVARIANT   FRD §4.5.1   Theme UUIDs join bronze.themes with 0 orphans and   PASS      orphans=0, parents=19                              
+                           19 parents                                                                                                       
+  INVARIANT   FRD §4.5.1   Only child themes stored (no parent ids in          PASS      0 parent-id rows                                   
+                           product_dimensions)                                                                                              
+  EMPIRICAL   FRD §4.5.1   Theme effective dates are snapshot-sourced (no      PASS      100.0% snapshot                                    
+                           payload date)                                                                                                    
+  EMPIRICAL   FRD §4.5.2   ESG taxonomy has 17 metrics (16 scores +            PASS      17 metrics                                         
+                           coverage)                                                                                                        
+  INVARIANT   FRD §4.5.2   ESG scores are integers (no fractional TRESG        PASS      0 fractional score rows                            
+                           values)                                                                                                          
+  INVARIANT   FRD §4.5.2   All 16 TRESG score ids plus esg_coverage present    PASS      missing=∅                                          
+  INVARIANT   FRD §4.5.2   ESG scores lie in [0, 10]                           PASS      0 out of range; min=0.0 max=10.0                   
+  EMPIRICAL   FRD §4.5.2   Aggregate ESG scores tresgs/tresgcs/tresgsos        PASS      tresgsos min=1.0, tresgcs min=1.0, tresgs min=1.0  
+                           never reach 0                                                                                                    
+  EMPIRICAL   FRD §4.5.2   esg_coverage > 1.0 near FRD count (leveraged        WARN      420 rows / 147 products (FRD: 281 / 139)           
+                           ETPs, retained unclipped)                                                                                        
+  EMPIRICAL   FRD §4.5.2   All observed esg_coverage ≥ 0.7 quality gate        PASS      min=0.700037                                       
+  EMPIRICAL   FRD §4.5.2   ESG payloads with scores but missing coverage       WARN      12 payloads across 3 products (FRD: 9 / 3)         
+                           match FRD (9 payloads / 3 funds)                                                                                 
+  EMPIRICAL   FRD §4.5.2   tresgs tight (σ<1) vs controversies wide (σ>2)      PASS      tresgs σ=0.91 tresgccs σ=2.11                      
+  EMPIRICAL   FRD §4.5.2   ESG dates are payload asOfDate (YYYYMMDD)           PASS      100.0% payload                                     
+  EMPIRICAL   FRD §4.5.5   Themes/ESG are equity-dominant (>80% vs <25% FI)    PASS      Eq themes 85.6% ESG 91.2%; FI themes 19.6% ESG     
+                                                                                         21.4%                                              
+  EMPIRICAL   FRD §4.5     ESG-only and theme-only product counts near FRD     PASS      ESG-only=903 (FRD 904), themes-only=159 (FRD 161)  
+                           (904 / 161)                                                                                                      
+  INVARIANT   FRD §4.5.4   ESG weekly cadence (median 7d, ~100% of deltas      FAIL      median=7d, 57.1% of deltas exactly 7d (FRD:        
+                           exactly 7d)                                                   100.0%)                                            
+  INVARIANT   FRD §4.2.3   Ratios monthly cadence (median 31d, >99% near       PASS      median=31d, 99.1% in {28,29,30,31}d (FRD: >99.2%   
+                           month-end)                                                    at exactly 31d)                                    
+  EMPIRICAL   FRD §4.1.3   Snapshot TER/tenure/approach crawl weekly (median   PASS      medians=[8.0, 7.0, 7.0] (FRD: 7.0–7.3d)            
+                           ~7d)                                                                                                             
+  INVARIANT   FRD §4.3.3   Holdings asset_class monthly cadence (31d mode)     FAIL      98.8% exactly 31d (n=11,395)                       
+  INVARIANT   FRD §4.1.3   Audited net expense ratio annual cadence (median    PASS      median=365.0d over 296 transitions                 
+                           365d)                                                                                                            
+  INVARIANT   FRD §4.4.3   Lipper monthly cadence (100% of deltas exactly      PASS      median=31d, 100.0% at 31d over 110,670             
+                           31d)                                                          transitions                                        
+  EMPIRICAL   FRD §4.5.4   Theme snapshot deltas in the 2–10 day crawl         WARN      n=12,233 median=13.0d min=2 max=16 (FRD LOCF cap   
+                           window (or monthly if collapsed)                              180d)                                              
+  INVARIANT   FRD §2.3     No namespace collisions between metric_ids and      PASS      namespaces disjoint                                
+                           dimension feature codes                                                                                          
+  SPEC        FRD §5       silver.monthly_panel built                          APPLIED   33,517,864 rows                                    
+                                                                                                                                            
+╭────────────────────────────────────────────────────────╮
+│ INVARIANT 41/44 pass, EMPIRICAL 5 warn, SPEC 1 pending │
+╰────────────────────────────────────────────────────────╯
+
+Invariant failures:
+  - FRD §4.4.1 Morningstar dates are item publish_date (>99.9%): 83.26% item
+  - FRD §4.5.4 ESG weekly cadence (median 7d, ~100% of deltas exactly 7d): median=7d, 57.1% of deltas exactly 7d (FRD: 100.0%)
+  - FRD §4.3.3 Holdings asset_class monthly cadence (31d mode): 98.8% exactly 31d (n=11,395)
+
+Spec rules not yet applied (implementation checklist):
+  - FRD §4.1.2 $ prefix on non-Canadian contracts maps to USD: 32 mismatched non-USD rows (covers UCITS, Mexican, Asian listings)
+
+Empirical drift (FRD snapshot vs live store):
+  - FRD §4.4.1 Lipper expense score clusters at 5.0 (>80%): 72.2% at 5.0
+  - FRD §4.5.1 Negative theme weights near FRD count (long/short): 4547 rows / 23 funds (FRD: 3,153 / 20)
+  - FRD §4.5.2 esg_coverage > 1.0 near FRD count (leveraged ETPs, retained unclipped): 420 rows / 147 products (FRD: 281 / 139)
+  - FRD §4.5.2 ESG payloads with scores but missing coverage match FRD (9 payloads / 3 funds): 12 payloads across 3 products (FRD: 9 / 3)
+  - FRD §4.5.4 Theme snapshot deltas in the 2–10 day crawl window (or monthly if collapsed): n=12,233 median=13.0d min=2 max=16 (FRD LOCF cap 180d)
+
+FRD audit finished in 10.92s (exit 1).
