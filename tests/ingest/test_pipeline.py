@@ -23,6 +23,11 @@ def test_ingest_cli_dispatch():
         cli.prices(force=False)
         mock_sync.assert_called_once_with(force=False)
 
+    with patch("etfportfolio.ingest.pipeline.fx.sync") as mock_sync:
+        mock_sync.return_value = 8
+        cli.fx(force=True)
+        mock_sync.assert_called_once_with(force=True)
+
     with patch("etfportfolio.ingest.pipeline._run_themes", new_callable=AsyncMock) as mock_themes:
         mock_themes.return_value = (5, 10)
         cli.themes(force=True)
@@ -50,3 +55,6 @@ def test_cli_signatures_reject_unused_flags():
 
     with pytest.raises(TypeError):
         ingest.details(product_ids="1001,1002")  # type: ignore
+
+    with pytest.raises(TypeError):
+        ingest.fx(limit=3)  # type: ignore

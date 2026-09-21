@@ -17,6 +17,7 @@ dependencies = [
     "requests>=2.34.2",
     "tqdm>=4.70.0",
     "xxhash>=4.0.1",
+    "yfinance>=1.7.0",
     "zstandard>=0.25.0",
 ]
 

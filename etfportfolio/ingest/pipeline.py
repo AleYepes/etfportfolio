@@ -7,7 +7,7 @@ from etfportfolio.core.config import settings
 from etfportfolio.core.db import AsyncDbWorker
 from etfportfolio.core.logging import console
 from etfportfolio.core.progress import progress_bar
-from etfportfolio.ingest import clean, contracts, details, prices, products, session, themes
+from etfportfolio.ingest import clean, contracts, details, fx, prices, products, session, themes
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +114,10 @@ async def _run_themes(force: bool = False) -> tuple[int, int]:
         await client.aclose()
 
 
+async def _run_fx(force: bool = False) -> int:
+    return await asyncio.to_thread(fx.sync, force=force)
+
+
 async def _run_details_only(force: bool = False) -> None:
     async with AsyncDbWorker(settings.db_path) as worker:
         client, account_id = await session.ensure_session()
@@ -142,7 +146,15 @@ async def _run_full(force: bool = False) -> None:
         logger.error("Contract qualification failed: %s", e)
         raise
 
-    console.info("=== Phase 3: Price series ===")
+    console.info("=== Phase 3: FX rate series ===")
+    try:
+        count = await _run_fx(force=force)
+        console.info(f"FX sync complete. {count} currencies processed.")
+    except Exception as e:
+        logger.error("FX sync failed: %s", e)
+        raise
+
+    console.info("=== Phase 4: Price series ===")
     try:
         count = await prices.sync(force=force)
         console.info(f"Price series complete. {count} products processed.")
@@ -150,19 +162,19 @@ async def _run_full(force: bool = False) -> None:
         logger.error("Price series failed: %s", e)
         raise
 
-    console.info("=== Phase 4: Session validation ===")
+    console.info("=== Phase 5: Session validation ===")
     client, account_id = await session.ensure_session()
     console.info(f"Session OK. Active account: {account_id}")
 
     try:
-        console.info("=== Phase 5: Theme taxonomy sync ===")
+        console.info("=== Phase 6: Theme taxonomy sync ===")
         try:
             p_count, n_count = await themes.sync(client=client, force=force)
             console.info(f"Theme taxonomy synced: {p_count} parents, {n_count} nodes.")
         except Exception as e:
             logger.error("Theme taxonomy sync failed: %s", e)
 
-        console.info("=== Phase 6: Product details ===")
+        console.info("=== Phase 7: Product details ===")
         async with AsyncDbWorker(settings.db_path) as worker:
             target_products = await worker.submit(products.resolve_target_products)
             target_ids = [p.product_id for p in target_products]
@@ -170,7 +182,7 @@ async def _run_full(force: bool = False) -> None:
     finally:
         await client.aclose()
 
-    console.info("=== Phase 7: Data cleaning ===")
+    console.info("=== Phase 8: Data cleaning ===")
     try:
         clean.run_clean()
         console.info("Data cleaning complete.")
@@ -202,6 +214,10 @@ class Ingest:
     def prices(self, force: bool = False) -> None:
         count = asyncio.run(prices.sync(force=force))
         console.info(f"Price series complete. {count} products processed.")
+
+    def fx(self, force: bool = False) -> None:
+        count = fx.sync(force=force)
+        console.info(f"FX sync complete. {count} currencies processed.")
 
     def themes(self, force: bool = False) -> None:
         p_count, n_count = asyncio.run(_run_themes(force=force))

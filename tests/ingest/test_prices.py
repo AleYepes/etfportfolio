@@ -15,11 +15,7 @@ from etfportfolio.ingest.prices import (
     PRICE_ABS_TOL,
     PRICE_REL_TOL,
     PRICES_SPEC,
-    PriceSeriesStatus,
     _fetch_and_store,
-    _has_historical_price_change,
-    _load_price_series_status,
-    _record_price_status,
     _run_price_ingestion,
     format_duration,
     is_series_fresh,
@@ -27,6 +23,12 @@ from etfportfolio.ingest.prices import (
     replace_series,
     upsert_series,
     validate_overlap,
+)
+from etfportfolio.ingest.series import (
+    SeriesStatus,
+    has_historical_series_change,
+    load_series_status,
+    record_series_status,
 )
 from etfportfolio.ingest.utils import ProductContract
 
@@ -65,22 +67,22 @@ def test_record_and_load_price_status(db_conn):
     )
 
     # Initial record: 'no_data'
-    _record_price_status(db_conn, 101, "no_data", None)
-    status_map = _load_price_series_status(db_conn)
+    record_series_status(db_conn, PRICES_SPEC, 101, "no_data", None)
+    status_map = load_series_status(db_conn, PRICES_SPEC)
     assert 101 in status_map
     assert status_map[101].status == "no_data"
     assert status_map[101].last_checked_at is not None
 
     # Update record: 'error' with truncation > 500 chars
     long_error = "E" * 600
-    _record_price_status(db_conn, 101, "error", long_error)
+    record_series_status(db_conn, PRICES_SPEC, 101, "error", long_error)
     row = db_conn.execute("SELECT status, error_message FROM bronze.price_status WHERE product_id = 101").fetchone()
     assert row[0] == "error"
     assert len(row[1]) == 500
     assert row[1] == "E" * 500
 
     # Update record: 'ok'
-    _record_price_status(db_conn, 101, "ok", None)
+    record_series_status(db_conn, PRICES_SPEC, 101, "ok", None)
     row = db_conn.execute("SELECT status, error_message FROM bronze.price_status WHERE product_id = 101").fetchone()
     assert row[0] == "ok"
     assert row[1] is None
@@ -95,7 +97,7 @@ def test_is_series_fresh_differentiated():
     old_date = yesterday - timedelta(days=10)
     assert (
         is_series_fresh(
-            PriceSeriesStatus(last_date=old_date, last_updated=None, last_checked_at=recent_check, status="no_data"),
+            SeriesStatus(last_date=old_date, last_updated=None, last_checked_at=recent_check, status="no_data"),
             yesterday,
             24.0,
         )
@@ -103,7 +105,7 @@ def test_is_series_fresh_differentiated():
     )
     assert (
         is_series_fresh(
-            PriceSeriesStatus(last_date=old_date, last_updated=None, last_checked_at=recent_check, status="ok"),
+            SeriesStatus(last_date=old_date, last_updated=None, last_checked_at=recent_check, status="ok"),
             yesterday,
             24.0,
         )
@@ -114,7 +116,7 @@ def test_is_series_fresh_differentiated():
     one_sec_ago = now - timedelta(seconds=1)
     assert (
         is_series_fresh(
-            PriceSeriesStatus(last_date=old_date, last_updated=None, last_checked_at=one_sec_ago, status="error"),
+            SeriesStatus(last_date=old_date, last_updated=None, last_checked_at=one_sec_ago, status="error"),
             yesterday,
             24.0,
         )
@@ -124,7 +126,7 @@ def test_is_series_fresh_differentiated():
     # 3. Bar reaches target_date is always fresh regardless of status
     assert (
         is_series_fresh(
-            PriceSeriesStatus(last_date=yesterday, last_updated=None, last_checked_at=None, status=None),
+            SeriesStatus(last_date=yesterday, last_updated=None, last_checked_at=None, status=None),
             yesterday,
             24.0,
         )
@@ -609,13 +611,13 @@ def test_has_historical_price_change(db_conn):
         },
         datetime(2026, 8, 20, 0, 0): {"open": 12.0, "high": 13.0, "low": 11.0, "close": 99.0},
     }
-    assert _has_historical_price_change(db_conn, PRICES_SPEC, pid, refetch_same, cutoff) is False
+    assert has_historical_series_change(db_conn, PRICES_SPEC, pid, refetch_same, cutoff) is False
 
     refetch_diff = {
         datetime(2026, 8, 1, 0, 0): {"open": 5.0, "high": 5.5, "low": 4.5, "close": 5.0},
         datetime(2026, 8, 20, 0, 0): {"open": 12.0, "high": 13.0, "low": 11.0, "close": 12.0},
     }
-    assert _has_historical_price_change(db_conn, PRICES_SPEC, pid, refetch_diff, cutoff) is True
+    assert has_historical_series_change(db_conn, PRICES_SPEC, pid, refetch_diff, cutoff) is True
 
 
 # --- Scenario: Anti-Truncation Safety Guard ---

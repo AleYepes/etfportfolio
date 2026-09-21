@@ -140,6 +140,40 @@ CREATE TABLE IF NOT EXISTS cold_storage.prices (
     PRIMARY KEY (product_id, run_id, date)
 );
 
+CREATE TABLE IF NOT EXISTS bronze.fx (
+    source_currency   VARCHAR NOT NULL,
+    target_currency   VARCHAR NOT NULL,
+    date              TIMESTAMP NOT NULL,
+    open              DOUBLE,
+    high              DOUBLE,
+    low               DOUBLE,
+    close             DOUBLE NOT NULL,
+    updated_at        TIMESTAMP NOT NULL,
+    PRIMARY KEY (source_currency, target_currency, date)
+);
+
+CREATE TABLE IF NOT EXISTS bronze.fx_status (
+    source_currency   VARCHAR NOT NULL,
+    target_currency   VARCHAR NOT NULL,
+    last_checked_at   TIMESTAMP NOT NULL,
+    status            VARCHAR NOT NULL,
+    error_message     VARCHAR,
+    PRIMARY KEY (source_currency, target_currency)
+);
+
+CREATE TABLE IF NOT EXISTS cold_storage.fx (
+    source_currency   VARCHAR NOT NULL,
+    target_currency   VARCHAR NOT NULL,
+    run_id            TIMESTAMP NOT NULL,
+    date              TIMESTAMP NOT NULL,
+    open              DOUBLE,
+    high              DOUBLE,
+    low               DOUBLE,
+    close             DOUBLE,
+    reason            VARCHAR,
+    PRIMARY KEY (source_currency, target_currency, run_id, date)
+);
+
 CREATE TABLE IF NOT EXISTS bronze.themes (
     theme_id        VARCHAR PRIMARY KEY,
     num_id          INTEGER,

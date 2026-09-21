@@ -1,83 +1,30 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
-from typing import Any
 
 import duckdb
 
 from etfportfolio.core.config import settings
 from etfportfolio.core.db import db_connection
 from etfportfolio.core.logging import console
-from etfportfolio.ingest.prices import PRICE_ABS_TOL, PRICE_REL_TOL, PRICES_SPEC, SETTLEMENT_TRADING_DAYS
 
 logger = logging.getLogger(__name__)
 
 
 def clean_cold_storage(conn: duckdb.DuckDBPyConnection) -> int:
-    """Purges redundant runs in cold_storage.prices.
-
-    A cold storage run is redundant if all historical bars older than
-    SETTLEMENT_TRADING_DAYS match bronze.prices within tolerance across all
-    PRICES_SPEC.value_columns (open, high, low, close).
-    Corporate actions (splits/dividends) alter prices across years of history,
-    whereas false-positive archives differ only on recent settlement days or not at all.
+    """Purges redundant runs in cold_storage.prices and cold_storage.fx.
 
     Returns the number of deleted rows.
     """
-    runs = conn.execute("SELECT DISTINCT product_id, run_id FROM cold_storage.prices").fetchall()
-    deleted_rows = 0
+    from etfportfolio.ingest.fx import FX_SPEC
+    from etfportfolio.ingest.prices import PRICES_SPEC
+    from etfportfolio.ingest.series import clean_series_cold_storage
 
-    col_conditions = []
-    for col in PRICES_SPEC.value_columns:
-        col_conditions.append(
-            f"(c.{col} IS NULL AND b.{col} IS NOT NULL) OR "
-            f"(c.{col} IS NOT NULL AND b.{col} IS NULL) OR "
-            f"(c.{col} IS NOT NULL AND b.{col} IS NOT NULL AND (abs(c.{col} - b.{col}) > ? OR abs(c.{col} - b.{col}) / nullif(abs(c.{col}), 0) > ?))"
-        )
-    value_cols_predicate = " OR\n        ".join(col_conditions)
+    deleted_prices = clean_series_cold_storage(conn, PRICES_SPEC)
+    deleted_fx = clean_series_cold_storage(conn, FX_SPEC)
 
-    mismatch_sql = f"""
-        SELECT count(*)
-        FROM cold_storage.prices c
-        LEFT JOIN bronze.prices b ON c.product_id = b.product_id AND c.date = b.date
-        WHERE c.product_id = ? AND c.run_id = ? AND c.date <= ?
-        AND (
-            b.date IS NULL OR
-            {value_cols_predicate}
-        )
-    """
-
-    for pid, run_id in runs:
-        # Find maximum date in this archived run
-        max_date_row = conn.execute(
-            "SELECT MAX(date) FROM cold_storage.prices WHERE product_id = ? AND run_id = ?",
-            [pid, run_id],
-        ).fetchone()
-        if not max_date_row or max_date_row[0] is None:
-            continue
-        max_date = max_date_row[0]
-        # 5 trading days horizon approximated by calendar buffer
-        cutoff_date = max_date - timedelta(days=SETTLEMENT_TRADING_DAYS + 2)
-
-        # Check if any historical bar (date <= cutoff_date) differs between cold_storage and bronze
-        params: list[Any] = [pid, run_id, cutoff_date]
-        for _ in PRICES_SPEC.value_columns:
-            params.extend([PRICE_ABS_TOL, PRICE_REL_TOL])
-
-        mismatch_row = conn.execute(mismatch_sql, params).fetchone()
-        mismatches = mismatch_row[0] if mismatch_row is not None else 0
-
-        if mismatches == 0:
-            del_row = conn.execute(
-                "DELETE FROM cold_storage.prices WHERE product_id = ? AND run_id = ?",
-                [pid, run_id],
-            ).fetchone()
-            count = del_row[0] if del_row is not None else 0
-            deleted_rows += count
-            logger.info("Product %d (run %s): deleted %d redundant cold storage rows.", pid, run_id, count)
-
-    return deleted_rows
+    logger.info("Cold storage purged: %d prices rows, %d fx rows.", deleted_prices, deleted_fx)
+    return deleted_prices + deleted_fx
 
 
 def clean_payload_blobs(conn: duckdb.DuckDBPyConnection) -> int:

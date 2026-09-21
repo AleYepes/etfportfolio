@@ -5,6 +5,7 @@ import pytest
 
 from etfportfolio.core.db import apply_schema
 from etfportfolio.ingest.clean import clean_cold_storage, clean_payload_blobs, run_clean
+from etfportfolio.ingest.fx import FX_SPEC
 from etfportfolio.ingest.prices import PRICES_SPEC, replace_series
 
 
@@ -128,3 +129,59 @@ def test_run_clean_end_to_end(monkeypatch, tmp_path):
     monkeypatch.setattr(settings, "db_path", db_file)
 
     run_clean()
+
+
+def test_clean_cold_storage_purges_redundant_fx_runs(db_conn):
+    now = datetime(2026, 9, 10, 0, 0)
+    bronze_points = {
+        now - timedelta(days=i): {
+            "open": 1.08,
+            "high": 1.085,
+            "low": 1.075,
+            "close": 1.08,
+        }
+        for i in range(20)
+    }
+    replace_series(db_conn, FX_SPEC, ("EUR", "USD"), bronze_points, archive=False)
+
+    run_time_1 = datetime(2026, 9, 9, 12, 0)
+    for d, b in bronze_points.items():
+        c_close = b["close"] + 1e-7 if d >= now - timedelta(days=2) else b["close"]
+        db_conn.execute(
+            """
+            INSERT INTO cold_storage.fx
+            (source_currency, target_currency, run_id, date, open, high, low, close, reason)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            ["EUR", "USD", run_time_1, d, b["open"], b["high"], b["low"], c_close, "value_mismatch"],
+        )
+
+    run_time_2 = datetime(2026, 9, 1, 12, 0)
+    for d, b in bronze_points.items():
+        db_conn.execute(
+            """
+            INSERT INTO cold_storage.fx
+            (source_currency, target_currency, run_id, date, open, high, low, close, reason)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                "EUR",
+                "USD",
+                run_time_2,
+                d,
+                b["open"] * 1.1,
+                b["high"] * 1.1,
+                b["low"] * 1.1,
+                b["close"] * 1.1,
+                "restatement",
+            ],
+        )
+
+    deleted = clean_cold_storage(db_conn)
+    assert deleted == 20
+
+    remaining_runs = db_conn.execute(
+        "SELECT DISTINCT run_id FROM cold_storage.fx WHERE source_currency = 'EUR'"
+    ).fetchall()
+    assert len(remaining_runs) == 1
+    assert remaining_runs[0][0] == run_time_2

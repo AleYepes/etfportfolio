@@ -41,72 +41,185 @@ STYLE_STYLES = ["value", "core", "growth"]
 STYLE_BOX_GRID = {f"{sz}_{st}" for sz in STYLE_SIZES for st in STYLE_STYLES}
 
 AUM_PREFIX_TOKENS = {
-    "$", "€", "£", "¥", "₹", "CAD", "AUD", "CNY", "TWD", "HKD", "CHF",
-    "BRL", "SGD", "MXN", "KRW", "MYR", "CNH", "AED", "SEK", "ZAR",
-    "ILS", "SAR", "NOK", "HUF", "DKK", "VND",
+    "$",
+    "€",
+    "£",
+    "¥",
+    "₹",
+    "CAD",
+    "AUD",
+    "CNY",
+    "TWD",
+    "HKD",
+    "CHF",
+    "BRL",
+    "SGD",
+    "MXN",
+    "KRW",
+    "MYR",
+    "CNH",
+    "AED",
+    "SEK",
+    "ZAR",
+    "ILS",
+    "SAR",
+    "NOK",
+    "HUF",
+    "DKK",
+    "VND",
 }
 
 CREDIT_RATING_GRADES = {
-    "AAA", "AA", "A", "BBB", "BB", "B", "CCC", "CC", "C", "D", "Not Rated", "Not Available",
+    "AAA",
+    "AA",
+    "A",
+    "BBB",
+    "BB",
+    "B",
+    "CCC",
+    "CC",
+    "C",
+    "D",
+    "Not Rated",
+    "Not Available",
 }
 
 MATURITY_SLUGS = {
-    "mat_lt_1y", "mat_1_to_3y", "mat_3_to_5y", "mat_5_to_10y",
-    "mat_10_to_20y", "mat_20_to_30y", "mat_gt_30y", "mat_other",
+    "mat_lt_1y",
+    "mat_1_to_3y",
+    "mat_3_to_5y",
+    "mat_5_to_10y",
+    "mat_10_to_20y",
+    "mat_20_to_30y",
+    "mat_gt_30y",
+    "mat_other",
 }
 
 DEBT_CLUSTERS: dict[str, tuple[str, ...]] = {
     "debt_sovereign": (
-        "Sovereign Bond", "Bundesanleihen", "Dutch State Loan", "Gilt Treasury Stock",
-        "Irish Govt Bond", "Japanese Govt Bond", "Danish Govt Bond",
-        "Notas do Tesouro Nacional F", "Obligaciones del Estado",
-        "Obligation Assimilable du Tresor", "Oblig Assim Tresor Indexee I'Indice",
-        "Oblig Assim Tresor Indexee I'Inflation", "Obligation Lineaire",
-        "Obrigacoes do Tesouro", "Titulos de Tesoreria TES B", "Treasury Bills",
-        "Treasury Notes/Bonds", "Treasury STRIPS", "MXBONO", "UDIBONO", "OMAN",
-        "Govt Guaranteed", "Government other",
+        "Sovereign Bond",
+        "Bundesanleihen",
+        "Dutch State Loan",
+        "Gilt Treasury Stock",
+        "Irish Govt Bond",
+        "Japanese Govt Bond",
+        "Danish Govt Bond",
+        "Notas do Tesouro Nacional F",
+        "Obligaciones del Estado",
+        "Obligation Assimilable du Tresor",
+        "Oblig Assim Tresor Indexee I'Indice",
+        "Oblig Assim Tresor Indexee I'Inflation",
+        "Obligation Lineaire",
+        "Obrigacoes do Tesouro",
+        "Titulos de Tesoreria TES B",
+        "Treasury Bills",
+        "Treasury Notes/Bonds",
+        "Treasury STRIPS",
+        "MXBONO",
+        "UDIBONO",
+        "OMAN",
+        "Govt Guaranteed",
+        "Government other",
     ),
     "debt_agency_supranational": ("Agencies", "Small Business Administration"),
     "debt_municipal": (
-        "MUNI", "Certificates of Obligation", "Certificates of Participation",
-        "Grant Antic Notes", "Tax And Rev Antic Notes", "Tax Antic Notes",
+        "MUNI",
+        "Certificates of Obligation",
+        "Certificates of Participation",
+        "Grant Antic Notes",
+        "Tax And Rev Antic Notes",
+        "Tax Antic Notes",
         "Unknown Antic Types",
     ),
     "debt_corporate_senior": (
-        "CORP", "Corporate Medium Term Notes", "Senior Note", "Senior Debenture",
-        "Senior Bank Note", "Senior Secured", "Secured Bond", "Secured Note",
-        "First Mortgage Bond", "First Mortgage Note", "First & Refunding Mortgage Bond",
-        "Covered Bond", "Hypothekenpfandbrief", "Pfandbrief Anleihe",
-        "Oeffentliche Pfandbrief", "HPF Jumbo", "Jumbo Landesschatzanweisung",
-        "Sakerstallda Obligationer", "Obligations Foncieres", "Collateral Trust",
-        "Collateral Debt", "Collateralized Notes",
+        "CORP",
+        "Corporate Medium Term Notes",
+        "Senior Note",
+        "Senior Debenture",
+        "Senior Bank Note",
+        "Senior Secured",
+        "Secured Bond",
+        "Secured Note",
+        "First Mortgage Bond",
+        "First Mortgage Note",
+        "First & Refunding Mortgage Bond",
+        "Covered Bond",
+        "Hypothekenpfandbrief",
+        "Pfandbrief Anleihe",
+        "Oeffentliche Pfandbrief",
+        "HPF Jumbo",
+        "Jumbo Landesschatzanweisung",
+        "Sakerstallda Obligationer",
+        "Obligations Foncieres",
+        "Collateral Trust",
+        "Collateral Debt",
+        "Collateralized Notes",
     ),
     "debt_corporate_subordinated": (
-        "Subordinated Note", "Senior Subordinated Note", "Subordinated Bank Note",
-        "Subordinated Debenture", "Senior Subordinated Debenture",
-        "Junior Subordinated Note", "Junior Subordinated Debenture", "Mezzanine Debt",
-        "Trust Preferred Security", "Participaciones Preferentes",
+        "Subordinated Note",
+        "Senior Subordinated Note",
+        "Subordinated Bank Note",
+        "Subordinated Debenture",
+        "Senior Subordinated Debenture",
+        "Junior Subordinated Note",
+        "Junior Subordinated Debenture",
+        "Mezzanine Debt",
+        "Trust Preferred Security",
+        "Participaciones Preferentes",
     ),
     "debt_securitized_mbs": (
-        "Mortgage Pools", "Mortgages", "Mortgage Bond", "Mortgage Note",
-        "Second Mortgage Bond", "Commercial Mortgage-Backed Security",
-        "Collateralized Mortgage Obligation", "CMOs", "CMO Whole Loan",
-        "CMO Agricultural MBS", "TBA", "Pass Through Certificate",
+        "Mortgage Pools",
+        "Mortgages",
+        "Mortgage Bond",
+        "Mortgage Note",
+        "Second Mortgage Bond",
+        "Commercial Mortgage-Backed Security",
+        "Collateralized Mortgage Obligation",
+        "CMOs",
+        "CMO Whole Loan",
+        "CMO Agricultural MBS",
+        "TBA",
+        "Pass Through Certificate",
     ),
     "debt_securitized_abs": (
-        "ABSY", "Asset Backed Tranches", "Credit Card Receivables",
-        "Auto/Installment Loans", "Auto Lease Loans", "Auto Floorplan/Wholesale Loans",
-        "Equipment Backed Loan", "Aircraft Lease", "Student Loan",
+        "ABSY",
+        "Asset Backed Tranches",
+        "Credit Card Receivables",
+        "Auto/Installment Loans",
+        "Auto Lease Loans",
+        "Auto Floorplan/Wholesale Loans",
+        "Equipment Backed Loan",
+        "Aircraft Lease",
+        "Student Loan",
     ),
     "debt_unsecured_general": (
-        "Bond", "Note", "Unsecured Note", "Debenture", "Fixed Income", "Global Bonds",
-        "Inhaberschuldverschreibung", "Certificate", "Certificates Of Indebtness",
-        "Other Certificates", "Deposit Note", "Depositary Share",
-        "Depository Receipts (Thailand)", "Bank Debt", "Bankers Acceptance", "Trust",
+        "Bond",
+        "Note",
+        "Unsecured Note",
+        "Debenture",
+        "Fixed Income",
+        "Global Bonds",
+        "Inhaberschuldverschreibung",
+        "Certificate",
+        "Certificates Of Indebtness",
+        "Other Certificates",
+        "Deposit Note",
+        "Depositary Share",
+        "Depository Receipts (Thailand)",
+        "Bank Debt",
+        "Bankers Acceptance",
+        "Trust",
     ),
     "debt_specialty_derivatives": (
-        "Index Linked Security", "Index-Linked Gilt", "Islamic Sukuk", "Derivative",
-        "Interest only", "Principal only", "Warrants", "Preferred Stock", "OTHER",
+        "Index Linked Security",
+        "Index-Linked Gilt",
+        "Islamic Sukuk",
+        "Derivative",
+        "Interest only",
+        "Principal only",
+        "Warrants",
+        "Preferred Stock",
+        "OTHER",
     ),
 }
 
@@ -123,6 +236,7 @@ BENCHMARK_LOCF_TARGETS = (
 # ==============================================================================
 # FINDINGS & FORMATTERS
 # ==============================================================================
+
 
 @dataclass(frozen=True, slots=True)
 class Finding:
@@ -178,10 +292,7 @@ def render_table(
         return
 
     print(f"\n--- {title} ---")
-    widths = [
-        max(len(str(x)) for x in [h] + [r[i] for r in rows])
-        for i, h in enumerate(headers)
-    ]
+    widths = [max(len(str(x)) for x in [h] + [r[i] for r in rows]) for i, h in enumerate(headers)]
     fmt = "  ".join(f"{{:>{w}}}" if i in align_indices else f"{{:<{w}}}" for i, w in enumerate(widths))
     print(fmt.format(*headers))
     print("  ".join("-" * w for w in widths))
@@ -195,7 +306,7 @@ def fmt_f(val: Any, decimals: int = 4) -> str:
     try:
         f = float(val)
         return f"{f:,.{decimals}f}"
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return str(val)
 
 
@@ -227,6 +338,7 @@ def has_table(con: duckdb.DuckDBPyConnection, schema: str, table: str) -> bool:
 # 1. HARD STRUCTURAL INVARIANTS
 # ==============================================================================
 
+
 def run_invariants(con: duckdb.DuckDBPyConnection, findings: list[Finding]) -> None:
     print_section(
         "1. STRUCTURAL INVARIANTS",
@@ -239,7 +351,9 @@ def run_invariants(con: duckdb.DuckDBPyConnection, findings: list[Finding]) -> N
             GROUP BY 1, 2, 3, 4 HAVING COUNT(*) > 1
         )
     """).fetchone()[0]
-    invariant(findings, "Structural", "PK uniqueness in silver.product_metrics", pk_dup_m == 0, f"{pk_dup_m} duplicate groups")
+    invariant(
+        findings, "Structural", "PK uniqueness in silver.product_metrics", pk_dup_m == 0, f"{pk_dup_m} duplicate groups"
+    )
 
     pk_dup_d = con.execute("""
         SELECT COUNT(*) FROM (
@@ -247,7 +361,13 @@ def run_invariants(con: duckdb.DuckDBPyConnection, findings: list[Finding]) -> N
             GROUP BY 1, 2, 3, 4 HAVING COUNT(*) > 1
         )
     """).fetchone()[0]
-    invariant(findings, "Structural", "PK uniqueness in silver.product_dimensions", pk_dup_d == 0, f"{pk_dup_d} duplicate groups")
+    invariant(
+        findings,
+        "Structural",
+        "PK uniqueness in silver.product_dimensions",
+        pk_dup_d == 0,
+        f"{pk_dup_d} duplicate groups",
+    )
 
     cross_source_dups = con.execute("""
         SELECT COUNT(*) FROM (
@@ -257,8 +377,13 @@ def run_invariants(con: duckdb.DuckDBPyConnection, findings: list[Finding]) -> N
             HAVING COUNT(DISTINCT source) > 1
         )
     """).fetchone()[0]
-    invariant(findings, "Structural", "No cross-source metric_id collisions", cross_source_dups == 0,
-              f"{cross_source_dups} duplicate groups across sources")
+    invariant(
+        findings,
+        "Structural",
+        "No cross-source metric_id collisions",
+        cross_source_dups == 0,
+        f"{cross_source_dups} duplicate groups across sources",
+    )
 
     null_m = con.execute("""
         SELECT COUNT(*) FILTER (WHERE value IS NULL),
@@ -266,9 +391,13 @@ def run_invariants(con: duckdb.DuckDBPyConnection, findings: list[Finding]) -> N
                COUNT(*) FILTER (WHERE isnan(value) OR isinf(value))
         FROM silver.product_metrics
     """).fetchone()
-    invariant(findings, "Structural", "value/raw_value NOT NULL, finite (product_metrics)",
-              null_m[0] == 0 and null_m[1] == 0 and null_m[2] == 0,
-              f"null value={null_m[0]}, null raw={null_m[1]}, non-finite={null_m[2]}")
+    invariant(
+        findings,
+        "Structural",
+        "value/raw_value NOT NULL, finite (product_metrics)",
+        null_m[0] == 0 and null_m[1] == 0 and null_m[2] == 0,
+        f"null value={null_m[0]}, null raw={null_m[1]}, non-finite={null_m[2]}",
+    )
 
     null_d = con.execute("""
         SELECT COUNT(*) FILTER (WHERE value IS NULL),
@@ -276,9 +405,13 @@ def run_invariants(con: duckdb.DuckDBPyConnection, findings: list[Finding]) -> N
                COUNT(*) FILTER (WHERE isnan(value) OR isinf(value))
         FROM silver.product_dimensions
     """).fetchone()
-    invariant(findings, "Structural", "value/raw_value NOT NULL, finite (product_dimensions)",
-              null_d[0] == 0 and null_d[1] == 0 and null_d[2] == 0,
-              f"null value={null_d[0]}, null raw={null_d[1]}, non-finite={null_d[2]}")
+    invariant(
+        findings,
+        "Structural",
+        "value/raw_value NOT NULL, finite (product_dimensions)",
+        null_d[0] == 0 and null_d[1] == 0 and null_d[2] == 0,
+        f"null value={null_d[0]}, null raw={null_d[1]}, non-finite={null_d[2]}",
+    )
 
     future = con.execute("""
         SELECT COUNT(*) FROM (
@@ -287,7 +420,13 @@ def run_invariants(con: duckdb.DuckDBPyConnection, findings: list[Finding]) -> N
             SELECT 1 FROM silver.product_dimensions WHERE effective_date > fetched_at::DATE
         )
     """).fetchone()[0]
-    invariant(findings, "Structural", "Temporal causality (effective_date <= fetched_at::DATE)", future == 0, f"{future} future-dated rows")
+    invariant(
+        findings,
+        "Structural",
+        "Temporal causality (effective_date <= fetched_at::DATE)",
+        future == 0,
+        f"{future} future-dated rows",
+    )
 
     if has_table(con, "bronze", "contracts"):
         orphans = con.execute("""
@@ -297,7 +436,13 @@ def run_invariants(con: duckdb.DuckDBPyConnection, findings: list[Finding]) -> N
                 SELECT product_id FROM silver.product_dimensions WHERE product_id NOT IN (SELECT product_id FROM bronze.contracts)
             )
         """).fetchone()[0]
-        invariant(findings, "Structural", "Every product_id resolves to bronze.contracts", orphans == 0, f"{orphans} orphan product_ids")
+        invariant(
+            findings,
+            "Structural",
+            "Every product_id resolves to bronze.contracts",
+            orphans == 0,
+            f"{orphans} orphan product_ids",
+        )
     else:
         skip(findings, "Structural", "bronze.contracts foreign key checks", "bronze.contracts table not found")
 
@@ -308,45 +453,92 @@ def run_invariants(con: duckdb.DuckDBPyConnection, findings: list[Finding]) -> N
         SELECT DISTINCT effective_date_source FROM silver.product_dimensions
         WHERE effective_date_source NOT IN ('payload','item','snapshot')
     """).fetchall()
-    invariant(findings, "Structural", "effective_date_source is exactly {payload, item, snapshot}",
-              len(bad_src) == 0, f"unexpected values: {[r[0] for r in bad_src]}")
+    invariant(
+        findings,
+        "Structural",
+        "effective_date_source is exactly {payload, item, snapshot}",
+        len(bad_src) == 0,
+        f"unexpected values: {[r[0] for r in bad_src]}",
+    )
 
     # Watchlists
-    ac_names = {r[0] for r in con.execute(
-        "SELECT DISTINCT dimension_name FROM silver.product_dimensions WHERE dimension_type = 'asset_class'"
-    ).fetchall()}
-    watchlist(findings, "Vocabulary", "Asset class categories", ac_names - ASSET_CLASSES,
-              f"{len(ac_names)} observed vs {len(ASSET_CLASSES)} documented")
+    ac_names = {
+        r[0]
+        for r in con.execute(
+            "SELECT DISTINCT dimension_name FROM silver.product_dimensions WHERE dimension_type = 'asset_class'"
+        ).fetchall()
+    }
+    watchlist(
+        findings,
+        "Vocabulary",
+        "Asset class categories",
+        ac_names - ASSET_CLASSES,
+        f"{len(ac_names)} observed vs {len(ASSET_CLASSES)} documented",
+    )
 
-    tokens = {r[0] for r in con.execute(r"""
+    tokens = {
+        r[0]
+        for r in con.execute(r"""
         SELECT DISTINCT REGEXP_EXTRACT(raw_value, '^([^0-9\s]+)', 1)
         FROM silver.product_metrics WHERE metric_id = 'total_net_assets_local'
-    """).fetchall() if r[0]}
-    watchlist(findings, "Vocabulary", "AUM currency prefix tokens", tokens - AUM_PREFIX_TOKENS,
-              f"{len(tokens)} observed vs {len(AUM_PREFIX_TOKENS)} documented")
+    """).fetchall()
+        if r[0]
+    }
+    watchlist(
+        findings,
+        "Vocabulary",
+        "AUM currency prefix tokens",
+        tokens - AUM_PREFIX_TOKENS,
+        f"{len(tokens)} observed vs {len(AUM_PREFIX_TOKENS)} documented",
+    )
 
-    cr_names = {r[0] for r in con.execute(
-        "SELECT DISTINCT dimension_name FROM silver.product_dimensions WHERE dimension_type = 'credit_rating'"
-    ).fetchall()}
-    watchlist(findings, "Vocabulary", "Credit rating grade names", cr_names - CREDIT_RATING_GRADES,
-              f"{len(cr_names)} observed vs {len(CREDIT_RATING_GRADES)} documented")
+    cr_names = {
+        r[0]
+        for r in con.execute(
+            "SELECT DISTINCT dimension_name FROM silver.product_dimensions WHERE dimension_type = 'credit_rating'"
+        ).fetchall()
+    }
+    watchlist(
+        findings,
+        "Vocabulary",
+        "Credit rating grade names",
+        cr_names - CREDIT_RATING_GRADES,
+        f"{len(cr_names)} observed vs {len(CREDIT_RATING_GRADES)} documented",
+    )
 
-    mat_codes = {r[0] for r in con.execute(
-        "SELECT DISTINCT dimension_code FROM silver.product_dimensions WHERE dimension_type = 'maturity' AND dimension_code IS NOT NULL"
-    ).fetchall()}
-    watchlist(findings, "Vocabulary", "Maturity bucket slugs", mat_codes - MATURITY_SLUGS,
-              f"{len(mat_codes)} observed vs {len(MATURITY_SLUGS)} documented")
+    mat_codes = {
+        r[0]
+        for r in con.execute(
+            "SELECT DISTINCT dimension_code FROM silver.product_dimensions WHERE dimension_type = 'maturity' AND dimension_code IS NOT NULL"
+        ).fetchall()
+    }
+    watchlist(
+        findings,
+        "Vocabulary",
+        "Maturity bucket slugs",
+        mat_codes - MATURITY_SLUGS,
+        f"{len(mat_codes)} observed vs {len(MATURITY_SLUGS)} documented",
+    )
 
-    sb_codes = {r[0] for r in con.execute(
-        "SELECT DISTINCT dimension_code FROM silver.product_dimensions WHERE dimension_type IN ('style_box', 'style_box_hist') AND dimension_code IS NOT NULL"
-    ).fetchall()}
-    watchlist(findings, "Vocabulary", "Style box dimension codes", sb_codes - STYLE_BOX_GRID,
-              f"{len(sb_codes)} observed vs {len(STYLE_BOX_GRID)} documented")
+    sb_codes = {
+        r[0]
+        for r in con.execute(
+            "SELECT DISTINCT dimension_code FROM silver.product_dimensions WHERE dimension_type IN ('style_box', 'style_box_hist') AND dimension_code IS NOT NULL"
+        ).fetchall()
+    }
+    watchlist(
+        findings,
+        "Vocabulary",
+        "Style box dimension codes",
+        sb_codes - STYLE_BOX_GRID,
+        f"{len(sb_codes)} observed vs {len(STYLE_BOX_GRID)} documented",
+    )
 
 
 # ==============================================================================
 # 2. PAYLOAD INGESTION & STORAGE CADENCE
 # ==============================================================================
+
 
 def run_payload_cadence(con: duckdb.DuckDBPyConnection) -> tuple[list[tuple], list[tuple], list[tuple], list[tuple]]:
     print_section(
@@ -408,10 +600,26 @@ def run_payload_cadence(con: duckdb.DuckDBPyConnection) -> tuple[list[tuple], li
 
     render_table(
         "Payload Mutation Frequency (Interval between successive bronze.snapshots records)",
-        ["URL Prefix", "Update Events", "Median Interval", "p25", "p75", "p95", "Max Gap", "% Weekly (~7d)", "% Monthly (~30d)"],
+        [
+            "URL Prefix",
+            "Update Events",
+            "Median Interval",
+            "p25",
+            "p75",
+            "p95",
+            "Max Gap",
+            "% Weekly (~7d)",
+            "% Monthly (~30d)",
+        ],
         [
             [
-                r[0], f"{r[1]:,}", f"{r[2]}d", f"{r[3]}d", f"{r[4]}d", f"{r[5]}d", f"{r[6]}d",
+                r[0],
+                f"{r[1]:,}",
+                f"{r[2]}d",
+                f"{r[3]}d",
+                f"{r[4]}d",
+                f"{r[5]}d",
+                f"{r[6]}d",
                 f"{r[7]}%" if r[7] is not None else "0.0%",
                 f"{r[8]}%" if r[8] is not None else "0.0%",
             ]
@@ -443,10 +651,7 @@ def run_payload_cadence(con: duckdb.DuckDBPyConnection) -> tuple[list[tuple], li
     render_table(
         "Payload Dwell Time / Stability Window (How long a payload hash remains current)",
         ["URL Prefix", "Snapshots", "Single-Poll Snaps", "% Transient", "Median Dwell", "p75 Dwell", "Max Dwell"],
-        [
-            [r[0], f"{r[1]:,}", f"{r[2]:,}", f"{r[3]}%", f"{r[4]}d", f"{r[5]}d", f"{r[6]}d"]
-            for r in dwell_summary
-        ],
+        [[r[0], f"{r[1]:,}", f"{r[2]:,}", f"{r[3]}%", f"{r[4]}d", f"{r[5]}d", f"{r[6]}d"] for r in dwell_summary],
         align_right=list(range(1, 7)),
     )
 
@@ -477,11 +682,30 @@ def run_payload_cadence(con: duckdb.DuckDBPyConnection) -> tuple[list[tuple], li
 
     render_table(
         "Publication Lag (fetched_at - effective_date: vendor reporting latency)",
-        ["Source", "Date Provenance", "Observations", "Min Lag", "p25 Lag", "Median Lag", "p75 Lag", "p95 Lag", "Max Lag", "Future Date (<0)"],
+        [
+            "Source",
+            "Date Provenance",
+            "Observations",
+            "Min Lag",
+            "p25 Lag",
+            "Median Lag",
+            "p75 Lag",
+            "p95 Lag",
+            "Max Lag",
+            "Future Date (<0)",
+        ],
         [
             [
-                r[0], r[1], f"{r[2]:,}", _fmt_days(r[3]), _fmt_days(r[4]), _fmt_days(r[5]),
-                _fmt_days(r[6]), _fmt_days(r[7]), _fmt_days(r[8]), f"{r[9]:,}",
+                r[0],
+                r[1],
+                f"{r[2]:,}",
+                _fmt_days(r[3]),
+                _fmt_days(r[4]),
+                _fmt_days(r[5]),
+                _fmt_days(r[6]),
+                _fmt_days(r[7]),
+                _fmt_days(r[8]),
+                f"{r[9]:,}",
             ]
             for r in pub_lag
         ],
@@ -494,6 +718,7 @@ def run_payload_cadence(con: duckdb.DuckDBPyConnection) -> tuple[list[tuple], li
 # ==============================================================================
 # 3. EMPIRICAL EFFECTIVE DATE CADENCE (LOCF Horizon Calibration)
 # ==============================================================================
+
 
 def run_effective_date_cadence(con: duckdb.DuckDBPyConnection) -> list[tuple]:
     print_section(
@@ -558,11 +783,34 @@ def run_effective_date_cadence(con: duckdb.DuckDBPyConnection) -> list[tuple]:
     display_rows = cadence_rows[:25]
     render_table(
         f"Empirical effective_date Update Cadence ({len(cadence_rows)} total features, top {len(display_rows)} displayed)",
-        ["Source", "Feature / Type", "Transitions", "Funds", "Min", "p25", "Median", "p75", "p90", "p95 (Cap Target)", "p99", "Max"],
+        [
+            "Source",
+            "Feature / Type",
+            "Transitions",
+            "Funds",
+            "Min",
+            "p25",
+            "Median",
+            "p75",
+            "p90",
+            "p95 (Cap Target)",
+            "p99",
+            "Max",
+        ],
         [
             [
-                r[0], r[1], f"{r[2]:,}", f"{r[3]:,}", _fmt_days(r[4]), _fmt_days(r[5]), _fmt_days(r[6]),
-                _fmt_days(r[7]), _fmt_days(r[8]), _fmt_days(r[9]), _fmt_days(r[10]), _fmt_days(r[11]),
+                r[0],
+                r[1],
+                f"{r[2]:,}",
+                f"{r[3]:,}",
+                _fmt_days(r[4]),
+                _fmt_days(r[5]),
+                _fmt_days(r[6]),
+                _fmt_days(r[7]),
+                _fmt_days(r[8]),
+                _fmt_days(r[9]),
+                _fmt_days(r[10]),
+                _fmt_days(r[11]),
             ]
             for r in display_rows
         ],
@@ -575,6 +823,7 @@ def run_effective_date_cadence(con: duckdb.DuckDBPyConnection) -> list[tuple]:
 # ==============================================================================
 # 4. FIRST OBSERVATION REACH (Backward-Fill Feasibility)
 # ==============================================================================
+
 
 def run_backward_fill_audit(con: duckdb.DuckDBPyConnection) -> list[tuple]:
     print_section(
@@ -635,8 +884,14 @@ def run_backward_fill_audit(con: duckdb.DuckDBPyConnection) -> list[tuple]:
         ["Family", "Funds", "Pre-Dated Funds", "% Pre-Dated", "Median Gap", "p75 Gap", "p95 Gap", "Max Gap"],
         [
             [
-                r[0], f"{r[1]:,}", f"{r[2]:,}", f"{r[3]}%" if r[3] is not None else "0.0%",
-                _fmt_days(r[4]), _fmt_days(r[5]), _fmt_days(r[6]), _fmt_days(r[7]),
+                r[0],
+                f"{r[1]:,}",
+                f"{r[2]:,}",
+                f"{r[3]}%" if r[3] is not None else "0.0%",
+                _fmt_days(r[4]),
+                _fmt_days(r[5]),
+                _fmt_days(r[6]),
+                _fmt_days(r[7]),
             ]
             for r in reach_rows
         ],
@@ -649,6 +904,7 @@ def run_backward_fill_audit(con: duckdb.DuckDBPyConnection) -> list[tuple]:
 # ==============================================================================
 # 5. CURRENCY DISTRIBUTION (total_net_assets_local Normalization Readiness)
 # ==============================================================================
+
 
 def run_currency_profile(con: duckdb.DuckDBPyConnection) -> list[tuple]:
     print_section(
@@ -678,10 +934,7 @@ def run_currency_profile(con: duckdb.DuckDBPyConnection) -> list[tuple]:
     render_table(
         "total_net_assets_local Currency Breakdown",
         ["Currency", "Observations", "Funds", "Min Local AUM", "Median Local AUM", "Max Local AUM"],
-        [
-            [r[0], f"{r[1]:,}", f"{r[2]:,}", fmt_f(r[3], 0), fmt_f(r[4], 0), fmt_f(r[5], 0)]
-            for r in ccy_rows
-        ],
+        [[r[0], f"{r[1]:,}", f"{r[2]:,}", fmt_f(r[3], 0), fmt_f(r[4], 0), fmt_f(r[5], 0)] for r in ccy_rows],
         align_right=[1, 2, 3, 4, 5],
     )
 
@@ -691,6 +944,7 @@ def run_currency_profile(con: duckdb.DuckDBPyConnection) -> list[tuple]:
 # ==============================================================================
 # 6. LOCF COVERAGE SIMULATION (Current Caps vs p95 vs Backward Fill)
 # ==============================================================================
+
 
 def run_locf_coverage_simulation(con: duckdb.DuckDBPyConnection, cadence_rows: list[tuple]) -> list[tuple]:
     print_section(
@@ -719,29 +973,43 @@ def run_locf_coverage_simulation(con: duckdb.DuckDBPyConnection, cadence_rows: l
 
     for target_name, target_type, current_cap in BENCHMARK_LOCF_TARGETS:
         if target_type == "metrics":
-            con.execute("""
+            con.execute(
+                """
                 CREATE OR REPLACE TEMP TABLE sim_obs AS
                 SELECT product_id, effective_date
                 FROM silver.product_metrics
                 WHERE metric_id = $1
                 GROUP BY product_id, effective_date
-            """, [target_name])
-            p95_cap = p95_map.get(("ratios", target_name)) or p95_map.get(("profile", target_name)) or p95_map.get(("mstar", target_name)) or p95_map.get(("holdings", target_name)) or p95_map.get(("esg", target_name)) or (current_cap * 2)
+            """,
+                [target_name],
+            )
+            p95_cap = (
+                p95_map.get(("ratios", target_name))
+                or p95_map.get(("profile", target_name))
+                or p95_map.get(("mstar", target_name))
+                or p95_map.get(("holdings", target_name))
+                or p95_map.get(("esg", target_name))
+                or (current_cap * 2)
+            )
         else:
             dim_type = target_type.split(":", 1)[1]
-            con.execute("""
+            con.execute(
+                """
                 CREATE OR REPLACE TEMP TABLE sim_obs AS
                 SELECT product_id, effective_date
                 FROM silver.product_dimensions
                 WHERE dimension_type = $1 AND dimension_name = $2
                 GROUP BY product_id, effective_date
-            """, [dim_type, target_name])
+            """,
+                [dim_type, target_name],
+            )
             p95_cap = p95_map.get(("dimension", dim_type)) or (current_cap * 2)
 
         # Enforce that p95_cap is at least current_cap for generous evaluation
         p95_cap = max(current_cap, p95_cap)
 
-        sim_row = con.execute("""
+        sim_row = con.execute(
+            """
             WITH eligible_spine AS (
                 SELECT s.product_id, s.as_of_date, f.first_eff_date
                 FROM active_spine s
@@ -780,7 +1048,9 @@ def run_locf_coverage_simulation(con: duckdb.DuckDBPyConnection, cadence_rows: l
                 SUM(has_p95_cap) AS p95_cap_months,
                 SUM(CASE WHEN has_p95_cap = 1 OR has_bfill = 1 THEN 1 ELSE 0 END) AS total_bfill_months
             FROM locf_matches
-        """, [current_cap, p95_cap]).fetchone()
+        """,
+            [current_cap, p95_cap],
+        ).fetchone()
 
         if sim_row and sim_row[0] > 0:
             elig = sim_row[0]
@@ -792,31 +1062,56 @@ def run_locf_coverage_simulation(con: duckdb.DuckDBPyConnection, cadence_rows: l
             b_pct = round(b_months * 100.0 / elig, 1)
             b_gain = b_months - p_months
 
-            sim_results.append((
-                target_name,
-                target_type,
-                current_cap,
-                p95_cap,
-                elig,
-                c_months,
-                c_pct,
-                p_months,
-                p_pct,
-                b_months,
-                b_pct,
-                b_gain,
-            ))
+            sim_results.append(
+                (
+                    target_name,
+                    target_type,
+                    current_cap,
+                    p95_cap,
+                    elig,
+                    c_months,
+                    c_pct,
+                    p_months,
+                    p_pct,
+                    b_months,
+                    b_pct,
+                    b_gain,
+                )
+            )
 
     con.execute("DROP TABLE IF EXISTS active_spine")
     con.execute("DROP TABLE IF EXISTS sim_obs")
 
     render_table(
         "LOCF Coverage Simulation Across Benchmark Features",
-        ["Feature", "Type", "Current Cap", "p95 Cap", "Spine Mos", "Current Mos", "Current %", "p95 Mos", "p95 %", "p95+Bfill Mos", "Total %", "Bfill Gain"],
+        [
+            "Feature",
+            "Type",
+            "Current Cap",
+            "p95 Cap",
+            "Spine Mos",
+            "Current Mos",
+            "Current %",
+            "p95 Mos",
+            "p95 %",
+            "p95+Bfill Mos",
+            "Total %",
+            "Bfill Gain",
+        ],
         [
             [
-                r[0], r[1], f"{r[2]}d", f"{r[3]}d", f"{r[4]:,}", f"{r[5]:,}", f"{r[6]}%",
-                f"{r[7]:,}", f"{r[8]}%", f"{r[9]:,}", f"{r[10]}%", f"+{r[11]:,}",
+                r[0],
+                r[1],
+                f"{r[2]}d",
+                f"{r[3]}d",
+                f"{r[4]:,}",
+                f"{r[5]:,}",
+                f"{r[6]}%",
+                f"{r[7]:,}",
+                f"{r[8]}%",
+                f"{r[9]:,}",
+                f"{r[10]}%",
+                f"+{r[11]:,}",
             ]
             for r in sim_results
         ],
@@ -829,6 +1124,7 @@ def run_locf_coverage_simulation(con: duckdb.DuckDBPyConnection, cadence_rows: l
 # ==============================================================================
 # 7. EMPIRICAL PROFILES (Sleeves, Fees, Debt Clusters)
 # ==============================================================================
+
 
 def run_empirical_profiles(con: duckdb.DuckDBPyConnection) -> tuple[list[tuple], list[tuple], list[tuple]]:
     print_section(
@@ -863,9 +1159,31 @@ def run_empirical_profiles(con: duckdb.DuckDBPyConnection) -> tuple[list[tuple],
 
     render_table(
         "Allocation Weights Profile by Dimension Type",
-        ["Dimension", "Snapshots", "Exact (±0.1%)", "Exact %", "Lev (>1.05)", "Under (<0.95)", "Min Sum", "Median Sum", "Max Sum", "With Shorts"],
         [
-            [r[0], f"{r[1]:,}", f"{r[2]:,}", f"{r[3]}%", f"{r[4]:,}", f"{r[5]:,}", fmt_f(r[6]), fmt_f(r[7]), fmt_f(r[8]), f"{r[9]:,}"]
+            "Dimension",
+            "Snapshots",
+            "Exact (±0.1%)",
+            "Exact %",
+            "Lev (>1.05)",
+            "Under (<0.95)",
+            "Min Sum",
+            "Median Sum",
+            "Max Sum",
+            "With Shorts",
+        ],
+        [
+            [
+                r[0],
+                f"{r[1]:,}",
+                f"{r[2]:,}",
+                f"{r[3]}%",
+                f"{r[4]:,}",
+                f"{r[5]:,}",
+                fmt_f(r[6]),
+                fmt_f(r[7]),
+                fmt_f(r[8]),
+                f"{r[9]:,}",
+            ]
             for r in sleeve_rows
         ],
         align_right=list(range(1, 10)),
@@ -898,11 +1216,30 @@ def run_empirical_profiles(con: duckdb.DuckDBPyConnection) -> tuple[list[tuple],
         fee_alloc_rows.append(fee_alloc)
         render_table(
             "Expense Ratio Allocation (Management + Non-Management)",
-            ["Paired Snaps", "Exact = 1.0", "% Exact", "Fee Subsidies (<0)", "Zero Non-Mgt", "Min Mgt", "Max Mgt", "Min Non-Mgt", "Max Non-Mgt"],
-            [[
-                f"{fee_alloc[0]:,}", f"{fee_alloc[1]:,}", f"{fee_alloc[2]}%", f"{fee_alloc[3]:,}", f"{fee_alloc[4]:,}",
-                fmt_f(fee_alloc[5]), fmt_f(fee_alloc[6]), fmt_f(fee_alloc[7]), fmt_f(fee_alloc[8]),
-            ]],
+            [
+                "Paired Snaps",
+                "Exact = 1.0",
+                "% Exact",
+                "Fee Subsidies (<0)",
+                "Zero Non-Mgt",
+                "Min Mgt",
+                "Max Mgt",
+                "Min Non-Mgt",
+                "Max Non-Mgt",
+            ],
+            [
+                [
+                    f"{fee_alloc[0]:,}",
+                    f"{fee_alloc[1]:,}",
+                    f"{fee_alloc[2]}%",
+                    f"{fee_alloc[3]:,}",
+                    f"{fee_alloc[4]:,}",
+                    fmt_f(fee_alloc[5]),
+                    fmt_f(fee_alloc[6]),
+                    fmt_f(fee_alloc[7]),
+                    fmt_f(fee_alloc[8]),
+                ]
+            ],
             align_right=list(range(9)),
         )
 
@@ -946,6 +1283,7 @@ def run_empirical_profiles(con: duckdb.DuckDBPyConnection) -> tuple[list[tuple],
 # 8. MIGRATION CHECKLIST
 # ==============================================================================
 
+
 def run_pending(con: duckdb.DuckDBPyConnection, findings: list[Finding]) -> None:
     print_section("8. MIGRATION CHECKLIST", "Implementation-readiness verification (schema migrations, cleanups)")
 
@@ -955,15 +1293,25 @@ def run_pending(con: duckdb.DuckDBPyConnection, findings: list[Finding]) -> None
     top_holding_rows = con.execute(
         "SELECT COUNT(*) FROM silver.product_dimensions WHERE dimension_type = 'top_holding'"
     ).fetchone()[0]
-    pending(findings, "Schema", "top_holding extraction pruned", top_holding_rows == 0,
-            f"{top_holding_rows:,} rows remain" if top_holding_rows else "0 rows (pruned)")
+    pending(
+        findings,
+        "Schema",
+        "top_holding extraction pruned",
+        top_holding_rows == 0,
+        f"{top_holding_rows:,} rows remain" if top_holding_rows else "0 rows (pruned)",
+    )
 
     med_growth = con.execute(
         "SELECT MEDIAN(value) FROM silver.product_metrics WHERE source = 'ratios' AND metric_id = 'eps_growth_1yr'"
     ).fetchone()[0]
     is_decimal = med_growth is not None and abs(float(med_growth)) < 2.0
-    pending(findings, "Ratios", "growth/return/yield metrics converted to decimals (/100)", is_decimal,
-            f"median eps_growth={fmt_f(med_growth)}")
+    pending(
+        findings,
+        "Ratios",
+        "growth/return/yield metrics converted to decimals (/100)",
+        is_decimal,
+        f"median eps_growth={fmt_f(med_growth)}",
+    )
 
     medalist_n = con.execute(
         "SELECT COUNT(*) FROM silver.product_metrics WHERE metric_id = 'mstar_medalist_rating'"
@@ -978,7 +1326,13 @@ def run_pending(con: duckdb.DuckDBPyConnection, findings: list[Finding]) -> None
     lip_variants = con.execute(
         "SELECT COUNT(DISTINCT metric_id) FROM silver.product_metrics WHERE source = 'lipper'"
     ).fetchone()[0]
-    pending(findings, "Lipper", "Max-Peer-Count reduction applied (<=25 canonical ids)", lip_variants <= 25, f"{lip_variants} distinct metric_ids")
+    pending(
+        findings,
+        "Lipper",
+        "Max-Peer-Count reduction applied (<=25 canonical ids)",
+        lip_variants <= 25,
+        f"{lip_variants} distinct metric_ids",
+    )
 
     theme_cov_n = con.execute(
         "SELECT COUNT(*) FROM silver.product_metrics WHERE metric_id = 'theme_coverage'"
@@ -988,12 +1342,20 @@ def run_pending(con: duckdb.DuckDBPyConnection, findings: list[Finding]) -> None
     theme_dim_n = con.execute(
         "SELECT COUNT(*) FROM silver.product_dimensions WHERE dimension_type = 'theme'"
     ).fetchone()[0]
-    pending(findings, "Themes", "theme weights extracted in product_dimensions", theme_dim_n > 0, f"{theme_dim_n:,} rows")
+    pending(
+        findings, "Themes", "theme weights extracted in product_dimensions", theme_dim_n > 0, f"{theme_dim_n:,} rows"
+    )
 
     sb_dim_n = con.execute(
         "SELECT COUNT(*) FROM silver.product_dimensions WHERE dimension_type IN ('style_box', 'style_box_hist')"
     ).fetchone()[0]
-    pending(findings, "Style Box", "style_box coordinates extracted in product_dimensions", sb_dim_n > 0, f"{sb_dim_n:,} rows")
+    pending(
+        findings,
+        "Style Box",
+        "style_box coordinates extracted in product_dimensions",
+        sb_dim_n > 0,
+        f"{sb_dim_n:,} rows",
+    )
 
     is_passive_n = con.execute(
         "SELECT COUNT(*) FROM silver.product_metrics WHERE source = 'profile' AND metric_id = 'is_passive'"
@@ -1003,7 +1365,9 @@ def run_pending(con: duckdb.DuckDBPyConnection, findings: list[Finding]) -> None
     audited_fee_n = con.execute(
         "SELECT COUNT(*) FROM silver.product_metrics WHERE source = 'profile' AND metric_id = 'audited_net_expense_ratio'"
     ).fetchone()[0]
-    pending(findings, "Profile", "audited_net_expense_ratio metric extracted", audited_fee_n > 0, f"{audited_fee_n:,} rows")
+    pending(
+        findings, "Profile", "audited_net_expense_ratio metric extracted", audited_fee_n > 0, f"{audited_fee_n:,} rows"
+    )
 
     tenure_n = con.execute(
         "SELECT COUNT(*) FROM silver.product_metrics WHERE source = 'profile' AND metric_id = 'manager_tenure_years'"
@@ -1025,21 +1389,36 @@ def run_pending(con: duckdb.DuckDBPyConnection, findings: list[Finding]) -> None
             (dimension_name = 'Unidentified' AND dimension_code IS NOT NULL)
         )
     """).fetchone()[0]
-    pending(findings, "Country", "ISO remaps applied (HR/BG/GU/UZ; Unidentified->NULL)", unmapped_countries == 0,
-            f"{unmapped_countries} unmapped rows" if unmapped_countries else "clean")
+    pending(
+        findings,
+        "Country",
+        "ISO remaps applied (HR/BG/GU/UZ; Unidentified->NULL)",
+        unmapped_countries == 0,
+        f"{unmapped_countries} unmapped rows" if unmapped_countries else "clean",
+    )
 
     legacy_telecom = con.execute("""
         SELECT COUNT(*) FROM silver.product_dimensions
         WHERE dimension_type = 'industry' AND dimension_name = 'Telecommunication Services-Discontinued eff 09/19/2020'
     """).fetchone()[0]
-    pending(findings, "Industry", "discontinued telecom remapped to Communication Services", legacy_telecom == 0,
-            f"{legacy_telecom} legacy rows remain" if legacy_telecom else "clean")
+    pending(
+        findings,
+        "Industry",
+        "discontinued telecom remapped to Communication Services",
+        legacy_telecom == 0,
+        f"{legacy_telecom} legacy rows remain" if legacy_telecom else "clean",
+    )
 
     mat_null = con.execute(
         "SELECT COUNT(*) FROM silver.product_dimensions WHERE dimension_type = 'maturity' AND dimension_code IS NULL"
     ).fetchone()[0]
-    pending(findings, "Maturity", "dimension_code populated with mat_* slugs", mat_null == 0,
-            f"{mat_null:,} rows still NULL" if mat_null else "clean")
+    pending(
+        findings,
+        "Maturity",
+        "dimension_code populated with mat_* slugs",
+        mat_null == 0,
+        f"{mat_null:,} rows still NULL" if mat_null else "clean",
+    )
 
     panel_exists = has_table(con, "silver", "monthly_panel")
     panel_detail = ""
@@ -1053,15 +1432,26 @@ def run_pending(con: duckdb.DuckDBPyConnection, findings: list[Finding]) -> None
 # 9. STATISTICAL CATALOG
 # ==============================================================================
 
-def run_catalog(con: duckdb.DuckDBPyConnection) -> tuple[
-    dict[str, Any], list[tuple], list[tuple], list[tuple], list[tuple], list[tuple]
-]:
+
+def run_catalog(
+    con: duckdb.DuckDBPyConnection,
+) -> tuple[dict[str, Any], list[tuple], list[tuple], list[tuple], list[tuple], list[tuple]]:
     print_section("9. STATISTICAL CATALOG", "Distributional profiling across all metrics and dimensions")
 
-    contracts_n = con.execute("SELECT COUNT(DISTINCT product_id) FROM bronze.contracts").fetchone()[0] if has_table(con, "bronze", "contracts") else 0
-    priced_n = con.execute("SELECT COUNT(DISTINCT product_id) FROM silver.products").fetchone()[0] if has_table(con, "silver", "products") else 0
+    contracts_n = (
+        con.execute("SELECT COUNT(DISTINCT product_id) FROM bronze.contracts").fetchone()[0]
+        if has_table(con, "bronze", "contracts")
+        else 0
+    )
+    priced_n = (
+        con.execute("SELECT COUNT(DISTINCT product_id) FROM silver.products").fetchone()[0]
+        if has_table(con, "silver", "products")
+        else 0
+    )
     m_rows, m_funds = con.execute("SELECT COUNT(*), COUNT(DISTINCT product_id) FROM silver.product_metrics").fetchone()
-    d_rows, d_funds = con.execute("SELECT COUNT(*), COUNT(DISTINCT product_id) FROM silver.product_dimensions").fetchone()
+    d_rows, d_funds = con.execute(
+        "SELECT COUNT(*), COUNT(DISTINCT product_id) FROM silver.product_dimensions"
+    ).fetchone()
 
     univ_base = priced_n or contracts_n or max(m_funds, d_funds, 1)
 
@@ -1103,10 +1493,37 @@ def run_catalog(con: duckdb.DuckDBPyConnection) -> tuple[
 
     render_table(
         "Dimensions Rollup by dimension_type",
-        ["Dimension Type", "Rows", "Names", "Codes", "Funds", "Univ %", "First Date", "Last Date", "Min", "Median", "Max", "Neg", ">1.0"],
         [
-            [r[0], f"{r[1]:,}", f"{r[2]:,}", f"{r[3]:,}", f"{r[4]:,}", f"{r[5]}%", str(r[6]), str(r[7]),
-             fmt_f(r[8]), fmt_f(r[9]), fmt_f(r[10]), f"{r[11]:,}", f"{r[12]:,}"]
+            "Dimension Type",
+            "Rows",
+            "Names",
+            "Codes",
+            "Funds",
+            "Univ %",
+            "First Date",
+            "Last Date",
+            "Min",
+            "Median",
+            "Max",
+            "Neg",
+            ">1.0",
+        ],
+        [
+            [
+                r[0],
+                f"{r[1]:,}",
+                f"{r[2]:,}",
+                f"{r[3]:,}",
+                f"{r[4]:,}",
+                f"{r[5]}%",
+                str(r[6]),
+                str(r[7]),
+                fmt_f(r[8]),
+                fmt_f(r[9]),
+                fmt_f(r[10]),
+                f"{r[11]:,}",
+                f"{r[12]:,}",
+            ]
             for r in dim_summary_rows
         ],
         align_right=[1, 2, 3, 4, 5, 8, 9, 10, 11, 12],
@@ -1144,10 +1561,39 @@ def run_catalog(con: duckdb.DuckDBPyConnection) -> tuple[
 
     render_table(
         f"silver.product_metrics Profile ({len(metrics_rows)} metrics)",
-        ["Source", "Metric ID", "Obs", "Funds", "Univ %", "First Date", "Last Date", "Min", "Median", "Max", "Mean", "StdDev", "Negs", "Ccys"],
         [
-            [r[0], r[1], f"{r[2]:,}", f"{r[3]:,}", f"{r[4]}%", str(r[5]), str(r[6]),
-             fmt_f(r[7]), fmt_f(r[9]), fmt_f(r[11]), fmt_f(r[12]), fmt_f(r[13]), f"{r[15]:,}", str(r[16])]
+            "Source",
+            "Metric ID",
+            "Obs",
+            "Funds",
+            "Univ %",
+            "First Date",
+            "Last Date",
+            "Min",
+            "Median",
+            "Max",
+            "Mean",
+            "StdDev",
+            "Negs",
+            "Ccys",
+        ],
+        [
+            [
+                r[0],
+                r[1],
+                f"{r[2]:,}",
+                f"{r[3]:,}",
+                f"{r[4]}%",
+                str(r[5]),
+                str(r[6]),
+                fmt_f(r[7]),
+                fmt_f(r[9]),
+                fmt_f(r[11]),
+                fmt_f(r[12]),
+                fmt_f(r[13]),
+                f"{r[15]:,}",
+                str(r[16]),
+            ]
             for r in metrics_rows
         ],
         align_right=[2, 3, 4, 7, 8, 9, 10, 11, 12, 13],
@@ -1202,10 +1648,7 @@ def run_catalog(con: duckdb.DuckDBPyConnection) -> tuple[
     render_table(
         "Style Box Grid Occupancy (12 standard cells)",
         ["Cell", "Selected", "Hist", "Funds", "Observed?"],
-        [
-            [r[0], f"{r[1]:,}", f"{r[2]:,}", f"{r[3]:,}", "YES" if r[4] else "NO"]
-            for r in style_box_rows
-        ],
+        [[r[0], f"{r[1]:,}", f"{r[2]:,}", f"{r[3]:,}", "YES" if r[4] else "NO"] for r in style_box_rows],
         align_right=[1, 2, 3],
     )
 
@@ -1224,6 +1667,7 @@ def run_catalog(con: duckdb.DuckDBPyConnection) -> tuple[
 # ==============================================================================
 # 10. SQLITE EXPORT
 # ==============================================================================
+
 
 def export_to_sqlite(
     db_path: Path,
@@ -1263,11 +1707,17 @@ def export_to_sqlite(
             dimension_funds INTEGER
         )
     """)
-    cur.execute("INSERT INTO universe VALUES (?,?,?,?,?,?)", (
-        footprint.get("contracts_n", 0), footprint.get("priced_n", 0),
-        footprint.get("metric_rows", 0), footprint.get("metric_funds", 0),
-        footprint.get("dimension_rows", 0), footprint.get("dimension_funds", 0),
-    ))
+    cur.execute(
+        "INSERT INTO universe VALUES (?,?,?,?,?,?)",
+        (
+            footprint.get("contracts_n", 0),
+            footprint.get("priced_n", 0),
+            footprint.get("metric_rows", 0),
+            footprint.get("metric_funds", 0),
+            footprint.get("dimension_rows", 0),
+            footprint.get("dimension_funds", 0),
+        ),
+    )
 
     cur.execute("""
         CREATE TABLE metrics (
@@ -1297,9 +1747,26 @@ def export_to_sqlite(
         "INSERT INTO metrics VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         [
             (
-                r[0], r[1], r[2], r[3], r[4], str(r[5]), str(r[6]),
-                r[7], r[8], r[9], r[10], r[11], r[12], r[13],
-                r[14], r[15], r[16], r[17], r[18], r[19],
+                r[0],
+                r[1],
+                r[2],
+                r[3],
+                r[4],
+                str(r[5]),
+                str(r[6]),
+                r[7],
+                r[8],
+                r[9],
+                r[10],
+                r[11],
+                r[12],
+                r[13],
+                r[14],
+                r[15],
+                r[16],
+                r[17],
+                r[18],
+                r[19],
             )
             for r in metrics_rows
         ],
@@ -1331,9 +1798,24 @@ def export_to_sqlite(
         "INSERT INTO dimensions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         [
             (
-                r[0], r[1], r[2], r[3], r[4], r[5], str(r[6]), str(r[7]),
-                r[8], r[9], r[10], r[11], r[12], r[13], r[14],
-                r[15], r[16], r[17],
+                r[0],
+                r[1],
+                r[2],
+                r[3],
+                r[4],
+                r[5],
+                str(r[6]),
+                str(r[7]),
+                r[8],
+                r[9],
+                r[10],
+                r[11],
+                r[12],
+                r[13],
+                r[14],
+                r[15],
+                r[16],
+                r[17],
             )
             for r in dims_rows
         ],
@@ -1360,8 +1842,19 @@ def export_to_sqlite(
         "INSERT INTO dimensions_summary VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
         [
             (
-                r[0], r[1], r[2], r[3], r[4], r[5], str(r[6]), str(r[7]),
-                r[8], r[9], r[10], r[11], r[12],
+                r[0],
+                r[1],
+                r[2],
+                r[3],
+                r[4],
+                r[5],
+                str(r[6]),
+                str(r[7]),
+                r[8],
+                r[9],
+                r[10],
+                r[11],
+                r[12],
             )
             for r in dim_summary_rows
         ],
@@ -1456,9 +1949,10 @@ def export_to_sqlite(
             last_seen TEXT
         )
     """)
-    cur.executemany("INSERT INTO payload_endpoint_summary VALUES (?,?,?,?,?,?,?)", [
-        (r[0], r[1], r[2], r[3], r[4], str(r[5]), str(r[6])) for r in ep_summary
-    ])
+    cur.executemany(
+        "INSERT INTO payload_endpoint_summary VALUES (?,?,?,?,?,?,?)",
+        [(r[0], r[1], r[2], r[3], r[4], str(r[5]), str(r[6])) for r in ep_summary],
+    )
 
     cur.execute("""
         CREATE TABLE payload_mutation_cadence (
@@ -1541,10 +2035,18 @@ def export_to_sqlite(
         "INSERT INTO effective_date_cadence VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
         [
             (
-                r[0], r[1], r[2], r[3],
-                _int_or_none(r[4]), _int_or_none(r[5]), _int_or_none(r[6]),
-                _int_or_none(r[7]), _int_or_none(r[8]), _int_or_none(r[9]),
-                _int_or_none(r[10]), _int_or_none(r[11]),
+                r[0],
+                r[1],
+                r[2],
+                r[3],
+                _int_or_none(r[4]),
+                _int_or_none(r[5]),
+                _int_or_none(r[6]),
+                _int_or_none(r[7]),
+                _int_or_none(r[8]),
+                _int_or_none(r[9]),
+                _int_or_none(r[10]),
+                _int_or_none(r[11]),
             )
             for r in cadence_rows
         ],
@@ -1566,8 +2068,14 @@ def export_to_sqlite(
         "INSERT INTO first_observation_reach VALUES (?,?,?,?,?,?,?,?)",
         [
             (
-                r[0], r[1], r[2], r[3],
-                _int_or_none(r[4]), _int_or_none(r[5]), _int_or_none(r[6]), _int_or_none(r[7]),
+                r[0],
+                r[1],
+                r[2],
+                r[3],
+                _int_or_none(r[4]),
+                _int_or_none(r[5]),
+                _int_or_none(r[6]),
+                _int_or_none(r[7]),
             )
             for r in reach_rows
         ],
@@ -1620,6 +2128,7 @@ def export_to_sqlite(
 # 11. SCORECARD
 # ==============================================================================
 
+
 def print_scorecard(findings: list[Finding]) -> int:
     print_section("11. SCORECARD", "Structural invariants pass/fail & open migration items")
 
@@ -1652,6 +2161,7 @@ def print_scorecard(findings: list[Finding]) -> int:
 # ==============================================================================
 # MAIN
 # ==============================================================================
+
 
 def main() -> int:
     db_path = Path("data/etf.duckdb")

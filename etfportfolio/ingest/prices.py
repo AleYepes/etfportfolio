@@ -7,11 +7,9 @@ from __future__ import annotations
 
 import logging
 import math
-from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-import duckdb
 from ib_async import BarData, Contract
 
 from etfportfolio.core.config import settings
@@ -19,14 +17,28 @@ from etfportfolio.core.db import AsyncDbWorker
 from etfportfolio.core.logging import console
 from etfportfolio.core.progress import progress_bar
 from etfportfolio.ingest.gateway import IBConnectionError, ib_connection
-from etfportfolio.ingest.utils import ProductContract, is_fresh
+from etfportfolio.ingest.series import (
+    FETCH_MARGIN_DAYS,
+    MIN_REFETCH_RETENTION_RATIO,
+    OVERLAP_CALENDAR_DAYS,
+    SeriesSpec,
+    get_last_date,
+    get_series_count,
+    has_historical_series_change,
+    is_series_fresh,
+    load_series_status,
+    overlap_start_for,
+    record_series_status,
+    replace_series,
+    upsert_series,
+    validate_overlap,
+)
+from etfportfolio.ingest.utils import ProductContract
 
 logger = logging.getLogger(__name__)
 
 WHAT_TO_SHOW = "ADJUSTED_LAST"
 BAR_SIZE = "1 day"
-OVERLAP_CALENDAR_DAYS = 14
-FETCH_MARGIN_DAYS = 2
 
 PRICE_REL_TOL = 1e-4  # 1 basis point
 PRICE_ABS_TOL = 0.01  # 1 cent
@@ -35,33 +47,20 @@ SETTLEMENT_REL_TOL = 0.01  # 1.00% max tolerance for recent settlement drift
 SETTLEMENT_ABS_TOL = 0.10  # $0.10 max absolute drift for recent settlement prints
 SETTLEMENT_TRADING_DAYS = 5  # Last 4-5 trading days horizon for settlement drift
 
-MIN_REFETCH_RETENTION_RATIO = 0.90  # Refetch must contain >= 90% of existing bars
-
-
-@dataclass(frozen=True)
-class SeriesSpec:
-    """Table/column layout for one bronze timeseries + its cold_storage archive."""
-
-    bronze_table: str
-    cold_table: str
-    columns: tuple[str, ...]
-    value_columns: tuple[str, ...]
-
-
 PRICES_SPEC = SeriesSpec(
     bronze_table="bronze.prices",
     cold_table="cold_storage.prices",
-    columns=("open", "high", "low", "close", "volume", "average", "bar_count"),
-    value_columns=("open", "high", "low", "close"),  # Exclude volume, average, bar_count
+    status_table="bronze.price_status",
+    entity_columns=("product_id",),
+    data_columns=("open", "high", "low", "close", "volume", "average", "bar_count"),
+    tolerance_columns=("open", "high", "low", "close"),
+    rel_tol=PRICE_REL_TOL,
+    abs_tol=PRICE_ABS_TOL,
+    settlement_rel_tol=SETTLEMENT_REL_TOL,
+    settlement_abs_tol=SETTLEMENT_ABS_TOL,
+    settlement_trading_days=SETTLEMENT_TRADING_DAYS,
+    detect_splits=True,
 )
-
-
-@dataclass(frozen=True)
-class PriceSeriesStatus:
-    last_date: datetime | None
-    last_updated: datetime | None  # MAX(bronze.prices.updated_at)
-    last_checked_at: datetime | None  # MAX(bronze.price_status.last_checked_at)
-    status: str | None  # 'ok', 'no_data', 'error', or None
 
 
 def format_duration(days: int) -> str:
@@ -74,305 +73,6 @@ def format_duration(days: int) -> str:
         return f"{max(days, 10)} D"
     years = math.ceil(days / 365.25)
     return f"{min(years, 30)} Y"
-
-
-def overlap_start_for(last_date: datetime) -> datetime:
-    """Closed-closed window W starts at last_date minus OVERLAP_CALENDAR_DAYS."""
-    return last_date - timedelta(days=OVERLAP_CALENDAR_DAYS)
-
-
-def validate_overlap(
-    conn: duckdb.DuckDBPyConnection,
-    spec: SeriesSpec,
-    product_id: int,
-    new_points: dict[datetime, dict[str, Any]],
-    last_date: datetime,
-) -> tuple[bool, str | None]:
-    """Set-equality checksum on W = [last_date - 14d, last_date] (closed-closed).
-
-    Dates outside W are ignored (fetch margin before W; new tail after last_date).
-    Value columns are compared with calibrated tolerances; missing/None on either side is skipped.
-    Returns (is_valid, mismatch_type) where mismatch_type is None, 'date_mismatch',
-    'value_mismatch', or 'corporate_action'.
-    """
-    start = overlap_start_for(last_date)
-    col_sql = ", ".join(("date", *spec.columns))
-    existing_rows = conn.execute(
-        f"""
-        SELECT {col_sql}
-        FROM {spec.bronze_table}
-        WHERE product_id = $1 AND date >= $2 AND date <= $3
-        ORDER BY date ASC
-        """,
-        [product_id, start, last_date],
-    ).fetchall()
-
-    existing_dates = [row[0] for row in existing_rows]
-    existing_set = set(existing_dates)
-    existing_vals: dict[datetime, dict[str, Any]] = {
-        row[0]: {col: row[i + 1] for i, col in enumerate(spec.columns)} for row in existing_rows
-    }
-
-    new_in_w = {d: vals for d, vals in new_points.items() if start <= d <= last_date}
-    new_dates = set(new_in_w)
-
-    if existing_set != new_dates:
-        return False, "date_mismatch"
-
-    mismatched_dates: list[datetime] = []
-    for d in sorted(new_in_w):
-        old_vals = existing_vals[d]
-        new_vals = new_in_w[d]
-        diff_found = False
-        for key in spec.value_columns:
-            v1, v2 = old_vals.get(key), new_vals.get(key)
-            if (
-                v1 is not None
-                and v2 is not None
-                and not math.isclose(float(v1), float(v2), rel_tol=PRICE_REL_TOL, abs_tol=PRICE_ABS_TOL)
-            ):
-                diff_found = True
-                break
-        if diff_found:
-            mismatched_dates.append(d)
-
-    if not mismatched_dates:
-        return True, None
-
-    # Partition into Historical Core and Recent Settlement Horizon
-    recent_dates = (
-        set(existing_dates[-SETTLEMENT_TRADING_DAYS:])
-        if len(existing_dates) >= SETTLEMENT_TRADING_DAYS
-        else set(existing_dates)
-    )
-    core_dates = [d for d in existing_dates if d not in recent_dates]
-    core_mismatches = [d for d in mismatched_dates if d in core_dates]
-
-    # Helper: ratio uniformity test to detect multiplicative corporate actions (splits/dividends)
-    def _is_uniform_ratio_shift(dates: list[datetime]) -> bool:
-        if len(dates) < 2:
-            return False
-        ratios = []
-        for d in dates:
-            c_old = float(existing_vals[d]["close"])
-            c_new = float(new_in_w[d]["close"])
-            if c_old > 0:
-                ratios.append(c_new / c_old)
-        if len(ratios) < 2:
-            return False
-        mean_r = sum(ratios) / len(ratios)
-        variance = sum((r - mean_r) ** 2 for r in ratios) / len(ratios)
-        std_r = math.sqrt(variance)
-        return std_r <= 1e-3 and abs(mean_r - 1.0) > 1e-3
-
-    # Any discrepancy in historical core indicates a structural restatement / split
-    if core_mismatches:
-        return False, "corporate_action"
-
-    # Discrepancies are isolated to recent settlement horizon (last 4-5 trading days)
-    # Check if this recent adjustment is actually a uniform split that happened recently
-    recent_mismatches = [d for d in mismatched_dates if d in recent_dates]
-    if _is_uniform_ratio_shift(recent_mismatches):
-        return False, "corporate_action"
-
-    # Verify all differing fields in recent dates fall within bounded settlement envelope
-    for d in recent_mismatches:
-        old_bar = existing_vals[d]
-        new_bar = new_in_w[d]
-        for key in spec.value_columns:
-            v1, v2 = old_bar.get(key), new_bar.get(key)
-            if v1 is not None and v2 is not None:
-                f1, f2 = float(v1), float(v2)
-                if not math.isclose(f1, f2, rel_tol=PRICE_REL_TOL, abs_tol=PRICE_ABS_TOL):
-                    abs_diff = abs(f2 - f1)
-                    rel_diff = abs_diff / abs(f1) if f1 != 0 else float("inf")
-                    if abs_diff > SETTLEMENT_ABS_TOL and rel_diff > SETTLEMENT_REL_TOL:
-                        return False, "value_mismatch"
-
-    logger.info(
-        "Product %d: accepted bounded settlement revision on %s; overwriting with official settlement.",
-        product_id,
-        [d.strftime("%Y-%m-%d") for d in mismatched_dates],
-    )
-    return True, None
-
-
-def _insert_points(
-    conn: duckdb.DuckDBPyConnection,
-    spec: SeriesSpec,
-    product_id: int,
-    points: dict[datetime, dict[str, Any]],
-    now: datetime,
-) -> None:
-    col_sql = ", ".join(("product_id", "date", *spec.columns, "updated_at"))
-    placeholders = ", ".join(f"${i + 1}" for i in range(len(spec.columns) + 3))
-    sql = f"INSERT INTO {spec.bronze_table} ({col_sql}) VALUES ({placeholders})"
-    for bar_date, point in points.items():
-        params: list[Any] = [product_id, bar_date]
-        params.extend(point.get(col) for col in spec.columns)
-        params.append(now)
-        conn.execute(sql, params)
-
-
-def replace_series(
-    conn: duckdb.DuckDBPyConnection,
-    spec: SeriesSpec,
-    product_id: int,
-    points: dict[datetime, dict[str, Any]],
-    *,
-    archive: bool = False,
-    reason: str | None = None,
-) -> None:
-    """Replace all bronze rows for a product. Optionally archive first (same txn).
-
-    `archive=True` is only for mismatch-triggered replace. `--force` and first
-    fill pass archive=False.
-    """
-    now = datetime.now(UTC).replace(tzinfo=None)
-    conn.execute("BEGIN TRANSACTION")
-    try:
-        if archive:
-            if not reason:
-                raise ValueError("archive=True requires a mismatch reason")
-            col_sql = ", ".join(("product_id", "run_id", "date", *spec.columns, "reason"))
-            select_cols = ", ".join(("product_id", "$2", "date", *spec.columns, "$3"))
-            conn.execute(
-                f"""
-                INSERT INTO {spec.cold_table} ({col_sql})
-                SELECT {select_cols}
-                FROM {spec.bronze_table}
-                WHERE product_id = $1
-                """,
-                [product_id, now, reason],
-            )
-        conn.execute(
-            f"DELETE FROM {spec.bronze_table} WHERE product_id = $1",
-            [product_id],
-        )
-        _insert_points(conn, spec, product_id, points, now)
-        conn.execute("COMMIT")
-    except Exception:
-        conn.execute("ROLLBACK")
-        raise
-
-
-def upsert_series(
-    conn: duckdb.DuckDBPyConnection,
-    spec: SeriesSpec,
-    product_id: int,
-    points: dict[datetime, dict[str, Any]],
-) -> None:
-    """Upsert points (overlap window bars and incremental tail).
-
-    Overlapping bars are updated in place with fresh auction settlement prints
-    and volume reconciliations, updating their updated_at timestamp.
-    """
-    now = datetime.now(UTC).replace(tzinfo=None)
-    col_sql = ", ".join(("product_id", "date", *spec.columns, "updated_at"))
-    placeholders = ", ".join(f"${i + 1}" for i in range(len(spec.columns) + 3))
-    assignments = ", ".join(f"{col} = EXCLUDED.{col}" for col in (*spec.columns, "updated_at"))
-    sql = f"""
-    INSERT INTO {spec.bronze_table} ({col_sql})
-    VALUES ({placeholders})
-    ON CONFLICT (product_id, date) DO UPDATE SET
-        {assignments}
-    """
-    conn.execute("BEGIN TRANSACTION")
-    try:
-        for bar_date, point in points.items():
-            params: list[Any] = [product_id, bar_date]
-            params.extend(point.get(col) for col in spec.columns)
-            params.append(now)
-            conn.execute(sql, params)
-        conn.execute("COMMIT")
-    except Exception:
-        conn.execute("ROLLBACK")
-        raise
-
-
-def _record_price_status(
-    conn: duckdb.DuckDBPyConnection,
-    product_id: int,
-    status: str,
-    error_message: str | None = None,
-) -> None:
-    now = datetime.now(UTC).replace(tzinfo=None)
-    truncated_msg = error_message[:500] if error_message else None
-    conn.execute(
-        """
-        INSERT INTO bronze.price_status (product_id, last_checked_at, status, error_message)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (product_id) DO UPDATE SET
-            last_checked_at = EXCLUDED.last_checked_at,
-            status = EXCLUDED.status,
-            error_message = EXCLUDED.error_message
-        """,
-        [product_id, now, status, truncated_msg],
-    )
-
-
-def _load_price_series_status(conn: duckdb.DuckDBPyConnection) -> dict[int, PriceSeriesStatus]:
-    """Load product_id -> PriceSeriesStatus from bronze tables."""
-    rows = conn.execute(
-        """
-        SELECT
-            c.product_id,
-            MAX(pr.date) AS last_date,
-            MAX(pr.updated_at) AS last_updated,
-            MAX(ps.last_checked_at) AS last_checked_at,
-            MAX(ps.status) AS status
-        FROM bronze.contracts c
-        LEFT JOIN bronze.prices pr ON c.product_id = pr.product_id
-        LEFT JOIN bronze.price_status ps ON c.product_id = ps.product_id
-        GROUP BY c.product_id
-        """
-    ).fetchall()
-    return {
-        row[0]: PriceSeriesStatus(
-            last_date=row[1],
-            last_updated=row[2],
-            last_checked_at=row[3],
-            status=row[4],
-        )
-        for row in rows
-    }
-
-
-def is_series_fresh(
-    status: PriceSeriesStatus | None,
-    target_date: datetime,
-    hours: float,
-) -> bool:
-    """Evaluate price freshness with differentiated status dampening.
-
-    1. Fresh if price bars reach target_date (yesterday).
-    2. Fresh if checked within hours and status was 'ok' or 'no_data'.
-    3. Fresh if last prices were updated within hours and status was 'ok' or 'no_data' (fallback).
-    4. An 'error' or None status is NEVER fresh; retried on subsequent runs.
-    """
-    if not status:
-        return False
-    if status.last_date is not None and status.last_date >= target_date:
-        return True
-    if status.status in ("ok", "no_data"):
-        return is_fresh(status.last_checked_at, hours) or is_fresh(status.last_updated, hours)
-    return False
-
-
-def _get_last_date(conn: duckdb.DuckDBPyConnection, product_id: int) -> datetime | None:
-    row = conn.execute(
-        "SELECT MAX(date) FROM bronze.prices WHERE product_id = $1",
-        [product_id],
-    ).fetchone()
-    return row[0] if row and row[0] else None
-
-
-def _get_series_count(conn: duckdb.DuckDBPyConnection, product_id: int) -> int:
-    row = conn.execute(
-        "SELECT COUNT(*) FROM bronze.prices WHERE product_id = $1",
-        [product_id],
-    ).fetchone()
-    return row[0] if row else 0
 
 
 def _extract_bars(
@@ -439,41 +139,6 @@ async def _fetch_historical(
     return bars or []
 
 
-def _has_historical_price_change(
-    conn: duckdb.DuckDBPyConnection,
-    spec: SeriesSpec,
-    product_id: int,
-    new_bars: dict[datetime, dict[str, Any]],
-    cutoff_date: datetime,
-) -> bool:
-    """Returns True if any historical bar (date < cutoff_date) differs between bronze and new_bars."""
-    col_sql = ", ".join(("date", *spec.value_columns))
-    rows = conn.execute(
-        f"""
-        SELECT {col_sql}
-        FROM {spec.bronze_table}
-        WHERE product_id = $1 AND date < $2
-        """,
-        [product_id, cutoff_date],
-    ).fetchall()
-
-    for row in rows:
-        d = row[0]
-        new_val = new_bars.get(d)
-        if new_val is None:
-            return True  # A bar was dropped or date changed
-        for i, col in enumerate(spec.value_columns):
-            v_old = row[i + 1]
-            v_new = new_val.get(col)
-            if (
-                v_old is not None
-                and v_new is not None
-                and not math.isclose(float(v_old), float(v_new), rel_tol=PRICE_REL_TOL, abs_tol=PRICE_ABS_TOL)
-            ):
-                return True
-    return False
-
-
 async def _fetch_and_store(
     worker: AsyncDbWorker,
     ib: Any,
@@ -484,7 +149,7 @@ async def _fetch_and_store(
     Initial fetch pulls 30 Y. Incremental fetch calculates duration with
     14-day overlap and 2-day margin, replacing and archiving on mismatch.
     """
-    last_date = await worker.submit(_get_last_date, product.product_id)
+    last_date = await worker.submit(get_last_date, PRICES_SPEC, product.product_id)
     today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
     yesterday = today - timedelta(days=1)
 
@@ -494,10 +159,10 @@ async def _fetch_and_store(
         new_bars = _extract_bars(bars, max_date=yesterday)
         if new_bars:
             await worker.submit(replace_series, PRICES_SPEC, product.product_id, new_bars, archive=False)
-            await worker.submit(_record_price_status, product.product_id, "ok", None)
+            await worker.submit(record_series_status, PRICES_SPEC, product.product_id, "ok", None)
             logger.info("Product %d: full price refetch complete (%d bars)", product.product_id, len(new_bars))
         else:
-            await worker.submit(_record_price_status, product.product_id, "no_data", None)
+            await worker.submit(record_series_status, PRICES_SPEC, product.product_id, "no_data", None)
             logger.warning("Product %d: no price bars returned", product.product_id)
         return
 
@@ -507,7 +172,7 @@ async def _fetch_and_store(
     new_bars = _extract_bars(bars, max_date=yesterday)
 
     if not new_bars:
-        await worker.submit(_record_price_status, product.product_id, "no_data", None)
+        await worker.submit(record_series_status, PRICES_SPEC, product.product_id, "no_data", None)
         logger.info("Product %d: no price bars returned for incremental update", product.product_id)
         return
 
@@ -519,7 +184,7 @@ async def _fetch_and_store(
             product.product_id,
             mismatch_type,
         )
-        existing_count = await worker.submit(_get_series_count, product.product_id)
+        existing_count = await worker.submit(get_series_count, PRICES_SPEC, product.product_id)
 
         full_bars_raw = await _fetch_historical(ib, product, "30 Y", end_datetime="")
         full_bars = _extract_bars(full_bars_raw, max_date=yesterday)
@@ -538,13 +203,13 @@ async def _fetch_and_store(
                 product.product_id,
                 err_msg,
             )
-            await worker.submit(_record_price_status, product.product_id, "error", err_msg)
+            await worker.submit(record_series_status, PRICES_SPEC, product.product_id, "error", err_msg)
             return
 
         if full_bars:
             overlap_start = overlap_start_for(last_date)
             hist_changed = await worker.submit(
-                _has_historical_price_change,
+                has_historical_series_change,
                 PRICES_SPEC,
                 product.product_id,
                 full_bars,
@@ -577,9 +242,9 @@ async def _fetch_and_store(
                     product.product_id,
                     len(full_bars),
                 )
-            await worker.submit(_record_price_status, product.product_id, "ok", None)
+            await worker.submit(record_series_status, PRICES_SPEC, product.product_id, "ok", None)
         else:
-            await worker.submit(_record_price_status, product.product_id, "no_data", None)
+            await worker.submit(record_series_status, PRICES_SPEC, product.product_id, "no_data", None)
             logger.warning(
                 "Product %d: full refetch returned no bars after mismatch. Preserving existing rows.",
                 product.product_id,
@@ -589,7 +254,7 @@ async def _fetch_and_store(
     overlap_start = overlap_start_for(last_date)
     points_to_store = {d: pt for d, pt in new_bars.items() if d >= overlap_start}
     await worker.submit(upsert_series, PRICES_SPEC, product.product_id, points_to_store)
-    await worker.submit(_record_price_status, product.product_id, "ok", None)
+    await worker.submit(record_series_status, PRICES_SPEC, product.product_id, "ok", None)
     logger.info("Product %d: incremental price update complete (%d bars)", product.product_id, len(points_to_store))
 
 
@@ -604,7 +269,7 @@ async def _run_price_ingestion(force: bool = False) -> int:
         if force:
             to_process = products
         else:
-            status_cache = await worker.submit(_load_price_series_status)
+            status_cache = await worker.submit(load_series_status, PRICES_SPEC)
             today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
             yesterday = today - timedelta(days=1)
             to_process = [
@@ -637,7 +302,7 @@ async def _run_price_ingestion(force: bool = False) -> int:
                         raise
                     except Exception as e:
                         logger.error("Failed to fetch prices for product %d: %s", product.product_id, e)
-                        await worker.submit(_record_price_status, product.product_id, "error", str(e))
+                        await worker.submit(record_series_status, PRICES_SPEC, product.product_id, "error", str(e))
                     finally:
                         bar.update(1)
 
