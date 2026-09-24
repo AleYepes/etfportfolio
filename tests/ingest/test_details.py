@@ -43,7 +43,7 @@ async def test_process_product_skips_when_fresh(tmp_path):
     now = datetime.now(UTC)
 
     # Prepare caches indicating everything is fresh
-    from etfportfolio.ingest import endpoints
+    from etfportfolio.core import endpoints
 
     landing_cache = {1001: now}
     endpoint_cache = {(1001, ep.url_prefix): now for ep in endpoints.UNGATED_ENDPOINTS}
@@ -101,7 +101,7 @@ async def test_process_product_landing_changed_fetches_gated(tmp_path):
     assert mock_gate.called
     assert mock_commit.called
     # Both ungated and gated endpoints should be fetched
-    from etfportfolio.ingest import endpoints
+    from etfportfolio.core import endpoints
 
     total_expected_eps = len(endpoints.DETAILS_ENDPOINTS)
     assert mock_snap.call_count == total_expected_eps

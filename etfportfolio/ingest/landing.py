@@ -3,8 +3,9 @@ import logging
 import duckdb
 import httpx
 
+from etfportfolio.core import endpoints
 from etfportfolio.core.db import AsyncDbWorker
-from etfportfolio.ingest import endpoints, session
+from etfportfolio.ingest import session
 from etfportfolio.ingest.utils import content_address, gc_preview_blob, store_blob
 
 logger = logging.getLogger(__name__)

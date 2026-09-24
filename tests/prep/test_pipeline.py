@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import UTC, date, datetime
 from pathlib import Path
 
@@ -17,7 +19,7 @@ def obs_test_db(tmp_path: Path):
 
     conn.execute(
         """
-        INSERT INTO bronze.products (product_id, symbol, currency, created_at, updated_at)
+        INSERT INTO bronze.contracts (product_id, symbol, currency, created_at, updated_at)
         VALUES (8335, 'ICF', 'USD', now(), now())
         """
     )
@@ -62,7 +64,7 @@ def obs_test_db(tmp_path: Path):
         {
             "asOfDate": "20260822",
             "coverage": 0.99,
-            "content": [{"name": "TRESGS", "value": 7}],
+            "content": [{"name": "TRESGS", "value": 70}],
         },
         fetched_at=t,
     )
@@ -100,7 +102,7 @@ def obs_test_db(tmp_path: Path):
         fetched_at=t,
     )
 
-    # 6. empty stub (valid no-op)
+    # 6. empty stub (valid no-op, watermarked)
     store_snapshot(
         conn,
         8335,
@@ -125,72 +127,242 @@ def test_pipeline_execution_and_idempotency(obs_test_db):
     watermark_row = conn.execute("SELECT COUNT(*) FROM silver.processed_snapshots").fetchone()
     assert watermark_row is not None and watermark_row[0] == 6
 
-    # Verify silver.product_metrics
-    metrics = conn.execute(
+    # Verify silver.observations
+    obs_rows = conn.execute(
         """
-        SELECT source, metric_id, effective_date, effective_date_source, value, currency
-        FROM silver.product_metrics
-        ORDER BY source, metric_id
-        """
-    ).fetchall()
-    metrics_dict = {(r[0], r[1]): (r[2], r[3], r[4], r[5]) for r in metrics}
-    assert metrics_dict[("ratios", "price_earnings")] == (date(2026, 7, 31), "payload", 25.5, None)
-    assert metrics_dict[("profile", "is_passive")] == (date(2026, 9, 1), "snapshot", 1.0, None)
-    assert pytest.approx(metrics_dict[("profile", "total_expense_ratio")][2]) == 0.0032
-    assert metrics_dict[("profile", "total_expense_ratio")][3] is None
-    assert metrics_dict[("profile", "total_net_assets_local")][0] == date(2026, 7, 31)
-    assert metrics_dict[("profile", "total_net_assets_local")][3] == "USD"
-    assert metrics_dict[("esg", "esg_coverage")] == (date(2026, 8, 22), "payload", 0.99, None)
-    assert metrics_dict[("esg", "tresgs")] == (date(2026, 8, 22), "payload", 7.0, None)
-    assert metrics_dict[("theme_weights", "theme_coverage")][2] == pytest.approx(0.91)
-    assert metrics_dict[("theme_weights", "theme_coverage")][3] is None
-
-    # Verify silver.product_dimensions
-    dims = conn.execute(
-        """
-        SELECT dimension_type, dimension_name, dimension_code, effective_date, value
-        FROM silver.product_dimensions
-        ORDER BY dimension_type, dimension_name
+        SELECT family, metric, code, effective_date, date_source_depth, value, raw_value
+        FROM silver.observations
+        ORDER BY family, metric
         """
     ).fetchall()
-    assert len(dims) == 2
+    by_fm = {(r[0], r[1]): r for r in obs_rows}
 
-    dims_dict = {(r[0], r[1]): (r[2], r[3], r[4]) for r in dims}
-    assert dims_dict[("asset_class", "Equity")][0] is None
-    assert dims_dict[("asset_class", "Equity")][1] == date(2026, 7, 31)
-    assert pytest.approx(dims_dict[("asset_class", "Equity")][2]) == 0.998
+    # Ratios
+    assert ("ratios", "price_earnings") in by_fm
+    r_pe = by_fm[("ratios", "price_earnings")]
+    assert r_pe[3] == date(2026, 7, 31)
+    assert r_pe[4] == 1  # Depth
+    assert r_pe[5] == 25.5
 
-    assert dims_dict[("theme", "Discount Retail")][0] == "006a0c27-4a9a-4766-8988-0d8acc6ede8b"
-    assert dims_dict[("theme", "Discount Retail")][1] == date(2026, 9, 1)
-    assert pytest.approx(dims_dict[("theme", "Discount Retail")][2]) == 0.009
+    # Profile
+    assert ("profile", "is_passive") in by_fm
+    assert by_fm[("profile", "is_passive")][5] == 1.0
 
-    top_holding_count = conn.execute(
-        "SELECT COUNT(*) FROM silver.product_dimensions WHERE dimension_type = 'top_holding'"
-    ).fetchone()
-    assert top_holding_count[0] == 0
+    assert ("profile", "total_expense_ratio") in by_fm
+    assert pytest.approx(by_fm[("profile", "total_expense_ratio")][5]) == 0.0032
+
+    assert ("profile", "total_net_assets_local") in by_fm
+    aum = by_fm[("profile", "total_net_assets_local")]
+    assert aum[2] == "USD"
+    assert aum[3] == date(2026, 7, 31)
+    assert aum[4] == 3  # Depth 3 leaf
+
+    # ESG
+    assert ("profile", "esg_coverage") in by_fm
+    assert pytest.approx(by_fm[("profile", "esg_coverage")][5]) == 0.99
+
+    assert ("esg", "tresgs") in by_fm
+    assert by_fm[("esg", "tresgs")][5] == 70.0
+
+    # Asset class
+    assert ("asset_class", "equity") in by_fm
+    assert pytest.approx(by_fm[("asset_class", "equity")][5]) == 1.0
+
+    # Themes
+    assert ("profile", "theme_coverage") in by_fm
+    assert ("theme", "discount_retail") in by_fm
+    assert ("rank_adj_theme", "discount_retail") in by_fm
+    assert by_fm[("theme", "discount_retail")][2] == "006a0c27-4a9a-4766-8988-0d8acc6ede8b"
 
     conn.close()
 
-    # 2. Immediate second run: all up to date, 0 processed
-    processed_again = run_observations(force=False, db_path=obs_test_db)
-    assert processed_again == 0
+    # 2. Second run: all up to date -> 0 processed
+    assert run_observations(force=False, db_path=obs_test_db) == 0
 
-    # 3. Run with force=True: wipes and repopulates
-    processed_force = run_observations(force=True, db_path=obs_test_db)
-    assert processed_force == 6
-
+    # 3. Force rebuild: deletes and re-extracts
+    assert run_observations(force=True, db_path=obs_test_db) == 6
     conn = duckdb.connect(obs_test_db)
-    proc_row = conn.execute("SELECT COUNT(*) FROM silver.processed_snapshots").fetchone()
-    assert proc_row is not None
-    assert proc_row[0] == 6
+    proc_cnt = conn.execute("SELECT COUNT(*) FROM silver.processed_snapshots").fetchone()[0]
+    assert proc_cnt == 6
+    obs_cnt = conn.execute("SELECT COUNT(*) FROM silver.observations").fetchone()[0]
+    assert obs_cnt == len(obs_rows)
+    conn.close()
 
-    met_row = conn.execute("SELECT COUNT(*) FROM silver.product_metrics").fetchone()
-    assert met_row is not None
-    assert met_row[0] == len(metrics)
 
-    dim_row = conn.execute("SELECT COUNT(*) FROM silver.product_dimensions").fetchone()
-    assert dim_row is not None
-    assert dim_row[0] == 2
+def test_pipeline_isolation(tmp_path: Path):
+    """Test that a bad snapshot does not roll back siblings or watermark itself."""
+    db_file = str(tmp_path / "isolation.duckdb")
+    conn = duckdb.connect(db_file)
+    apply_schema(conn)
+
+    conn.execute(
+        """
+        INSERT INTO bronze.contracts (product_id, symbol, currency, created_at, updated_at)
+        VALUES (1, 'AAA', 'USD', now(), now()), (2, 'BBB', 'USD', now(), now())
+        """
+    )
+    t = datetime(2026, 9, 1, 12, 0, 0, tzinfo=UTC)
+
+    # Good snapshot 1
+    store_snapshot(
+        conn,
+        1,
+        "/tws.proxy/fundamentals/mf_ratios_fundamentals/",
+        "slug",
+        {"as_of_date": "2026-07-31", "ratios": [{"name_tag": "price_earnings", "value": 20.0}]},
+        fetched_at=t,
+    )
+
+    # Bad snapshot 2 (corrupt payload blob)
+    store_snapshot(
+        conn,
+        1,
+        "/tws.proxy/fundamentals/mf_holdings/",
+        "slug",
+        {"raw": "corrupt"},
+        fetched_at=t,
+    )
+    # Corrupt its blob in bronze.payload_blobs
+    bad_hash = conn.execute(
+        "SELECT hash FROM bronze.snapshots WHERE url_prefix = '/tws.proxy/fundamentals/mf_holdings/'"
+    ).fetchone()[0]
+    conn.execute("UPDATE bronze.payload_blobs SET payload = 'NOT_ZSTD' WHERE hash = ?", [bad_hash])
+
+    # Bad snapshot 3 (causes extract failure: unknown closed-vocab tag in ratios)
+    store_snapshot(
+        conn,
+        2,
+        "/tws.proxy/fundamentals/mf_ratios_fundamentals/",
+        "slug",
+        {"as_of_date": "2026-07-31", "ratios": [{"name_tag": "totally_invalid_ratio_key", "value": 1.0}]},
+        fetched_at=t,
+    )
+
+    # Good snapshot 4
+    store_snapshot(
+        conn,
+        2,
+        "/tws.proxy/impact/esg/",
+        "slug",
+        {"asOfDate": "2026-07-31", "content": [{"name": "TRESGS", "value": 85}]},
+        fetched_at=t,
+    )
+
+    conn.close()
+
+    # 4 snapshots total: 2 good, 2 bad.
+    watermarked = run_observations(force=False, db_path=db_file)
+    assert watermarked == 2
+
+    conn = duckdb.connect(db_file)
+    watermarked_ids = [r[0] for r in conn.execute("SELECT snapshot_id FROM silver.processed_snapshots").fetchall()]
+    assert len(watermarked_ids) == 2
+
+    # Check observations table contains rows from good snapshots 1 and 4
+    obs = conn.execute(
+        "SELECT product_id, family, metric, value FROM silver.observations ORDER BY product_id"
+    ).fetchall()
+    assert len(obs) == 2
+    assert obs[0] == (1, "ratios", "price_earnings", 20.0)
+    assert obs[1] == (2, "esg", "tresgs", 85.0)
+    conn.close()
+
+
+def test_pipeline_collision_depth_wins(tmp_path: Path):
+    db_file = str(tmp_path / "depth_test.duckdb")
+    conn = duckdb.connect(db_file)
+    apply_schema(conn)
+
+    conn.execute(
+        """
+        INSERT INTO bronze.contracts (product_id, symbol, currency, created_at, updated_at)
+        VALUES (10, 'CCC', 'USD', now(), now())
+        """
+    )
+    t = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
+
+    # Snapshot with lower depth (e.g. depth 0 or depth 1)
+    store_snapshot(
+        conn,
+        10,
+        "/tws.proxy/fundamentals/mf_profile_and_fees/",
+        "slug1",
+        {
+            "fund_and_profile": [
+                {"name": "Total Net Assets (Month End)", "value": "$50M"}  # No embedded date -> depth 0
+            ]
+        },
+        fetched_at=t,
+    )
+
+    # Snapshot with higher depth for same effective_date (depth 3 leaf)
+    store_snapshot(
+        conn,
+        10,
+        "/tws.proxy/fundamentals/mf_profile_and_fees/",
+        "slug2",
+        {
+            "fund_and_profile": [
+                {"name": "Total Net Assets (Month End)", "value": "$80M (2026/09/01)"}  # embedded date matches t.date()
+            ]
+        },
+        fetched_at=t,
+    )
+    conn.close()
+
+    run_observations(force=False, db_path=db_file)
+
+    conn = duckdb.connect(db_file)
+    row = conn.execute(
+        "SELECT value, date_source_depth FROM silver.observations WHERE metric = 'total_net_assets_local'"
+    ).fetchone()
+    assert row is not None
+    assert row[0] == 80000000.0
+    assert row[1] == 3
+    conn.close()
+
+
+def test_pipeline_collision_later_fetched_at_wins(tmp_path: Path):
+    db_file = str(tmp_path / "fetched_test.duckdb")
+    conn = duckdb.connect(db_file)
+    apply_schema(conn)
+
+    conn.execute(
+        """
+        INSERT INTO bronze.contracts (product_id, symbol, currency, created_at, updated_at)
+        VALUES (20, 'DDD', 'USD', now(), now())
+        """
+    )
+    t1 = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
+    t2 = datetime(2026, 9, 1, 14, 0, 0, tzinfo=UTC)
+
+    # Earlier snapshot
+    store_snapshot(
+        conn,
+        20,
+        "/tws.proxy/fundamentals/mf_ratios_fundamentals/",
+        "slug1",
+        {"as_of_date": "2026-07-31", "ratios": [{"name_tag": "price_earnings", "value": 20.0}]},
+        fetched_at=t1,
+    )
+
+    # Later snapshot (same depth 1, same PK)
+    store_snapshot(
+        conn,
+        20,
+        "/tws.proxy/fundamentals/mf_ratios_fundamentals/",
+        "slug2",
+        {"as_of_date": "2026-07-31", "ratios": [{"name_tag": "price_earnings", "value": 25.0}]},
+        fetched_at=t2,
+    )
+    conn.close()
+
+    run_observations(force=False, db_path=db_file)
+
+    conn = duckdb.connect(db_file)
+    row = conn.execute("SELECT value, fetched_at FROM silver.observations WHERE metric = 'price_earnings'").fetchone()
+    assert row is not None
+    assert row[0] == 25.0
     conn.close()
 
 
@@ -212,96 +384,3 @@ def test_pipeline_unregistered_extractor_raises(tmp_path: Path):
 
     with pytest.raises(ValueError, match="Unregistered extractor for url_prefix: /unregistered/unknown/prefix/"):
         run_observations(force=False, db_path=db_file)
-
-
-def test_pipeline_in_memory_deduplication(tmp_path: Path):
-    """Verifies that duplicate primary keys within the same batch do not throw DuckDB Constraint Errors
-
-    and that the observation with the newer fetched_at wins.
-    """
-    db_file = str(tmp_path / "dedup_test.duckdb")
-    conn = duckdb.connect(db_file)
-    apply_schema(conn)
-
-    conn.execute(
-        """
-        INSERT INTO bronze.products (product_id, symbol, created_at, updated_at)
-        VALUES (9999, 'TEST', now(), now())
-        """
-    )
-
-    t1 = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
-    t2 = datetime(2026, 9, 1, 14, 0, 0, tzinfo=UTC)
-
-    # Older snapshot: P/E = 20.0
-    store_snapshot(
-        conn,
-        9999,
-        "/tws.proxy/fundamentals/mf_ratios_fundamentals/",
-        "slug",
-        {
-            "as_of_date": 1785470400000,  # 2026-07-31
-            "ratios": [{"name_tag": "price_earnings", "value": 20.0}],
-        },
-        fetched_at=t1,
-    )
-
-    # Newer snapshot with identical PK (product_id, source, metric_id, effective_date): P/E = 25.0
-    store_snapshot(
-        conn,
-        9999,
-        "/tws.proxy/fundamentals/mf_ratios_fundamentals/",
-        "slug",
-        {
-            "as_of_date": 1785470400000,  # 2026-07-31
-            "ratios": [{"name_tag": "price_earnings", "value": 25.0}],
-        },
-        fetched_at=t2,
-    )
-    conn.close()
-
-    # Processing should complete without duplicate key Constraint Error
-    processed = run_observations(force=False, db_path=db_file)
-    assert processed == 2
-
-    conn = duckdb.connect(db_file)
-    rows = conn.execute(
-        "SELECT value, raw_value, fetched_at, currency FROM silver.product_metrics WHERE metric_id = 'price_earnings'"
-    ).fetchall()
-    assert len(rows) == 1
-    assert rows[0][0] == 25.0
-    assert rows[0][1] == "25.0"
-    assert rows[0][3] is None
-    conn.close()
-
-
-def test_pipeline_cad_aum_currency_from_product(tmp_path: Path):
-    db_file = str(tmp_path / "cad_aum.duckdb")
-    conn = duckdb.connect(db_file)
-    apply_schema(conn)
-    conn.execute(
-        """
-        INSERT INTO bronze.products (product_id, symbol, currency, exchange_id, country, created_at, updated_at)
-        VALUES (42, 'XIU', 'CAD', 'TSE', 'Canada', now(), now())
-        """
-    )
-    t = datetime(2026, 9, 1, 12, 0, 0, tzinfo=UTC)
-    store_snapshot(
-        conn,
-        42,
-        "/tws.proxy/fundamentals/mf_profile_and_fees/",
-        "slug",
-        {"fund_and_profile": [{"name": "Total Net Assets (Month End)", "value": "$1.2B (2026/07/31)"}]},
-        fetched_at=t,
-    )
-    conn.close()
-
-    assert run_observations(force=False, db_path=db_file) == 1
-    conn = duckdb.connect(db_file)
-    row = conn.execute(
-        "SELECT value, currency FROM silver.product_metrics WHERE metric_id = 'total_net_assets_local'"
-    ).fetchone()
-    assert row is not None
-    assert row[0] == 1_200_000_000.0
-    assert row[1] == "CAD"
-    conn.close()

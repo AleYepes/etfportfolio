@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import math
 from datetime import UTC, date, datetime
 
 import pytest
@@ -27,6 +30,7 @@ def test_extract_ratios():
         ],
         "fixed_income": [
             {"name_tag": "Yield_to_Maturity", "value": 4.5},
+            {"name_tag": "average_quality", "value": 8.0, "value_fmt": "-"},  # Should be skipped
         ],
         "ratios": [
             {"name_tag": "Price/Earnings", "value": 38.15},
@@ -36,9 +40,8 @@ def test_extract_ratios():
         ],
     }
 
-    res = extract_ratios(1001, payload, created_at)
-    assert len(res.metrics) == 5
-    assert len(res.dimensions) == 0
+    obs_list = extract_ratios(1001, payload, created_at)
+    assert len(obs_list) == 5
 
     eff_date = date(2026, 7, 31)
     expected_metrics = {
@@ -49,318 +52,216 @@ def test_extract_ratios():
         "latest_composite_z_score": -0.18,
     }
 
-    for m in res.metrics:
-        pid, source, metric_id, eff, eff_src, snap_time, val, raw_val, currency = m
-        assert pid == 1001
-        assert source == "ratios"
-        assert eff == eff_date
-        assert eff_src == "payload"
-        assert snap_time == created_at
-        assert val == pytest.approx(expected_metrics[metric_id])
-        assert currency is None
+    for obs in obs_list:
+        assert obs.product_id == 1001
+        assert obs.family == "ratios"
+        assert obs.effective_date == eff_date
+        assert obs.date_source_depth == 1
+        assert obs.fetched_at == created_at
+        assert obs.value == pytest.approx(expected_metrics[obs.metric])
+        assert obs.code is None
 
-    # Display string stays unscaled
-    by_id = {m[2]: m[7] for m in res.metrics}
-    assert by_id["dividend_yield_weighted_average"] == "3.3433"
-    assert by_id["yield_to_maturity"] == "4.5"
-
-    empty_res = extract_ratios(1001, {}, created_at)
-    assert len(empty_res.metrics) == 0
-    assert len(empty_res.dimensions) == 0
-
-
-def test_extract_ratios_native_vs_scaled():
-    created_at = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
-    payload = {
-        "as_of_date": 1785470400000,
-        "ratios": [
-            {"name_tag": "Price_Book", "value": 4.2},
-            {"name_tag": "return_on_equity_1yr", "value": 18.13},
-            {"name_tag": "relative_strength", "value": 12.0},
-        ],
-        "fixed_income": [
-            {"name_tag": "nominal_maturity", "value": 7.5},
-            {"name_tag": "average_quality", "value": 8.0, "value_fmt": "AA"},
-        ],
-        "zscore": [
-            {"name_tag": "weighted_final_composite_zscore", "value": 0.4},
-        ],
+    # Unknown ratio tag raises
+    bad_payload = {
+        "ratios": [{"name_tag": "Unknown_Ratio_Tag_XYZ", "value": 1.0}],
     }
-    res = extract_ratios(1, payload, created_at)
-    vals = {m[2]: (m[6], m[7]) for m in res.metrics}
-    assert vals["price_book"][0] == 4.2
-    assert vals["return_on_equity_1yr"][0] == pytest.approx(0.1813)
-    assert vals["relative_strength"][0] == pytest.approx(0.12)
-    assert vals["nominal_maturity"][0] == 7.5
-    assert vals["average_quality"] == (8.0, "AA")
-    assert vals["weighted_final_composite_zscore"][0] == 0.4
+    with pytest.raises(ValueError, match="Unrecognized ratio metric"):
+        extract_ratios(1001, bad_payload, created_at)
+
+    # Empty payload returns empty
+    assert extract_ratios(1001, {}, created_at) == []
 
 
 def test_extract_profile():
     created_at = datetime(2026, 8, 15, 10, 0, 0, tzinfo=UTC)
     payload = {
         "expenses_allocation": [
-            {"name": "Management Expenses", "ratio": 0.85},
-            {"name": "Non-Management Expenses", "ratio": 0.15},
+            {"name": "Management Expenses", "ratio": 0.002, "value": "0.20%"},
+            {"name": "Non-Management Expenses", "ratio": 0.0005, "value": "0.05%"},
         ],
         "fund_and_profile": [
-            {"name_tag": "Total_Expense_Ratio", "value": "0.06%"},
+            {"name_tag": "Total_Expense_Ratio", "value": "0.25%"},
             {"name_tag": "Management_Approach", "value": "Passive"},
-            {"name": "Total Net Assets (Month End)", "value": "$78.63B (2026/07/31)"},
-            {"name": "Manager Tenure", "value": "2013/01/01"},
-            {"name_tag": "Inception_Date", "value": "2001/01/29"},  # ignored
+            {"name_tag": "Total_Net_Assets_Month_End", "value": "$100.5M (2026/07/31)"},
+            {"name_tag": "Manager_Tenure", "value": "2020/01/01"},
         ],
         "reports": [
             {
                 "name": "Annual Report",
-                "as_of_date": 1761883200000,  # 2025-10-31
-                "fields": [{"name": "Total Net Expense", "value": "0.0564%"}],
+                "as_of_date": "2025-12-31",
+                "fields": [{"name": "Total Net Expense", "value": "0.24%"}],
             }
         ],
         "mstar": {
-            "x_axis_tag": ["value", "core", "growth"],
-            "y_axis_tag": ["large", "multi", "mid", "small"],
-            "selected": [[1, 1], [1, 2]],
-            "hist": [[0, 0]],
+            "x_axis_tag": ["Value", "Core", "Growth"],
+            "y_axis_tag": ["Large", "Multi", "Mid", "Small"],
+            "selected": [[1, 2]],  # Core, Mid -> mid_core
+            "hist": [[0, 0]],  # Value, Large -> large_value
         },
     }
 
-    res = extract_profile(1001, payload, created_at)
-    assert len(res.metrics) == 7
-    assert len(res.dimensions) == 3
-
-    metrics = {m[2]: (m[3], m[4], m[6], m[7]) for m in res.metrics}
-    currencies = {m[2]: m[8] for m in res.metrics}
-    snap_date = date(2026, 8, 15)
-
-    assert metrics["management_expense_ratio"] == (snap_date, "snapshot", 0.85, "0.85")
-    assert metrics["non_management_expense_ratio"] == (snap_date, "snapshot", 0.15, "0.15")
-    assert pytest.approx(metrics["total_expense_ratio"][2]) == 0.0006
-    assert metrics["total_expense_ratio"][:2] == (snap_date, "snapshot")
-    assert metrics["total_expense_ratio"][3] == "0.06%"
-    assert metrics["is_passive"] == (snap_date, "snapshot", 1.0, "Passive")
-    assert metrics["total_net_assets_local"] == (date(2026, 7, 31), "item", 78630000000.0, "$78.63B (2026/07/31)")
-    assert metrics["manager_tenure_years"][1] == "snapshot"
-    assert pytest.approx(metrics["manager_tenure_years"][2]) == round((snap_date - date(2013, 1, 1)).days / 365.25, 4)
-
-    assert currencies["total_net_assets_local"] == "USD"
-    for metric_id, currency in currencies.items():
-        if metric_id != "total_net_assets_local":
-            assert currency is None, metric_id
-
-    audited = metrics["audited_net_expense_ratio"]
-    assert audited[0] == date(2025, 10, 31)
-    assert audited[1] == "item"
-    assert pytest.approx(audited[2]) == 0.000564
-    assert audited[3] == "0.0564%"
-
-    # Style Box dimensions check
-    dims = {(d[1], d[2], d[3]): (d[4], d[5], d[7], d[8]) for d in res.dimensions}
-    assert dims[("style_box", "Multi Core", "multi_core")] == (snap_date, "snapshot", 1.0, "[1, 1]")
-    assert dims[("style_box", "Mid Core", "mid_core")] == (snap_date, "snapshot", 1.0, "[1, 2]")
-    assert dims[("style_box_hist", "Large Value", "large_value")] == (snap_date, "snapshot", 1.0, "[0, 0]")
-
-    # Active fund test
-    active_payload = {"fund_and_profile": [{"name_tag": "Management_Approach", "value": "Active"}]}
-    active_res = extract_profile(1001, active_payload, created_at)
-    assert len(active_res.metrics) == 1
-    assert active_res.metrics[0][2] == "is_passive"
-    assert active_res.metrics[0][6] == 0.0
-
-    # Pending tokens are skipped, not raised
-    skip_payload = {"fund_and_profile": [{"name_tag": "Management_Approach", "value": "n/a"}]}
-    skip_res = extract_profile(1001, skip_payload, created_at)
-    assert len(skip_res.metrics) == 0
-
-    # Validation errors
-    bad_approach = {"fund_and_profile": [{"name_tag": "Management_Approach", "value": "Robotic"}]}
-    with pytest.raises(ValueError, match="Unknown Management Approach"):
-        extract_profile(1001, bad_approach, created_at)
-
-    bad_style_tag = {
-        "mstar": {
-            "x_axis_tag": ["unknown"],
-            "y_axis_tag": ["large"],
-            "selected": [[0, 0]],
-        }
-    }
-    with pytest.raises(ValueError, match="Unrecognized style box axis configuration"):
-        extract_profile(1001, bad_style_tag, created_at)
-
-    bad_style_coord = {
-        "mstar": {
-            "x_axis_tag": ["value", "core", "growth"],
-            "y_axis_tag": ["large", "mid", "small"],
-            "selected": [[5, 5]],
-        }
-    }
-    with pytest.raises(ValueError, match="Style box coordinate out of bounds"):
-        extract_profile(1001, bad_style_coord, created_at)
-
-    empty_res = extract_profile(1001, {}, created_at)
-    assert len(empty_res.metrics) == 0
-    assert len(empty_res.dimensions) == 0
-
-
-def test_extract_profile_aum_currency_disambiguation():
-    created_at = datetime(2026, 8, 15, 10, 0, 0, tzinfo=UTC)
-
-    cad_zero = extract_profile(
-        1,
-        {"fund_and_profile": [{"name": "Total Net Assets", "value": "CAD0 (2020/08/31)"}]},
+    known = {"USD", "CAD", "EUR"}
+    obs_list = extract_profile(
+        1001,
+        payload,
         created_at,
+        contract_currency="USD",
+        known_currencies=known,
     )
-    assert cad_zero.metrics[0][6] == 0.0
-    assert cad_zero.metrics[0][8] == "CAD"
 
-    dollar_cad = extract_profile(
-        1,
-        {"fund_and_profile": [{"name": "Total Net Assets", "value": "$10.0M (2026/07/31)"}]},
-        created_at,
-        product_currency="CAD",
-    )
-    assert dollar_cad.metrics[0][8] == "CAD"
-    assert dollar_cad.metrics[0][6] == 10_000_000.0
+    by_key = {(obs.family, obs.metric): obs for obs in obs_list}
 
-    dollar_tse = extract_profile(
-        1,
-        {"fund_and_profile": [{"name": "Total Net Assets", "value": "$10.0M"}]},
-        created_at,
-        listing_exchange="TSE",
-    )
-    assert dollar_tse.metrics[0][8] == "CAD"
+    # Management expenses
+    m_exp = by_key[("profile", "management_expense_ratio")]
+    assert m_exp.value == 0.002
+    assert m_exp.effective_date == date(2026, 8, 15)
+    assert m_exp.date_source_depth == 0
 
-    euro = extract_profile(
-        1,
-        {"fund_and_profile": [{"name": "Total Net Assets", "value": "€2.5B"}]},
+    # Total expense ratio
+    ter = by_key[("profile", "total_expense_ratio")]
+    assert ter.value == 0.0025
+
+    # Passive approach
+    pas = by_key[("profile", "is_passive")]
+    assert pas.value == 1.0
+
+    # AUM with resolved currency
+    aum = by_key[("profile", "total_net_assets_local")]
+    assert aum.value == 100500000.0
+    assert aum.code == "USD"
+    assert aum.effective_date == date(2026, 7, 31)
+    assert aum.date_source_depth == 3
+
+    # Manager tenure
+    ten = by_key[("profile", "manager_tenure_years")]
+    assert ten.value > 0
+
+    # Audited net expense ratio
+    aud = by_key[("profile", "audited_net_expense_ratio")]
+    assert aud.value == 0.0024
+    assert aud.effective_date == date(2025, 12, 31)
+    assert aud.date_source_depth == 2
+
+    # Style boxes
+    sb = by_key[("style_box", "mid_core")]
+    assert sb.value == 1.0
+    assert sb.code is None
+
+    sb_hist = by_key[("style_box_hist", "large_value")]
+    assert sb_hist.value == 1.0
+    assert sb_hist.code is None
+
+    # Unresolved currency omits AUM row
+    obs_unresolved = extract_profile(
+        1001,
+        payload,
         created_at,
+        contract_currency="EUR",  # $ with EUR -> unresolved -> omitted
+        known_currencies=known,
     )
-    assert euro.metrics[0][8] == "EUR"
-    assert euro.metrics[0][6] == 2_500_000_000.0
+    unresolved_keys = {(obs.family, obs.metric) for obs in obs_unresolved}
+    assert ("profile", "total_net_assets_local") not in unresolved_keys
 
 
 def test_extract_esg():
     created_at = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
     payload = {
-        "asOfDate": "20260822",
-        "coverage": 0.99762,
+        "asOfDate": "2026-06-30",
+        "coverage": 0.95,
         "content": [
             {
                 "name": "TRESGS",
-                "value": 6,
-            },
-            {
-                "name": "TRESGENS",
-                "value": 7,
+                "value": 72.5,
                 "children": [
-                    {"name": "TRESGENERS", "value": 8},
-                    {"name": "TRESGENPIS", "value": 5},
+                    {"name": "TRESGENS", "value": 68.0},
+                    {"name": "TRESGSOS", "value": 0.0},  # 0 must be kept
                 ],
-            },
+            }
         ],
     }
 
-    res = extract_esg(1001, payload, created_at)
-    assert len(res.metrics) == 5
-    assert len(res.dimensions) == 0
+    obs_list = extract_esg(1001, payload, created_at)
+    assert len(obs_list) == 4
 
-    eff_date = date(2026, 8, 22)
-    metrics = {m[2]: (m[4], m[6]) for m in res.metrics}
-    assert metrics["esg_coverage"] == ("payload", 0.99762)
-    assert metrics["tresgs"] == ("payload", 6.0)
-    assert metrics["tresgens"] == ("payload", 7.0)
-    assert metrics["tresgeners"] == ("payload", 8.0)
-    assert metrics["tresgenpis"] == ("payload", 5.0)
+    by_key = {(obs.family, obs.metric): obs for obs in obs_list}
+    cov = by_key[("profile", "esg_coverage")]
+    assert cov.value == 0.95
+    assert cov.effective_date == date(2026, 6, 30)
 
-    for m in res.metrics:
-        assert m[0] == 1001
-        assert m[1] == "esg"
-        assert m[3] == eff_date
-        assert m[8] is None
+    score = by_key[("esg", "tresgs")]
+    assert score.value == 72.5
 
-    empty_res = extract_esg(1001, {}, created_at)
-    assert len(empty_res.metrics) == 0
-    assert len(empty_res.dimensions) == 0
+    env = by_key[("esg", "tresgens")]
+    assert env.value == 68.0
 
+    soc = by_key[("esg", "tresgsos")]
+    assert soc.value == 0.0
 
-def test_extract_esg_retains_zero_scores():
-    created_at = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
-    payload = {
-        "asOfDate": "20260822",
-        "content": [{"name": "TRESGCCS", "value": 0, "children": [{"name": "TRESGCGBDS", "value": 0}]}],
+    # Unknown pillar raises
+    bad_payload = {
+        "asOfDate": "2026-06-30",
+        "content": [{"name": "UNKNOWN_PILLAR", "value": 50.0}],
     }
-    res = extract_esg(1, payload, created_at)
-    vals = {m[2]: m[6] for m in res.metrics}
-    assert "esg_coverage" not in vals
-    assert vals["tresgccs"] == 0.0
-    assert vals["tresgcgbds"] == 0.0
+    with pytest.raises(ValueError, match="Unrecognized ESG metric"):
+        extract_esg(1001, bad_payload, created_at)
 
 
 def test_extract_mstar():
     created_at = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
     payload = {
-        "as_of_date": "20260731",
+        "as_of_date": "2026-07-31",
         "summary": [
-            {"id": "category", "value": "Real Estate"},  # skipped
-            {"id": "medalist_rating", "value": "Gold", "q": False, "publish_date": "20260427"},
-            {"id": "process", "value": "High", "q": False, "publish_date": "20260427"},
-            {"id": "q_process", "value": "Below_Average", "q": True, "publish_date": "20260731"},
-            {"id": "morningstar_rating", "value": "4", "q": False, "publish_date": "20260731"},
-            {"id": "parent", "value": "Above_Average", "q": False},  # fallback to payload as_of_date
-            {"id": "people", "value": "Under_Review"},  # skipped score, still counts as analyst pillar
-            {"id": "sustainability_rating", "value": "High", "publish_date": "20260630"},
+            {"id": "category", "value": "US Fund Large Blend"},  # Ignored
+            {"id": "quantitative_rating", "value": "Silver", "publish_date": "2026-07-15"},
+            {"id": "q_people", "value": "Above Average", "publish_date": "2026-07-10"},
+            {"id": "process", "value": "High", "publish_date": "2026-07-12"},
+            {"id": "parent", "value": "Average"},
+            {"id": "morningstar_rating", "value": "4"},
+            {"id": "sustainability_rating", "value": "5"},
         ],
     }
 
-    res = extract_mstar(1001, payload, created_at)
-    assert len(res.metrics) == 7
-    assert len(res.dimensions) == 0
+    obs_list = extract_mstar(1001, payload, created_at)
+    by_key = {(obs.family, obs.metric): obs for obs in obs_list}
 
-    metrics = {m[2]: (m[3], m[4], m[6], m[7]) for m in res.metrics}
-    assert "mstar_medalist_rating_analyst" not in metrics
-    assert metrics["mstar_medalist_rating"] == (date(2026, 4, 27), "item", 5.0, "Gold")
-    assert metrics["mstar_process_analyst"] == (date(2026, 4, 27), "item", 5.0, "High")
-    assert metrics["mstar_process_quant"] == (date(2026, 7, 31), "item", 2.0, "Below_Average")
-    assert metrics["mstar_morningstar_rating"] == (date(2026, 7, 31), "item", 4.0, "4")
-    assert metrics["mstar_parent_analyst"] == (date(2026, 7, 31), "payload", 4.0, "Above_Average")
-    assert metrics["mstar_sustainability_rating"] == (date(2026, 6, 30), "item", 5.0, "High")
-    assert metrics["mstar_analyst_coverage_pct"][2] == pytest.approx(1.0)
-    assert metrics["mstar_analyst_coverage_pct"][3] == "3/3 analyst pillars"
-    assert metrics["mstar_analyst_coverage_pct"][0] == date(2026, 7, 31)
-    assert metrics["mstar_analyst_coverage_pct"][1] == "payload"
+    # Coverage: 3 pillars present (people, process, parent) -> 3/3 = 1.0
+    cov = by_key[("profile", "mstar_coverage")]
+    assert cov.value == 1.0
 
-    for m in res.metrics:
-        assert m[8] is None
+    # Medalist rating (quantitative_rating mapped to medalist_rating)
+    med = by_key[("mstar", "medalist_rating")]
+    assert med.value == 4.0
+    assert med.effective_date == date(2026, 7, 15)
+    assert med.date_source_depth == 3
 
-    bad_payload = {"summary": [{"id": "people", "value": "Nonexistent_Rating"}]}
+    # People (q_ stripped, no quant suffix)
+    peop = by_key[("mstar", "people")]
+    assert peop.value == 4.0
+    assert peop.effective_date == date(2026, 7, 10)
+
+    # Process
+    proc = by_key[("mstar", "process")]
+    assert proc.value == 5.0
+
+    # Parent (inherits payload date)
+    parent = by_key[("mstar", "parent")]
+    assert parent.value == 3.0
+    assert parent.effective_date == date(2026, 7, 31)
+
+    # Stars
+    stars = by_key[("mstar", "morningstar_rating")]
+    assert stars.value == 4.0
+
+    sust = by_key[("mstar", "sustainability_rating")]
+    assert sust.value == 5.0
+
+    # Unknown rating raises
+    bad_payload = {
+        "as_of_date": "2026-07-31",
+        "summary": [{"id": "process", "value": "Super Duper"}],
+    }
     with pytest.raises(ValueError, match="Unrecognized rating string"):
         extract_mstar(1001, bad_payload, created_at)
-
-    missing_id_payload = {"summary": [{"value": "High"}]}
-    with pytest.raises(ValueError, match="Missing 'id'"):
-        extract_mstar(1001, missing_id_payload, created_at)
-
-    empty_res = extract_mstar(1001, {}, created_at)
-    assert len(empty_res.metrics) == 0
-    assert len(empty_res.dimensions) == 0
-
-
-def test_extract_mstar_pure_quant_coverage():
-    created_at = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
-    payload = {
-        "as_of_date": "20260731",
-        "summary": [
-            {"id": "q_people", "value": "Average", "q": True},
-            {"id": "q_process", "value": "Average", "q": True},
-            {"id": "q_parent", "value": "Low", "q": True},
-            {"id": "medalist_rating", "value": "Neutral", "q": False},
-        ],
-    }
-    res = extract_mstar(1, payload, created_at)
-    metrics = {m[2]: m[6] for m in res.metrics}
-    assert metrics["mstar_medalist_rating"] == 2.0
-    assert metrics["mstar_analyst_coverage_pct"] == pytest.approx(0.0)
-    assert metrics["mstar_people_quant"] == 3.0
 
 
 def test_extract_lipper():
@@ -369,187 +270,113 @@ def test_extract_lipper():
         "universes": [
             {
                 "name": "United States",
-                "as_of_date": 1785470400000,  # 2026-07-31
-                "3_year": [
-                    {"name_tag": "consistent_return", "rating": {"value": 4, "name": "1,500 funds"}},
-                    {"name_tag": "tax_efficiency", "rating": {"value": 5, "name": "1,500 funds"}},
+                "as_of_date": "2026-07-31",
+                "overall": [
+                    {
+                        "name_tag": "Total_Return",
+                        "rating": {"value": 5, "name": "5 (1500 funds)"},
+                    }
                 ],
-            },
-            {
-                "name": "Chile",
-                "as_of_date": 1785470400000,  # 2026-07-31
-                "3_year": [{"name_tag": "consistent_return", "rating": {"value": 5, "name": "27 funds"}}],
-            },
+                "3_year": [
+                    {
+                        "name_tag": "Consistent_Return",
+                        "rating": {"value": 4, "name": "4 (1200 funds)"},
+                    }
+                ],
+            }
         ]
     }
 
-    res = extract_lipper(1001, payload, created_at)
-    assert len(res.metrics) == 2
-    assert len(res.dimensions) == 0
+    obs_list = extract_lipper(1001, payload, created_at)
+    assert len(obs_list) == 2
 
-    metrics = {m[2]: (m[3], m[4], m[6], m[7], m[8]) for m in res.metrics}
-    eff_date = date(2026, 7, 31)
-    assert "lipper_consistent_return_3yr_united_states" not in metrics
-    assert "lipper_consistent_return_3yr_chile" not in metrics
-    assert metrics["lipper_consistent_return_3yr"] == (
-        eff_date,
-        "item",
-        4.0,
-        "4 (United States: 1500 funds)",
-        None,
-    )
-    assert metrics["lipper_tax_efficiency_3yr"][2] == 5.0
+    by_metric = {obs.metric: obs for obs in obs_list}
+    tot = by_metric["total_return_overall"]
+    assert tot.family == "lipper"
+    assert tot.value == 5.0
+    assert tot.effective_date == date(2026, 7, 31)
+    assert tot.date_source_depth == 2
 
-    empty_res = extract_lipper(1001, {}, created_at)
-    assert len(empty_res.metrics) == 0
-    assert len(empty_res.dimensions) == 0
-
-
-def test_extract_lipper_tiebreak_prefers_united_states():
-    created_at = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
-    payload = {
-        "universes": [
-            {
-                "name": "Chile",
-                "as_of_date": 1785470400000,
-                "3_year": [{"name_tag": "total_return", "rating": {"value": 5, "name": "100 funds"}}],
-            },
-            {
-                "name": "United States",
-                "as_of_date": 1785470400000,
-                "3_year": [{"name_tag": "total_return", "rating": {"value": 3, "name": "100 funds"}}],
-            },
-        ]
-    }
-    res = extract_lipper(1, payload, created_at)
-    assert len(res.metrics) == 1
-    assert res.metrics[0][2] == "lipper_total_return_3yr"
-    assert res.metrics[0][6] == 3.0
-    assert "United States" in res.metrics[0][7]
+    cons = by_metric["consistent_return_3yr"]
+    assert cons.family == "lipper"
+    assert cons.value == 4.0
 
 
 def test_extract_holdings():
     created_at = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
     payload = {
-        "as_of_date": 1785470400000,  # 2026-07-31
-        "top_10_weight": "30.47%",
+        "as_of_date": "2026-07-31",
+        "top_10_weight": "32.5%",
         "allocation_self": [
-            {"name": "Equity", "weight": 99.76},
-        ],
-        "currency": [
-            {"name": "US Dollar", "code": "USD", "weight": 99.8},
-        ],
-        "geographic": [
-            {"name": "North America", "weight": 99.8},
+            {"name": "Equity", "weight": 80.0},
+            {"name": "Cash", "weight": 10.0},
+            {"name": "Other", "weight": 10.0},  # Residual -> dropped
         ],
         "investor_country": [
-            {"name": "United States", "country_code": "US", "weight": 71.2451},
-        ],
-        "debtor": [
-            {"name": "% Quality/AAA", "weight": 1.5},
-        ],
-        "top_10": [
-            {
-                "name": "GUGGENHEIM STRATEGIC OPPORTUNITIES FUND",
-                "conids": [86174372],
-                "assets_pct": "3.49%",
-            },
-            {
-                "name": "MICROSOFT CORP",
-                "ticker": "MSFT",
-                "conids": [272093],
-                "assets_pct": "<0.01%",
-            },
-        ],
-    }
-
-    res = extract_holdings(1001, payload, created_at)
-    assert len(res.metrics) == 1
-    assert len(res.dimensions) == 3
-
-    m = res.metrics[0]
-    assert m[1] == "holdings"
-    assert m[2] == "portfolio_top_10_concentration"
-    assert m[3] == date(2026, 7, 31)
-    assert m[4] == "payload"
-    assert pytest.approx(m[6]) == 0.3047
-    assert m[7] == "30.47%"
-    assert m[8] is None
-
-    dims = {(d[1], d[2]): (d[3], d[7], d[8]) for d in res.dimensions}
-    assert pytest.approx(dims[("asset_class", "Equity")][1]) == 0.9976
-    assert dims[("country", "United States")][0] == "US"
-    assert pytest.approx(dims[("country", "United States")][1]) == 0.712451
-    assert dims[("credit_rating", "AAA")][0] == "AAA"
-    assert pytest.approx(dims[("credit_rating", "AAA")][1]) == 0.015
-    assert all(d[1] != "top_holding" for d in res.dimensions)
-
-    empty_res = extract_holdings(1001, {}, created_at)
-    assert len(empty_res.metrics) == 0
-    assert len(empty_res.dimensions) == 0
-
-
-def test_extract_holdings_dimension_remaps():
-    created_at = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
-    payload = {
-        "as_of_date": 1785470400000,
-        "investor_country": [
-            {"name": "Croatia", "country_code": "CR", "weight": 0.1},
-            {"name": "Bulgaria", "country_code": "BGR", "weight": 0.2},
-            {"name": "Guam", "country_code": None, "weight": 0.3},
-            {"name": "Uzbekistan", "weight": 0.4},
-            {"name": "Unidentified", "country_code": "XX", "weight": -1.5},
-            {"name": "Costa Rica", "country_code": "CR", "weight": 0.5},
-            {"name": "Korea", "country_code": "KR", "weight": 1.0},
+            {"name": "United States", "country_code": "US", "weight": 70.0},
+            {"name": "Croatia", "weight": 5.0},  # Remapped to HR
+            {"name": "Unidentified", "weight": 5.0},  # Residual -> dropped
         ],
         "industry": [
+            {"name": "Technology", "weight": 40.0},
             {
                 "name": "Telecommunication Services-Discontinued eff 09/19/2020",
-                "weight": 2.0,
-            },
-            {"name": "Communication Services", "weight": 3.0},
+                "weight": 10.0,
+            },  # Remapped to communication_services
+            {"name": "Non Classified Equity", "weight": 10.0},  # Residual -> dropped
+        ],
+        "debtor": [
+            {"name": "% Quality/AAA", "weight": 20.0},
+            {"name": "% Quality Not Rated", "weight": 5.0},  # Residual -> dropped
         ],
         "maturity": [
-            {"name": "% Maturity Less than 1 Year", "weight": 10.0},
-            {"name": "% Maturity Greater than 30 Years", "weight": 5.0},
-            {"name": "% Maturity Other", "weight": 1.0},
+            {"name": "% Maturity Less than 1 Year", "weight": 15.0},
+            {"name": "% Maturity Other", "weight": 5.0},  # Residual -> dropped
         ],
+        # debt_type must NOT be extracted
         "debt_type": [
             {"name": "Corporate Bond", "code": "corp", "weight": 40.0},
         ],
-        "allocation_self": [
-            {"name": "Other", "weight": -12.5},
-        ],
     }
-    res = extract_holdings(1, payload, created_at)
-    countries = {d[2]: d[3] for d in res.dimensions if d[1] == "country"}
-    assert countries["Croatia"] == "HR"
-    assert countries["Bulgaria"] == "BG"
-    assert countries["Guam"] == "GU"
-    assert countries["Uzbekistan"] == "UZ"
-    assert countries["Unidentified"] is None
-    assert countries["Costa Rica"] == "CR"
-    assert countries["Korea"] == "KR"
 
-    unidentified = next(d for d in res.dimensions if d[2] == "Unidentified")
-    assert unidentified[7] == pytest.approx(-0.015)
+    obs_list = extract_holdings(1001, payload, created_at)
+    by_key = {(obs.family, obs.metric): obs for obs in obs_list}
 
-    comm = [d for d in res.dimensions if d[1] == "industry" and d[2] == "Communication Services"]
-    assert len(comm) == 1
-    assert comm[0][7] == pytest.approx(0.03)
-    assert all(d[2] != "Telecommunication Services-Discontinued eff 09/19/2020" for d in res.dimensions)
+    # Top 10 weight in profile
+    top10 = by_key[("profile", "top_10_weight")]
+    assert top10.value == pytest.approx(0.325)
 
-    mats = {d[2]: d[3] for d in res.dimensions if d[1] == "maturity"}
-    assert mats["% Maturity Less than 1 Year"] == "mat_lt_1y"
-    assert mats["% Maturity Greater than 30 Years"] == "mat_gt_30y"
-    assert mats["% Maturity Other"] == "mat_other"
+    # Asset class: 80 equity + 10 cash + 10 other = 100. Survivors: equity 0.80, cash 0.10. Other dropped.
+    assert pytest.approx(by_key[("asset_class", "equity")].value) == 0.80
+    assert pytest.approx(by_key[("asset_class", "cash")].value) == 0.10
+    assert ("asset_class", "other") not in by_key
 
-    debt = next(d for d in res.dimensions if d[1] == "debt_type")
-    assert debt[2] == "Corporate Bond"
-    assert debt[3] == "corp"
+    # Country: 70 US + 5 Croatia + 5 Unidentified = 80 total.
+    # US = 70/80 = 0.875, Croatia = 5/80 = 0.0625. Unidentified dropped.
+    us = by_key[("country", "united_states")]
+    assert us.code == "US"
+    assert pytest.approx(us.value) == 70.0 / 80.0
+    hr = by_key[("country", "croatia")]
+    assert hr.code == "HR"
+    assert pytest.approx(hr.value) == 5.0 / 80.0
+    assert ("country", "unidentified") not in by_key
 
-    other = next(d for d in res.dimensions if d[1] == "asset_class")
-    assert other[7] == pytest.approx(-0.125)
+    # Industry: 40 tech + 10 telecom + 10 non-classified = 60 total.
+    # Tech = 40/60, Comm = 10/60. Non-classified dropped.
+    assert pytest.approx(by_key[("industry", "technology")].value) == 40.0 / 60.0
+    assert pytest.approx(by_key[("industry", "communication_services")].value) == 10.0 / 60.0
+    assert ("industry", "non_classified_equity") not in by_key
+
+    # Credit: 20 AAA + 5 Not Rated = 25 total. AAA = 20/25 = 0.8.
+    assert pytest.approx(by_key[("credit_rating", "aaa")].value) == 20.0 / 25.0
+    assert ("credit_rating", "not_rated") not in by_key
+
+    # Maturity: 15 less than 1 year + 5 other = 20 total.
+    assert pytest.approx(by_key[("maturity", "maturity_less_than_1_year")].value) == 15.0 / 20.0
+    assert ("maturity", "maturity_other") not in by_key
+
+    # debt_type is strictly NOT extracted
+    assert not any(obs.family == "debt_type" for obs in obs_list)
 
 
 def test_extract_theme_weights():
@@ -566,79 +393,67 @@ def test_extract_theme_weights():
         ],
     }
 
-    res = extract_theme_weights(1001, payload, created_at)
-    assert len(res.metrics) == 1
-    assert len(res.dimensions) == 1
+    obs_list = extract_theme_weights(1001, payload, created_at)
+    by_key = {(obs.family, obs.metric): obs for obs in obs_list}
 
-    m = res.metrics[0]
-    assert m[1] == "theme_weights"
-    assert m[2] == "theme_coverage"
-    assert m[3] == date(2026, 9, 1)
-    assert m[4] == "snapshot"
-    assert m[6] == pytest.approx(0.84)
-    assert m[7] == "0.84"
-    assert m[8] is None
+    # Coverage in profile
+    cov = by_key[("profile", "theme_coverage")]
+    assert cov.value == 0.84
 
-    d = res.dimensions[0]
-    assert d[0] == 1001
-    assert d[1] == "theme"
-    assert d[2] == "Discount Retail"
-    assert d[3] == "006a0c27-4a9a-4766-8988-0d8acc6ede8b"
-    assert d[4] == date(2026, 9, 1)
-    assert d[5] == "snapshot"
-    assert d[6] == created_at
-    assert pytest.approx(d[7]) == 0.0094658
-    assert d[8] == "0.0094658"
+    # Dual theme families unscaled
+    th = by_key[("theme", "discount_retail")]
+    assert th.code == "006a0c27-4a9a-4766-8988-0d8acc6ede8b"
+    assert th.value == 0.084085
 
-    empty_res = extract_theme_weights(1001, {}, created_at)
-    assert len(empty_res.metrics) == 0
-    assert len(empty_res.dimensions) == 0
+    rank_th = by_key[("rank_adj_theme", "discount_retail")]
+    assert rank_th.code == "006a0c27-4a9a-4766-8988-0d8acc6ede8b"
+    assert rank_th.value == 0.0094658
 
 
-# --- Real JSON Fixtures Verification ---
 @pytest.mark.parametrize(
-    "fixture_name, extractor, expect_metrics, expect_dimensions",
+    "fixture_name, extractor, expect_observations",
     [
-        ("ratios_complete", extract_ratios, True, False),
-        ("ratios_equity", extract_ratios, True, False),
-        ("ratios_bond", extract_ratios, True, False),
-        ("ratios_empty", extract_ratios, False, False),
-        ("profile_complete", extract_profile, True, True),
-        ("profile_equity", extract_profile, True, False),
-        ("profile_bond", extract_profile, True, False),
-        ("profile_empty", extract_profile, False, False),
-        ("esg", extract_esg, True, False),
-        ("mstar_equity", extract_mstar, True, False),
-        ("mstar_bond", extract_mstar, True, False),
-        ("mstar_empty", extract_mstar, False, False),
-        ("lipper_equity", extract_lipper, True, False),
-        ("lipper_bond", extract_lipper, True, False),
-        ("lipper_empty", extract_lipper, False, False),
-        ("holdings_complete", extract_holdings, True, True),
-        ("holdings_equity", extract_holdings, True, True),
-        ("holdings_bond", extract_holdings, True, True),
-        ("holdings_empty", extract_holdings, False, False),
-        ("theme_weights", extract_theme_weights, True, True),
+        ("ratios_complete", extract_ratios, True),
+        ("ratios_equity", extract_ratios, True),
+        ("ratios_bond", extract_ratios, True),
+        ("ratios_empty", extract_ratios, False),
+        ("profile_complete", extract_profile, True),
+        ("profile_equity", extract_profile, True),
+        ("profile_bond", extract_profile, True),
+        ("profile_empty", extract_profile, False),
+        ("esg", extract_esg, True),
+        ("mstar_equity", extract_mstar, True),
+        ("mstar_bond", extract_mstar, True),
+        ("mstar_empty", extract_mstar, False),
+        ("lipper_equity", extract_lipper, True),
+        ("lipper_bond", extract_lipper, True),
+        ("lipper_empty", extract_lipper, False),
+        ("holdings_complete", extract_holdings, True),
+        ("holdings_equity", extract_holdings, True),
+        ("holdings_bond", extract_holdings, True),
+        ("holdings_empty", extract_holdings, False),
+        ("theme_weights", extract_theme_weights, True),
     ],
 )
-def test_extractors_against_payload_fixtures(fixture_name, extractor, expect_metrics, expect_dimensions):
+def test_extractors_against_payload_fixtures(fixture_name, extractor, expect_observations):
     payload = load_fixture(fixture_name)
     created_at = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
-    res = extractor(8335, payload, created_at)
+    obs_list = extractor(
+        8335,
+        payload,
+        created_at,
+        contract_currency="USD",
+        known_currencies={"USD", "CAD", "EUR", "GBP"},
+    )
 
-    if expect_metrics:
-        assert len(res.metrics) > 0, f"Expected metrics for {fixture_name}"
-        for m in res.metrics:
-            assert len(m) == 9
-            if m[2] == "total_net_assets_local":
-                assert m[8] is not None
-            else:
-                assert m[8] is None
-            assert all(d[1] != "top_holding" for d in res.dimensions)
+    if expect_observations:
+        assert len(obs_list) > 0, f"Expected observations for {fixture_name}"
+        for obs in obs_list:
+            assert obs.product_id == 8335
+            assert obs.family
+            assert obs.metric
+            assert obs.effective_date <= obs.fetched_at.date()
+            assert not (math.isnan(obs.value) or math.isinf(obs.value))
+            assert obs.family != "debt_type"
     else:
-        assert len(res.metrics) == 0, f"Expected no metrics for {fixture_name}"
-
-    if expect_dimensions:
-        assert len(res.dimensions) > 0, f"Expected dimensions for {fixture_name}"
-    else:
-        assert len(res.dimensions) == 0, f"Expected no dimensions for {fixture_name}"
+        assert len(obs_list) == 0, f"Expected no observations for {fixture_name}"

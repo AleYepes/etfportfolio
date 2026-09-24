@@ -6,9 +6,10 @@ from datetime import datetime
 import duckdb
 import httpx
 
+from etfportfolio.core import endpoints
 from etfportfolio.core.config import settings
 from etfportfolio.core.db import AsyncDbWorker
-from etfportfolio.ingest import endpoints, landing, session, snapshots
+from etfportfolio.ingest import landing, session, snapshots
 from etfportfolio.ingest.utils import is_fresh
 
 logger = logging.getLogger(__name__)

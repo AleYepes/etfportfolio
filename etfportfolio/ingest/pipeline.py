@@ -22,7 +22,7 @@ def _is_product_fully_fresh(
     When landing is fresh, gated endpoints won't fire (they require a landing
     change), so we only need to check ungated endpoints.
     """
-    from etfportfolio.ingest import endpoints as ep_mod
+    from etfportfolio.core import endpoints as ep_mod
     from etfportfolio.ingest.utils import is_fresh
 
     if not is_fresh(landing_cache.get(product_id), settings.freshness_window_hours):

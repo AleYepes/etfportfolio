@@ -4,8 +4,9 @@ from typing import Any
 import duckdb
 import httpx
 
+from etfportfolio.core import endpoints
 from etfportfolio.core.db import AsyncDbWorker
-from etfportfolio.ingest import endpoints, session
+from etfportfolio.ingest import session
 from etfportfolio.ingest.utils import content_address, store_blob
 
 

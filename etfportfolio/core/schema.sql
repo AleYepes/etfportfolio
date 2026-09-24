@@ -184,30 +184,17 @@ CREATE TABLE IF NOT EXISTS bronze.themes (
     last_checked_at TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS silver.product_metrics (
+CREATE TABLE IF NOT EXISTS silver.observations (
     product_id             INTEGER NOT NULL,
-    source                 VARCHAR NOT NULL,
-    metric_id              VARCHAR NOT NULL,
+    family                 VARCHAR NOT NULL,
+    metric                 VARCHAR NOT NULL,
+    code                   VARCHAR,
     effective_date         DATE NOT NULL,
-    effective_date_source  VARCHAR NOT NULL,
+    date_source_depth      INTEGER NOT NULL,
     fetched_at             TIMESTAMP WITH TIME ZONE NOT NULL,
     value                  DOUBLE NOT NULL,
     raw_value              VARCHAR NOT NULL,
-    currency               VARCHAR,
-    PRIMARY KEY (product_id, source, metric_id, effective_date)
-);
-
-CREATE TABLE IF NOT EXISTS silver.product_dimensions (
-    product_id             INTEGER NOT NULL,
-    dimension_type         VARCHAR NOT NULL,
-    dimension_name         VARCHAR NOT NULL,
-    dimension_code         VARCHAR,
-    effective_date         DATE NOT NULL,
-    effective_date_source  VARCHAR NOT NULL,
-    fetched_at             TIMESTAMP WITH TIME ZONE NOT NULL,
-    value                  DOUBLE NOT NULL,
-    raw_value              VARCHAR NOT NULL,
-    PRIMARY KEY (product_id, dimension_type, dimension_name, effective_date)
+    PRIMARY KEY (product_id, family, metric, effective_date)
 );
 
 CREATE TABLE IF NOT EXISTS silver.processed_snapshots (
@@ -218,11 +205,12 @@ CREATE TABLE IF NOT EXISTS silver.processed_snapshots (
 CREATE TABLE IF NOT EXISTS silver.monthly_panel (
     product_id   INTEGER NOT NULL,
     as_of_date   DATE NOT NULL,
-    asset_class  VARCHAR NOT NULL,
     feature_id   VARCHAR NOT NULL,
     value        DOUBLE NOT NULL,
     PRIMARY KEY (product_id, as_of_date, feature_id)
 );
+
+ALTER TABLE silver.monthly_panel DROP COLUMN IF EXISTS asset_class;
 
 CREATE OR REPLACE VIEW silver.products AS
 SELECT
@@ -245,7 +233,8 @@ SELECT
     c.updated_at
 FROM bronze.contracts c
 WHERE c.product_id IN (SELECT DISTINCT product_id FROM bronze.prices)
-  AND (
-      c.product_id IN (SELECT DISTINCT product_id FROM silver.product_metrics)
-      OR c.product_id IN (SELECT DISTINCT product_id FROM silver.product_dimensions)
-  );
+  AND c.product_id IN (SELECT DISTINCT product_id FROM silver.observations);
+
+DROP TABLE IF EXISTS silver.product_metrics;
+DROP TABLE IF EXISTS silver.product_dimensions;
+

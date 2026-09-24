@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import contextlib
+import math
 import re
-from dataclasses import dataclass, field
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import UTC, date, datetime
-from typing import Any, Literal
+from typing import Any
 
 import orjson
 import zstandard as zstd
@@ -17,21 +20,173 @@ def decompress_payload(compressed: bytes) -> Any:
     return orjson.loads(canonical)
 
 
-EffectiveDateSource = Literal["payload", "item", "snapshot"]
+@dataclass(frozen=True, slots=True)
+class Observation:
+    product_id: int
+    family: str
+    metric: str
+    code: str | None
+    effective_date: date
+    date_source_depth: int
+    fetched_at: datetime
+    value: float
+    raw_value: str
 
-# Field order matches silver.product_metrics (post-currency migration).
-MetricRow = tuple[int, str, str, date, str, datetime, float, str, str | None]
-MetricTuple = MetricRow
+    def to_row(self) -> tuple[int, str, str, str | None, date, int, datetime, float, str]:
+        return (
+            self.product_id,
+            self.family,
+            self.metric,
+            self.code,
+            self.effective_date,
+            self.date_source_depth,
+            self.fetched_at,
+            self.value,
+            self.raw_value,
+        )
 
-# Field order matches silver.product_dimensions in schema.sql
-DimensionRow = tuple[int, str, str, str | None, date, str, datetime, float, str]
-DimensionTuple = DimensionRow
+
+def to_lower_snake_case(s: str) -> str:
+    cleaned = s.replace("&", "and")
+    return re.sub(r"[^a-z0-9]+", "_", cleaned.lower()).strip("_")
 
 
-@dataclass(slots=True)
-class ExtractionResult:
-    metrics: list[MetricRow] = field(default_factory=list)
-    dimensions: list[DimensionRow] = field(default_factory=list)
+@dataclass(frozen=True)
+class DateScope:
+    effective_date: date
+    depth: int
+
+
+class DateContext:
+    def __init__(self, snapshot_date: date):
+        self._stack: list[DateScope] = [DateScope(snapshot_date, 0)]
+
+    @property
+    def current(self) -> DateScope:
+        return self._stack[-1]
+
+    @contextmanager
+    def scope(self, raw_date: Any, depth: int) -> Iterator[DateScope]:
+        parsed = self.parse_date(raw_date)
+        if parsed is not None and parsed <= self._stack[0].effective_date:
+            self._stack.append(DateScope(parsed, depth))
+        else:
+            self._stack.append(self.current)
+        try:
+            yield self.current
+        finally:
+            self._stack.pop()
+
+    @staticmethod
+    def parse_date(val: Any) -> date | None:
+        if val is None:
+            return None
+
+        if isinstance(val, (int, float)):
+            if val <= 0:
+                return None
+            try:
+                return datetime.fromtimestamp(val / 1000.0, tz=UTC).date()
+            except ValueError, OverflowError, OSError:
+                return None
+
+        if isinstance(val, str):
+            val_str = val.strip()
+            if not val_str:
+                return None
+
+            if val_str.isdigit() and len(val_str) > 8:
+                try:
+                    return datetime.fromtimestamp(int(val_str) / 1000.0, tz=UTC).date()
+                except ValueError, OverflowError, OSError:
+                    return None
+
+            if len(val_str) == 8 and val_str.isdigit():
+                with contextlib.suppress(ValueError):
+                    return datetime.strptime(val_str, "%Y%m%d").date()
+
+            if "-" in val_str:
+                with contextlib.suppress(ValueError):
+                    return datetime.strptime(val_str[:10], "%Y-%m-%d").date()
+
+            if "/" in val_str:
+                with contextlib.suppress(ValueError):
+                    return datetime.strptime(val_str[:10], "%Y/%m/%d").date()
+
+        return None
+
+
+def clean_simplex(
+    raw_items: list[dict[str, Any]],
+    name_extractor: Callable[[dict[str, Any]], str | None],
+    weight_extractor: Callable[[dict[str, Any]], float | None],
+    metric_map: dict[str, bool] | None,
+    code_extractor: Callable[[dict[str, Any]], str | None] | None = None,
+    open_vocab: bool = False,
+    residual_names: set[str] | None = None,
+) -> list[tuple[str, str | None, float, str]]:
+    parsed: list[tuple[str, str | None, float, str]] = []
+    for item in raw_items:
+        raw_name = name_extractor(item)
+        raw_w = weight_extractor(item)
+        if raw_name is None or raw_w is None:
+            continue
+
+        metric = to_lower_snake_case(raw_name)
+        code = code_extractor(item) if code_extractor else None
+        raw = str(item.get("formatted_weight", raw_w))
+
+        if not open_vocab and metric_map is not None and metric not in metric_map:
+            raise ValueError(f"Unrecognized metric '{metric}' in simplex")
+
+        clipped_w = max(0.0, float(raw_w))
+        parsed.append((metric, code, clipped_w, raw))
+
+    total = sum(p[2] for p in parsed)
+    if total <= 0:
+        return []
+
+    survivors: list[tuple[str, str | None, float, str]] = []
+    for metric, code, clipped_w, raw in parsed:
+        norm_val = clipped_w / total
+        is_residual = (metric_map is not None and metric_map.get(metric) is True) or (
+            residual_names is not None and metric in residual_names
+        )
+        if not is_residual:
+            survivors.append((metric, code, norm_val, raw))
+
+    return survivors
+
+
+SYMBOL_TO_CURRENCIES: dict[str, set[str]] = {
+    "$": {"USD", "CAD", "AUD", "MXN", "SGD", "HKD", "NZD", "TWD"},
+    "€": {"EUR"},
+    "£": {"GBP", "EGP", "LBP"},
+    "¥": {"JPY", "CNY", "CNH"},
+    "₩": {"KRW", "KPW"},
+    "₹": {"INR"},
+}
+
+
+def disambiguate_aum_currency(
+    raw_value: str,
+    contract_currency: str | None,
+    known_currencies: set[str],
+) -> str | None:
+    s = raw_value.strip()
+    if not s:
+        return None
+    m = re.match(r"^([A-Za-z]{3})(?![A-Za-z])", s)
+    if m:
+        token = m.group(1).upper()
+        return token if token in known_currencies else None
+    if s[0] in SYMBOL_TO_CURRENCIES:
+        prod = (contract_currency or "").strip().upper()
+        return prod if prod in SYMBOL_TO_CURRENCIES[s[0]] else None
+    prod = (contract_currency or "").strip().upper()
+    if prod in known_currencies:
+        return prod
+    return None
 
 
 _DATE_REGEX = re.compile(r"(\d{4}[-/]?\d{2}[-/]?\d{2}|\d{8})")
@@ -43,125 +198,10 @@ _AUM_MULTIPLIERS = {
     "t": 1e12,
 }
 
-_AUM_SYMBOL_TO_ISO = {
-    "€": "EUR",
-    "£": "GBP",
-    "¥": "JPY",
-    "₹": "INR",
-}
-
-_AUM_ISO_PREFIXES = frozenset(
-    {
-        "CAD",
-        "AUD",
-        "CNY",
-        "TWD",
-        "HKD",
-        "CHF",
-        "BRL",
-        "SGD",
-        "MXN",
-        "KRW",
-        "MYR",
-        "CNH",
-        "AED",
-        "SEK",
-        "ZAR",
-        "ILS",
-        "SAR",
-        "NOK",
-        "HUF",
-        "DKK",
-        "VND",
-    }
-)
-
-_CAD_EXCHANGES = frozenset({"TSE", "TSX"})
-
-
-def parse_effective_date(
-    val: Any,
-    fallback_date: date,
-    default_source: str = "payload",
-) -> tuple[date, str]:
-    if val is None:
-        return fallback_date, "snapshot"
-
-    if isinstance(val, (int, float)):
-        if val <= 0:
-            return fallback_date, "snapshot"
-        try:
-            return datetime.fromtimestamp(val / 1000.0, tz=UTC).date(), default_source
-        except ValueError, OverflowError, OSError:
-            return fallback_date, "snapshot"
-
-    if isinstance(val, str):
-        val_str = val.strip()
-        if not val_str:
-            return fallback_date, "snapshot"
-
-        if val_str.isdigit() and len(val_str) > 8:
-            try:
-                return datetime.fromtimestamp(int(val_str) / 1000.0, tz=UTC).date(), default_source
-            except ValueError, OverflowError, OSError:
-                return fallback_date, "snapshot"
-
-        if len(val_str) == 8 and val_str.isdigit():
-            with contextlib.suppress(ValueError):
-                return datetime.strptime(val_str, "%Y%m%d").date(), default_source
-
-        if "-" in val_str:
-            with contextlib.suppress(ValueError):
-                return datetime.strptime(val_str[:10], "%Y-%m-%d").date(), default_source
-
-        if "/" in val_str:
-            with contextlib.suppress(ValueError):
-                return datetime.strptime(val_str[:10], "%Y/%m/%d").date(), default_source
-
-    return fallback_date, "snapshot"
-
-
-def disambiguate_aum_currency(
-    raw_value: str,
-    product_currency: str | None = None,
-    listing_exchange: str | None = None,
-    country: str | None = None,
-) -> str:
-    """Map an AUM display string to an ISO-4217 code (§2.5)."""
-    s = str(raw_value).lstrip()
-    if s:
-        first = s[0]
-        if first in _AUM_SYMBOL_TO_ISO:
-            return _AUM_SYMBOL_TO_ISO[first]
-
-        iso_match = re.match(r"^([A-Za-z]{3})", s)
-        if iso_match:
-            token = iso_match.group(1).upper()
-            if token in _AUM_ISO_PREFIXES:
-                return token
-
-        if s.startswith("$"):
-            prod = (product_currency or "").strip().upper()
-            if prod == "CAD":
-                return "CAD"
-            exch = (listing_exchange or "").strip().upper()
-            if exch in _CAD_EXCHANGES or "CANADIAN" in exch:
-                return "CAD"
-            ctry = (country or "").strip().lower()
-            if ctry in {"canada", "ca"}:
-                return "CAD"
-            return "USD"
-
-    prod = (product_currency or "").strip().upper()
-    if len(prod) == 3:
-        return prod
-    return "USD"
-
 
 def parse_net_assets(
     raw_val: Any,
-    fallback_date: date,
-) -> tuple[float, str, date, str] | None:
+) -> tuple[float, str, str | None] | None:
     if raw_val is None:
         return None
 
@@ -171,16 +211,10 @@ def parse_net_assets(
 
     date_match = _DATE_REGEX.search(raw_str)
     if date_match:
-        eff_date, _ = parse_effective_date(
-            date_match.group(1),
-            fallback_date=fallback_date,
-            default_source="item",
-        )
-        eff_source = "item"
+        embedded_date = date_match.group(1)
         amt_str = raw_str[: date_match.start()] + raw_str[date_match.end() :]
     else:
-        eff_date = fallback_date
-        eff_source = "snapshot"
+        embedded_date = None
         amt_str = raw_str
 
     amt_clean = re.sub(r"[^\d.,kKmMbBtT]", "", amt_str)
@@ -215,7 +249,7 @@ def parse_net_assets(
     multiplier = _AUM_MULTIPLIERS.get(suffix, 1.0)
     final_val = base_val * multiplier
 
-    return final_val, raw_str, eff_date, eff_source
+    return final_val, raw_str, embedded_date
 
 
 def parse_manager_tenure(
@@ -262,6 +296,8 @@ def parse_percentage(val: Any, allow_bound: bool = False) -> tuple[float, str] |
 
     try:
         pct_float = float(clean_str) / 100.0
+        if math.isnan(pct_float) or math.isinf(pct_float):
+            return None
         return pct_float, raw_str
     except ValueError as e:
         raise ValueError(f"Cannot parse percentage from '{val}': {e}") from e
@@ -276,7 +312,3 @@ def clean_credit_rating(raw_name: str) -> str:
     if s.startswith("% Quality-"):
         return s[len("% Quality-") :].strip()
     return s
-
-
-def sanitize_metric_id(tag: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "_", tag.strip().lower()).strip("_")

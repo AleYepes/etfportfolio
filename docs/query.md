@@ -218,4 +218,4 @@ Instead of updating the FRD, organize an implementation plan and execute it. Wor
 
 
 
-Let's draft a new FDR-like document that conveys all the decisions we've settled and why. The document should be clear and comprehensive enough that a fresh agent (one without access to this conversation) can accurately understand and implement all the specs. The agent will receive the same preliminary context you did at the start of our conversation (Overview, Project structure, Code Guidelines, and Tests) and they will have direct read/write access to the repo.
+If that clears the frontier, let's draft a new FDR-like document that conveys all the decisions we've settled and why. The document should be clear and comprehensive enough that a fresh agent (one without access to this conversation, the FRD_architecture.md, or the FRD_panel.md) can accurately understand and implement all the specs correctly. The agent will receive the same preliminary context you did at the start of our conversation (Project Overview, Project Structure, Code Guidelines) and they will have direct read/write access to the repo.

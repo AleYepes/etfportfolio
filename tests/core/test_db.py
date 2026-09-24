@@ -20,23 +20,50 @@ def test_apply_schema_creates_schemas_and_tables(db_conn):
     assert "prices" in tables
     assert "snapshots" in tables
     assert "snapshot_previews" in tables
-    assert "product_metrics" in tables
-    assert "product_dimensions" in tables
+    assert "observations" in tables
     assert "monthly_panel" in tables
+    assert "product_metrics" not in tables
+    assert "product_dimensions" not in tables
 
 
-def test_product_metrics_has_currency_column(db_conn):
+def test_monthly_panel_has_no_asset_class_column(db_conn):
     cols = [
         r[0]
         for r in db_conn.execute(
             """
             SELECT column_name
             FROM information_schema.columns
-            WHERE table_schema = 'silver' AND table_name = 'product_metrics'
+            WHERE table_schema = 'silver' AND table_name = 'monthly_panel'
             """
         ).fetchall()
     ]
-    assert "currency" in cols
+    assert "asset_class" not in cols
+    assert set(cols) == {"product_id", "as_of_date", "feature_id", "value"}
+
+
+def test_observations_schema(db_conn):
+    cols = [
+        r[0]
+        for r in db_conn.execute(
+            """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'silver' AND table_name = 'observations'
+            """
+        ).fetchall()
+    ]
+    expected = {
+        "product_id",
+        "family",
+        "metric",
+        "code",
+        "effective_date",
+        "date_source_depth",
+        "fetched_at",
+        "value",
+        "raw_value",
+    }
+    assert set(cols) == expected
 
 
 def test_apply_schema_is_idempotent(db_conn):

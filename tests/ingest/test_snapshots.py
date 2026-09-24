@@ -5,8 +5,8 @@ import httpx
 import pytest
 
 from etfportfolio.core.db import AsyncDbWorker
+from etfportfolio.core.endpoints import ENDPOINTS_BY_NAME
 from etfportfolio.ingest.details import load_endpoint_freshness_cache
-from etfportfolio.ingest.endpoints import ENDPOINTS_BY_NAME
 from etfportfolio.ingest.snapshots import fetch_snapshot, store_snapshot
 
 
