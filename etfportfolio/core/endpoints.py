@@ -344,18 +344,60 @@ LIPPER_HORIZONS: dict[str, str] = {
 
 LIPPER_TIEBREAK: tuple[str, ...] = ("United States", "Germany", "UK", "Canada", "Japan", "Australia")
 
+ANNUAL_REPORT_METRICS: dict[str, str] = {
+    "Total Net Expense": "audited_net_expense_ratio",
+    "Total Gross Expense": "audited_gross_expense_ratio",
+    "Management Fees": "audited_management_fee_ratio",
+    "Non-Management Expenses": "audited_non_management_fee_ratio",
+}
+
+PROSPECTUS_REPORT_METRICS: dict[str, str] = {
+    "Prospectus Net Expense Ratio": "prospectus_net_expense_ratio",
+    "Prospectus Gross Expense Ratio": "prospectus_gross_expense_ratio",
+    "Prospectus Net Management Fee Ratio": "prospectus_net_management_fee_ratio",
+    "Prospectus Gross Management Fee Ratio": "prospectus_gross_management_fee_ratio",
+    "Prospectus Fee Waiver Ratio": "prospectus_fee_waiver_ratio",
+    "Prospectus Net 12b-1 Fee Ratio": "prospectus_net_12b1_fee_ratio",
+    "Prospectus Gross 12b-1 Fee": "prospectus_gross_12b1_fee_ratio",
+}
+
+FUND_PROFILE_REDEMPTION_METRICS: dict[str, str] = {
+    "Redemption_Charge_Max": "redemption_charge_max",
+    "Redemption Charge Max": "redemption_charge_max",
+    "Redemption_Charge_Actual": "redemption_charge_actual",
+    "Redemption Charge Actual": "redemption_charge_actual",
+}
+
 PROFILE_METRICS = frozenset(
     {
+        # Core profile
         "total_expense_ratio",
         "total_net_assets_local",
         "is_passive",
         "manager_tenure_years",
-        "audited_net_expense_ratio",
-        "management_expense_ratio",
-        "non_management_expense_ratio",
+        # Coverage scalars
         "top_10_weight",
         "theme_coverage",
         "esg_coverage",
         "mstar_coverage",
+        # Expense allocation
+        "management_expense_ratio",
+        "non_management_expense_ratio",
+        # Audited annual report (audited_net_expense_ratio preserved from base spec)
+        "audited_net_expense_ratio",
+        "audited_gross_expense_ratio",
+        "audited_management_fee_ratio",
+        "audited_non_management_fee_ratio",
+        # Prospectus report
+        "prospectus_net_expense_ratio",
+        "prospectus_gross_expense_ratio",
+        "prospectus_net_management_fee_ratio",
+        "prospectus_gross_management_fee_ratio",
+        "prospectus_fee_waiver_ratio",
+        "prospectus_net_12b1_fee_ratio",
+        "prospectus_gross_12b1_fee_ratio",
+        # Trading frictions
+        "redemption_charge_max",
+        "redemption_charge_actual",
     }
 )

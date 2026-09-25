@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import math
 import re
 from collections.abc import Callable
@@ -8,10 +9,12 @@ from typing import Any
 
 from etfportfolio.core.endpoints import (
     ALL_RATIOS_METRICS,
+    ANNUAL_REPORT_METRICS,
     ASSET_CLASS_METRICS,
     COUNTRY_CODE_REMAPS,
     CREDIT_RATING_METRICS,
     ESG_METRICS,
+    FUND_PROFILE_REDEMPTION_METRICS,
     INDUSTRY_METRICS,
     INDUSTRY_NAME_REMAPS,
     LIPPER_HORIZONS,
@@ -21,6 +24,7 @@ from etfportfolio.core.endpoints import (
     MSTAR_PILLAR_MAP,
     MSTAR_STAR_MAP,
     MSTAR_SUSTAINABILITY_MAP,
+    PROSPECTUS_REPORT_METRICS,
     RATIOS_PERCENTAGE_METRICS,
     SKIP_RATING_TOKENS,
 )
@@ -39,6 +43,8 @@ from etfportfolio.prep.utils import (
 _INT_RE = re.compile(r"\d{1,3}(?:,\d{3})+|\d+")
 _VALID_STYLE_X_TAGS = {"value", "core", "growth"}
 _VALID_STYLE_Y_TAGS = {"large", "multi", "mid", "small"}
+
+logger = logging.getLogger(__name__)
 
 
 def _regex_int(raw: str) -> int:
@@ -236,24 +242,14 @@ def _extract_style_box_dimensions(
     return dimensions
 
 
-def extract_profile(
+def _extract_profile_expenses_allocation(
+    observations: list[Observation],
     product_id: int,
-    payload: dict[str, Any],
+    expenses_allocation: list[dict[str, Any]],
     fetched_at: datetime,
-    date_ctx: DateContext | None = None,
-    contract_currency: str | None = None,
-    known_currencies: set[str] | None = None,
-) -> list[Observation]:
-    if not payload or not isinstance(payload, dict):
-        return []
-
-    if date_ctx is None:
-        date_ctx = DateContext(fetched_at.date())
-
-    observations: list[Observation] = []
-
-    # expenses_allocation at depth 0
-    for item in payload.get("expenses_allocation", []):
+    date_ctx: DateContext,
+) -> None:
+    for item in expenses_allocation:
         ratio = item.get("ratio")
         if ratio is None:
             continue
@@ -284,12 +280,42 @@ def extract_profile(
             if obs:
                 observations.append(obs)
 
-    # fund_and_profile
-    for item in payload.get("fund_and_profile", []):
+
+def _extract_profile_fund_tags(
+    observations: list[Observation],
+    product_id: int,
+    fund_and_profile: list[dict[str, Any]],
+    fetched_at: datetime,
+    date_ctx: DateContext,
+    contract_currency: str | None = None,
+    known_currencies: set[str] | None = None,
+) -> None:
+    for item in fund_and_profile:
         name_tag = item.get("name_tag") or ""
         name = item.get("name") or ""
         val = item.get("value")
         if val is None:
+            continue
+
+        if name_tag in ("Inception_Date", "Maturity_Date") or name in ("Inception Date", "Maturity Date"):
+            continue
+
+        redemption_metric = FUND_PROFILE_REDEMPTION_METRICS.get(name_tag) or FUND_PROFILE_REDEMPTION_METRICS.get(name)
+        if redemption_metric is not None:
+            parsed = parse_percentage(val)
+            if parsed is not None:
+                fee_val, raw_str = parsed
+                obs = _obs(
+                    product_id,
+                    "profile",
+                    redemption_metric,
+                    fee_val,
+                    raw_str,
+                    date_ctx,
+                    fetched_at,
+                )
+                if obs:
+                    observations.append(obs)
             continue
 
         if name_tag == "Total_Expense_Ratio" or name == "Total Expense Ratio":
@@ -318,7 +344,14 @@ def extract_profile(
             if parsed_aum is not None:
                 aum_val, raw_str, aum_date_str = parsed_aum
                 code = disambiguate_aum_currency(raw_str, contract_currency, known_currencies or set())
-                if code is not None:
+                if code is None:
+                    logger.debug(
+                        "Product %d: Dropped total_net_assets_local due to unresolved currency (raw='%s', contract_currency='%s')",
+                        product_id,
+                        raw_str,
+                        contract_currency,
+                    )
+                else:
                     with date_ctx.scope(aum_date_str, 3):
                         obs = _obs(
                             product_id,
@@ -348,28 +381,80 @@ def extract_profile(
                 if obs:
                     observations.append(obs)
 
-    # reports
-    for report in payload.get("reports", []):
-        if report.get("name") == "Annual Report":
-            with date_ctx.scope(report.get("as_of_date"), 2):
-                for report_field in report.get("fields", []):
-                    if report_field.get("name") == "Total Net Expense":
-                        parsed = parse_percentage(report_field.get("value"))
-                        if parsed is not None:
-                            fee_val, raw_str = parsed
-                            obs = _obs(
-                                product_id,
-                                "profile",
-                                "audited_net_expense_ratio",
-                                fee_val,
-                                raw_str,
-                                date_ctx,
-                                fetched_at,
-                            )
-                            if obs:
-                                observations.append(obs)
 
-    # mstar style box
+def _extract_profile_reports(
+    observations: list[Observation],
+    product_id: int,
+    reports: list[dict[str, Any]],
+    fetched_at: datetime,
+    date_ctx: DateContext,
+) -> None:
+    for report in reports:
+        report_name = report.get("name")
+        if report_name == "Annual Report":
+            active_map = ANNUAL_REPORT_METRICS
+        elif report_name == "Prospectus Report":
+            active_map = PROSPECTUS_REPORT_METRICS
+        else:
+            continue
+
+        with date_ctx.scope(report.get("as_of_date"), 2):
+            for field in report.get("fields", []):
+                field_name = field.get("name")
+                if field_name in active_map:
+                    metric = active_map[field_name]
+                    parsed = parse_percentage(field.get("value"))
+                    if parsed is not None:
+                        val_float, raw_str = parsed
+                        obs = _obs(
+                            product_id,
+                            "profile",
+                            metric,
+                            val_float,
+                            raw_str,
+                            date_ctx,
+                            fetched_at,
+                        )
+                        if obs:
+                            observations.append(obs)
+
+
+def extract_profile(
+    product_id: int,
+    payload: dict[str, Any],
+    fetched_at: datetime,
+    date_ctx: DateContext | None = None,
+    contract_currency: str | None = None,
+    known_currencies: set[str] | None = None,
+) -> list[Observation]:
+    if not payload or not isinstance(payload, dict):
+        return []
+
+    if date_ctx is None:
+        date_ctx = DateContext(fetched_at.date())
+
+    observations: list[Observation] = []
+
+    # 1. Expenses Allocation (depth 0)
+    _extract_profile_expenses_allocation(
+        observations, product_id, payload.get("expenses_allocation", []), fetched_at, date_ctx
+    )
+
+    # 2. Fund and Profile Tags (depth 0, except AUM at depth 3)
+    _extract_profile_fund_tags(
+        observations,
+        product_id,
+        payload.get("fund_and_profile", []),
+        fetched_at,
+        date_ctx,
+        contract_currency,
+        known_currencies,
+    )
+
+    # 3. Reports (depth 2)
+    _extract_profile_reports(observations, product_id, payload.get("reports", []), fetched_at, date_ctx)
+
+    # 4. Morningstar Style Box Dimensions
     mstar = payload.get("mstar")
     if isinstance(mstar, dict):
         observations.extend(_extract_style_box_dimensions(product_id, mstar, fetched_at, date_ctx))

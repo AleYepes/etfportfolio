@@ -7,6 +7,8 @@ zeros for composition/dummy families, in-month AUM->USD.
 
 from __future__ import annotations
 
+import logging
+import time
 from calendar import monthrange
 from datetime import date
 
@@ -14,11 +16,14 @@ from etfportfolio.core.db import db_connection
 from etfportfolio.core.endpoints import (
     ASSET_CLASS_METRICS,
     CREDIT_RATING_METRICS,
+    DEFAULT_ZERO_FAMILIES,
     INDUSTRY_METRICS,
     MATURITY_METRICS,
     STYLE_CELLS,
 )
 from etfportfolio.core.logging import console
+
+logger = logging.getLogger(__name__)
 
 
 def month_end_spine(start: date, end: date) -> list[date]:
@@ -46,6 +51,7 @@ def run_panel(db_path: str | None = None) -> int:
 
 
 def _build_panel(conn) -> int:
+    panel_start = time.perf_counter()
     n_obs = conn.execute("SELECT COUNT(*) FROM silver.observations").fetchone()[0]
     if n_obs == 0:
         conn.execute("DELETE FROM silver.monthly_panel")
@@ -71,6 +77,7 @@ def _build_panel(conn) -> int:
         return 0
 
     # Build per-product trading spine
+    console.info("Building per-product trading spines from bronze.prices…")
     conn.execute("CREATE TEMP TABLE product_spine (product_id INTEGER NOT NULL, as_of_date DATE NOT NULL)")
     spine_rows: list[tuple[int, date]] = []
     for pid, first_p, last_p in product_bounds:
@@ -78,6 +85,16 @@ def _build_panel(conn) -> int:
             spine_rows.append((pid, m_date))
 
     conn.executemany("INSERT INTO product_spine VALUES (?, ?)", spine_rows)
+
+    min_spine_date = min(r[1] for r in spine_rows)
+    max_spine_date = max(r[1] for r in spine_rows)
+    logger.info(
+        "Resolved trading bounds for %d products spanning %s to %s (%d total product-months)",
+        len(product_bounds),
+        min_spine_date,
+        max_spine_date,
+        len(spine_rows),
+    )
 
     # --------------------------------------------------------------------------
     # 1. DEFAULT-0 FAMILIES (Densified snapshot replacement with stored zeros)
@@ -272,6 +289,12 @@ def _build_panel(conn) -> int:
          AND o.effective_date = live.snap
         """
     )
+    n_def0 = conn.execute("SELECT COUNT(*) FROM panel_default0").fetchone()[0]
+    logger.info(
+        "Constructed default-0 densified panel: %d long rows across %d families",
+        n_def0,
+        len(DEFAULT_ZERO_FAMILIES),
+    )
 
     # --------------------------------------------------------------------------
     # 2. SCALAR FAMILIES (Interpolation without stored zeros) & AUM -> USD
@@ -314,6 +337,8 @@ def _build_panel(conn) -> int:
         GROUP BY o.product_id, LAST_DAY(o.effective_date)
         """
     )
+    n_aum = conn.execute("SELECT COUNT(*) FROM aum_usd_monthly").fetchone()[0]
+    logger.info("Converted and averaged %d product-months of USD AUM", n_aum)
 
     # Union all scalar observations
     conn.execute(
@@ -448,6 +473,8 @@ def _build_panel(conn) -> int:
           AND date_diff('day', latest.effective_date, sp.as_of_date) <= sc.cap
         """
     )
+    n_scalar = conn.execute("SELECT COUNT(*) FROM panel_scalar").fetchone()[0]
+    logger.info("Interpolated scalar panel: %d long rows", n_scalar)
 
     # --------------------------------------------------------------------------
     # 3. WRITE PATH
@@ -477,5 +504,13 @@ def _build_panel(conn) -> int:
         conn.execute("ROLLBACK")
         raise
 
+    elapsed = time.perf_counter() - panel_start
     console.info(f"Wrote {n_rows} rows to silver.monthly_panel.")
+    logger.info(
+        "Monthly panel rebuild complete in %.2fs: %d rows written (%d default-0, %d scalar)",
+        elapsed,
+        n_rows,
+        n_def0,
+        n_scalar,
+    )
     return int(n_rows)

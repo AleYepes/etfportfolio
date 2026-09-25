@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from etfportfolio.core.endpoints import (
     ALL_RATIOS_METRICS,
+    ANNUAL_REPORT_METRICS,
     ASSET_CLASS_METRICS,
     CREDIT_RATING_METRICS,
     DEFAULT_ZERO_FAMILIES,
@@ -9,11 +10,13 @@ from etfportfolio.core.endpoints import (
     ENDPOINTS,
     ENDPOINTS_BY_NAME,
     ESG_METRICS,
+    FUND_PROFILE_REDEMPTION_METRICS,
     GATED_ENDPOINTS,
     INDUSTRY_METRICS,
     MATURITY_METRICS,
     MSTAR_METRICS,
     PROFILE_METRICS,
+    PROSPECTUS_REPORT_METRICS,
     RATIOS_PERCENTAGE_METRICS,
     RATIOS_STANDARD_METRICS,
     SCALAR_FAMILIES,
@@ -90,3 +93,31 @@ def test_scalar_metric_sets():
     assert "esg_coverage" not in ESG_METRICS
     assert "people" in MSTAR_METRICS
     assert "mstar_coverage" in PROFILE_METRICS
+
+
+def test_profile_metrics_membership():
+    new_metrics = {
+        "audited_gross_expense_ratio",
+        "audited_management_fee_ratio",
+        "audited_non_management_fee_ratio",
+        "prospectus_net_expense_ratio",
+        "prospectus_gross_expense_ratio",
+        "prospectus_net_management_fee_ratio",
+        "prospectus_gross_management_fee_ratio",
+        "prospectus_fee_waiver_ratio",
+        "prospectus_net_12b1_fee_ratio",
+        "prospectus_gross_12b1_fee_ratio",
+        "redemption_charge_max",
+        "redemption_charge_actual",
+    }
+    assert len(PROFILE_METRICS) == 23
+    assert new_metrics.issubset(PROFILE_METRICS)
+
+    for metric in ANNUAL_REPORT_METRICS.values():
+        assert metric in PROFILE_METRICS
+
+    for metric in PROSPECTUS_REPORT_METRICS.values():
+        assert metric in PROFILE_METRICS
+
+    for metric in FUND_PROFILE_REDEMPTION_METRICS.values():
+        assert metric in PROFILE_METRICS

@@ -7,6 +7,7 @@ import duckdb
 import pytest
 
 from etfportfolio.core.db import apply_schema
+from etfportfolio.core.logging import configure_logging
 from etfportfolio.ingest.snapshots import store_snapshot
 from etfportfolio.prep.pipeline import run_observations
 
@@ -384,3 +385,19 @@ def test_pipeline_unregistered_extractor_raises(tmp_path: Path):
 
     with pytest.raises(ValueError, match="Unregistered extractor for url_prefix: /unregistered/unknown/prefix/"):
         run_observations(force=False, db_path=db_file)
+
+
+def test_pipeline_diagnostic_telemetry(obs_test_db, tmp_path):
+    log_file = tmp_path / "telemetry.log"
+    configure_logging(verbose=False, log_file=log_file)
+
+    processed = run_observations(force=True, db_path=obs_test_db)
+    assert processed == 6
+
+    assert log_file.exists()
+    content = log_file.read_text(encoding="utf-8")
+    assert "Queued 6 pending snapshots for extraction" in content
+    assert "Processed chunk 1/1" in content
+    assert "staged observations" in content
+    assert "watermarked" in content
+    assert "Observations phase completed in" in content

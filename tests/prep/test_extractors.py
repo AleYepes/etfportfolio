@@ -457,3 +457,139 @@ def test_extractors_against_payload_fixtures(fixture_name, extractor, expect_obs
             assert obs.family != "debt_type"
     else:
         assert len(obs_list) == 0, f"Expected no observations for {fixture_name}"
+
+
+def test_extract_profile_annual_report_metrics():
+    created_at = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
+    payload = {
+        "reports": [
+            {
+                "name": "Annual Report",
+                "as_of_date": "2025-12-31",
+                "fields": [
+                    {"name": "Total Net Expense", "value": "0.15%"},
+                    {"name": "Total Gross Expense", "value": "0.18%"},
+                    {"name": "Management Fees", "value": "0.10%"},
+                    {"name": "Non-Management Expenses", "value": "0.05%"},
+                ],
+            }
+        ]
+    }
+    obs_list = extract_profile(1001, payload, created_at)
+    assert len(obs_list) == 4
+    by_metric = {obs.metric: obs for obs in obs_list}
+
+    expected = {
+        "audited_net_expense_ratio": 0.0015,
+        "audited_gross_expense_ratio": 0.0018,
+        "audited_management_fee_ratio": 0.0010,
+        "audited_non_management_fee_ratio": 0.0005,
+    }
+    for metric, exp_val in expected.items():
+        assert metric in by_metric
+        obs = by_metric[metric]
+        assert obs.family == "profile"
+        assert obs.effective_date == date(2025, 12, 31)
+        assert obs.date_source_depth == 2
+        assert obs.value == pytest.approx(exp_val)
+
+
+def test_extract_profile_prospectus_report_metrics():
+    created_at = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
+    payload = {
+        "reports": [
+            {
+                "name": "Prospectus Report",
+                "as_of_date": "2026-03-31",
+                "fields": [
+                    {"name": "Prospectus Net Expense Ratio", "value": "0.20%"},
+                    {"name": "Prospectus Gross Expense Ratio", "value": "0.25%"},
+                    {"name": "Prospectus Net Management Fee Ratio", "value": "0.12%"},
+                    {"name": "Prospectus Gross Management Fee Ratio", "value": "0.15%"},
+                    {"name": "Prospectus Fee Waiver Ratio", "value": "0.05%"},
+                    {"name": "Prospectus Net 12b-1 Fee Ratio", "value": "0.02%"},
+                    {"name": "Prospectus Gross 12b-1 Fee", "value": "0.03%"},
+                ],
+            }
+        ]
+    }
+    obs_list = extract_profile(1001, payload, created_at)
+    assert len(obs_list) == 7
+    by_metric = {obs.metric: obs for obs in obs_list}
+
+    expected = {
+        "prospectus_net_expense_ratio": 0.0020,
+        "prospectus_gross_expense_ratio": 0.0025,
+        "prospectus_net_management_fee_ratio": 0.0012,
+        "prospectus_gross_management_fee_ratio": 0.0015,
+        "prospectus_fee_waiver_ratio": 0.0005,
+        "prospectus_net_12b1_fee_ratio": 0.0002,
+        "prospectus_gross_12b1_fee_ratio": 0.0003,
+    }
+    for metric, exp_val in expected.items():
+        assert metric in by_metric
+        obs = by_metric[metric]
+        assert obs.family == "profile"
+        assert obs.effective_date == date(2026, 3, 31)
+        assert obs.date_source_depth == 2
+        assert obs.value == pytest.approx(exp_val)
+
+
+def test_extract_profile_redemption_charges():
+    created_at = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
+    payload = {
+        "fund_and_profile": [
+            {"name_tag": "Redemption_Charge_Max", "value": "5%"},
+            {"name": "Redemption Charge Actual", "value": "0%"},
+        ]
+    }
+    obs_list = extract_profile(1001, payload, created_at)
+    assert len(obs_list) == 2
+    by_metric = {obs.metric: obs for obs in obs_list}
+
+    assert "redemption_charge_max" in by_metric
+    r_max = by_metric["redemption_charge_max"]
+    assert r_max.value == 0.05
+    assert r_max.date_source_depth == 0
+    assert r_max.effective_date == date(2026, 9, 1)
+
+    assert "redemption_charge_actual" in by_metric
+    r_act = by_metric["redemption_charge_actual"]
+    assert r_act.value == 0.0
+    assert r_act.date_source_depth == 0
+    assert r_act.effective_date == date(2026, 9, 1)
+
+    # Missing / empty redemption charges produce no row
+    empty_payload = {
+        "fund_and_profile": [
+            {"name_tag": "Redemption_Charge_Max", "value": None},
+            {"name": "Redemption Charge Actual", "value": "-"},
+        ]
+    }
+    assert extract_profile(1001, empty_payload, created_at) == []
+
+
+def test_extract_profile_ignores_itemized_accounting_fields_and_static_dates():
+    created_at = datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC)
+    payload = {
+        "fund_and_profile": [
+            {"name_tag": "Inception_Date", "value": "2020-01-01"},
+            {"name": "Maturity Date", "value": "2030-01-01"},
+            {"name_tag": "Asset_Type", "value": "Equity"},
+            {"name": "Classification", "value": "Large Blend"},
+        ],
+        "reports": [
+            {
+                "name": "Annual Report",
+                "as_of_date": "2025-12-31",
+                "fields": [
+                    {"name": "Custodian Expenses", "value": "0.01%"},
+                    {"name": "Misc. Expenses", "value": "0.01%"},
+                    {"name": "Postage and Printing Expenses", "value": "0.01%"},
+                    {"name": "Audit Expenses", "value": "0.01%"},
+                ],
+            }
+        ],
+    }
+    obs_list = extract_profile(1001, payload, created_at)
+    assert obs_list == []

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import date
 
 from etfportfolio.core.db import db_connection
@@ -83,6 +84,14 @@ def run_observations(force: bool = False, db_path: str | None = None) -> int:
             """
         ).fetchall()
 
+        phase_start = time.perf_counter()
+        logger.info(
+            "Queued %d pending snapshots for extraction (batch_size=%d, force=%s)",
+            len(pending_snapshots),
+            BATCH_SIZE,
+            force,
+        )
+
         if not pending_snapshots:
             console.info("All snapshots up to date.")
             return 0
@@ -95,12 +104,16 @@ def run_observations(force: bool = False, db_path: str | None = None) -> int:
         }
 
         total_pending = len(pending_snapshots)
+        total_chunks = (total_pending + BATCH_SIZE - 1) // BATCH_SIZE
         watermarked_total = 0
         failed_count = 0
         empty_count = 0
 
         with progress_bar(total_pending, desc="Observations", unit="snapshot") as bar:
-            for i in range(0, total_pending, BATCH_SIZE):
+            for chunk_idx, i in enumerate(range(0, total_pending, BATCH_SIZE), start=1):
+                chunk_start = time.perf_counter()
+                chunk_failed_count = 0
+                chunk_empty_count = 0
                 chunk = pending_snapshots[i : i + BATCH_SIZE]
                 unique_hashes = list({row[4] for row in chunk})
                 placeholders = ", ".join("?" for _ in unique_hashes)
@@ -127,6 +140,7 @@ def run_observations(force: bool = False, db_path: str | None = None) -> int:
                     if raw_blob is None:
                         logger.error("Missing blob payload for hash %s, snapshot %d", blob_hash, snapshot_id)
                         failed_count += 1
+                        chunk_failed_count += 1
                         continue
 
                     try:
@@ -134,11 +148,13 @@ def run_observations(force: bool = False, db_path: str | None = None) -> int:
                     except Exception as e:
                         logger.error("Decompression failed for snapshot %d: %s", snapshot_id, e)
                         failed_count += 1
+                        chunk_failed_count += 1
                         continue
 
                     if not data or not isinstance(data, dict):
                         succeeded_snapshot_ids.append((snapshot_id,))
                         empty_count += 1
+                        chunk_empty_count += 1
                         continue
 
                     if ep_name in EXCLUDED_ENDPOINTS:
@@ -163,13 +179,15 @@ def run_observations(force: bool = False, db_path: str | None = None) -> int:
                         )
                     except Exception as e:
                         logger.error(
-                            "Extract failed for product %d, snapshot %d, endpoint %s: %s",
-                            product_id,
+                            "Snapshot %d (product %d, endpoint '%s') failed extraction: %s",
                             snapshot_id,
+                            product_id,
                             ep_name,
                             e,
+                            exc_info=True,
                         )
                         failed_count += 1
+                        chunk_failed_count += 1
                         continue
 
                     for obs in observations:
@@ -198,11 +216,33 @@ def run_observations(force: bool = False, db_path: str | None = None) -> int:
                     conn.execute("ROLLBACK")
                     raise
 
+                chunk_elapsed = time.perf_counter() - chunk_start
+                logger.info(
+                    "Processed chunk %d/%d (snapshots %d–%d) in %.2fs: %d staged observations, %d watermarked, %d empty, %d failed",
+                    chunk_idx,
+                    total_chunks,
+                    chunk[0][0],
+                    chunk[-1][0],
+                    chunk_elapsed,
+                    len(staged_observations),
+                    len(succeeded_snapshot_ids),
+                    chunk_empty_count,
+                    chunk_failed_count,
+                )
+
                 bar.update(len(chunk))
                 bar.set_postfix_str(f"snap {chunk[-1][0]}")
                 watermarked_total += len(succeeded_snapshot_ids)
 
+        total_elapsed = time.perf_counter() - phase_start
         console.info(
             f"Observations finished: {watermarked_total} watermarked, {failed_count} failed, {empty_count} empty."
+        )
+        logger.info(
+            "Observations phase completed in %.2fs. Total watermarked: %d, Total failed: %d, Total empty: %d",
+            total_elapsed,
+            watermarked_total,
+            failed_count,
+            empty_count,
         )
         return watermarked_total

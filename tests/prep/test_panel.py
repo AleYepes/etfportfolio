@@ -435,3 +435,57 @@ def test_open_vocab_densify_per_product_only(panel_db):
     ]
     assert p2_features == ["theme_theme_c"]
     conn.close()
+
+
+def test_panel_interpolates_new_profile_scalars(panel_db):
+    conn = duckdb.connect(panel_db)
+    conn.execute(
+        """
+        INSERT INTO bronze.prices (product_id, date, close, updated_at)
+        VALUES (1, '2024-01-15', 100.0, now()),
+               (1, '2024-03-31', 110.0, now())
+        """
+    )
+    conn.execute(
+        """
+        INSERT INTO silver.observations (
+            product_id, family, metric, code, effective_date, date_source_depth,
+            fetched_at, value, raw_value
+        ) VALUES
+            (1, 'profile', 'audited_gross_expense_ratio', NULL, '2024-01-31', 2, '2024-01-31 10:00:00+00', 0.0018, '0.18%'),
+            (1, 'profile', 'redemption_charge_max', NULL, '2024-02-29', 0, '2024-02-29 10:00:00+00', 0.05, '5%')
+        """
+    )
+    conn.close()
+
+    rows_written = run_panel(panel_db)
+    assert rows_written > 0
+
+    conn = duckdb.connect(panel_db)
+    features = [
+        r[0]
+        for r in conn.execute(
+            "SELECT DISTINCT feature_id FROM silver.monthly_panel WHERE product_id = 1 ORDER BY feature_id"
+        ).fetchall()
+    ]
+    assert features == [
+        "profile_audited_gross_expense_ratio",
+        "profile_redemption_charge_max",
+    ]
+
+    # Verify singleton scalar fills full spine
+    audited_rows = conn.execute(
+        "SELECT as_of_date, value FROM silver.monthly_panel WHERE feature_id = 'profile_audited_gross_expense_ratio' ORDER BY as_of_date"
+    ).fetchall()
+    expected_dates = [date(2024, 1, 31), date(2024, 2, 29), date(2024, 3, 31)]
+    assert [r[0] for r in audited_rows] == expected_dates
+    for _, val in audited_rows:
+        assert val == pytest.approx(0.0018)
+
+    redemption_rows = conn.execute(
+        "SELECT as_of_date, value FROM silver.monthly_panel WHERE feature_id = 'profile_redemption_charge_max' ORDER BY as_of_date"
+    ).fetchall()
+    assert [r[0] for r in redemption_rows] == expected_dates
+    for _, val in redemption_rows:
+        assert val == pytest.approx(0.05)
+    conn.close()
