@@ -125,26 +125,27 @@ async def process_product(
 
     fetch_success = {ep: (res is True) for ep, res in zip(to_fetch, results, strict=False)}
 
-    gated_success = True
-    if fetch_gated:
-        for ep in endpoints.GATED_ENDPOINTS:
-            if ep in fetch_success and not fetch_success[ep]:
-                gated_success = False
-                break
+    # A gated endpoint is satisfied when it was fresh in the pre-run cache
+    # (and we're not forcing a re-fetch) OR it was successfully fetched this run.
+    # This prevents stamping the preview when a gated endpoint is stale but was
+    # not attempted (fetch_gated=False because landing content was unchanged).
+    gated_all_satisfied = all(
+        (not force and is_fresh(endpoint_cache.get((product_id, ep.url_prefix)), settings.freshness_window_hours))
+        or fetch_success.get(ep, False)
+        for ep in endpoints.GATED_ENDPOINTS
+    )
 
-    should_stamp = not (fetch_gated and not gated_success)
-
-    if should_stamp:
+    if gated_all_satisfied:
         if landing_fetched:
             if changed and digest is not None and compressed is not None:
                 await landing.commit_preview(worker, product_id, digest, compressed)
             else:
                 await landing.stamp_last_checked(worker, product_id)
     else:
-        logger.warning("Product %d: partial gated endpoint failure. Preview not updated.", product_id)
+        logger.warning("Product %d: gated endpoint(s) not satisfied. Preview not updated.", product_id)
 
     all_ok = all(fetch_success.values()) if fetch_success else True
-    if fetch_gated and not gated_success:
+    if not gated_all_satisfied:
         all_ok = False
 
     return ProductDetailsResult(

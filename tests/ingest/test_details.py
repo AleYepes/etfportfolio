@@ -105,3 +105,90 @@ async def test_process_product_landing_changed_fetches_gated(tmp_path):
 
     total_expected_eps = len(endpoints.DETAILS_ENDPOINTS)
     assert mock_snap.call_count == total_expected_eps
+
+
+@pytest.mark.anyio
+async def test_process_product_stale_gated_landing_unchanged_does_not_stamp(tmp_path):
+    """When a gated endpoint is stale but landing content is unchanged (changed=False),
+    fetch_gated is False and the gated endpoint is not attempted. The preview must
+    NOT be stamped because the gated endpoint is unsatisfied."""
+    db_file = str(tmp_path / "test_details_stale_gated.duckdb")
+    now = datetime.now(UTC)
+    stale = now - timedelta(days=10)
+
+    from etfportfolio.core import endpoints
+
+    landing_cache = {1001: stale}
+    # Ungated endpoints are fresh; gated endpoints are absent (stale)
+    endpoint_cache = {(1001, ep.url_prefix): now for ep in endpoints.UNGATED_ENDPOINTS}
+
+    async with AsyncDbWorker(db_file) as worker, httpx.AsyncClient() as client:
+        semaphore = asyncio.Semaphore(5)
+        with (
+            patch("etfportfolio.ingest.details.landing.fetch_and_gate", new_callable=AsyncMock) as mock_gate,
+            patch("etfportfolio.ingest.details.landing.commit_preview", new_callable=AsyncMock) as mock_commit,
+            patch("etfportfolio.ingest.details.landing.stamp_last_checked", new_callable=AsyncMock) as mock_stamp,
+            patch("etfportfolio.ingest.details.snapshots.fetch_snapshot", new_callable=AsyncMock),
+        ):
+            # Landing re-fetched but content unchanged → changed=False
+            mock_gate.return_value = (False, None, None)
+
+            res = await process_product(
+                client,
+                worker,
+                1001,
+                "U123456",
+                semaphore,
+                landing_cache,
+                endpoint_cache,
+                force=False,
+            )
+
+    assert res.ok is False
+    mock_commit.assert_not_called()
+    mock_stamp.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_process_product_gated_failure_does_not_commit_landing(tmp_path):
+    """When landing changes, but a gated endpoint fails (e.g. 429 or 5xx),
+    landing preview must NOT be committed or stamped."""
+    db_file = str(tmp_path / "test_details_gated_fail.duckdb")
+    now = datetime.now(UTC)
+    stale = now - timedelta(days=10)
+
+    landing_cache = {1001: stale}
+    endpoint_cache = {}
+
+    async with AsyncDbWorker(db_file) as worker, httpx.AsyncClient() as client:
+        semaphore = asyncio.Semaphore(5)
+        with (
+            patch("etfportfolio.ingest.details.landing.fetch_and_gate", new_callable=AsyncMock) as mock_gate,
+            patch("etfportfolio.ingest.details.landing.commit_preview", new_callable=AsyncMock) as mock_commit,
+            patch("etfportfolio.ingest.details.landing.stamp_last_checked", new_callable=AsyncMock) as mock_stamp,
+            patch("etfportfolio.ingest.details.snapshots.fetch_snapshot", new_callable=AsyncMock) as mock_snap,
+        ):
+            mock_gate.return_value = (True, 999999, b"compressed")
+
+            async def side_effect(_client, _worker, ep, _product_id, _account_id):
+                if ep.name == "holdings":
+                    raise RuntimeError("Request failed after 3 attempts: 429 Too Many Requests")
+                return None
+
+            mock_snap.side_effect = side_effect
+
+            res = await process_product(
+                client,
+                worker,
+                1001,
+                "U123456",
+                semaphore,
+                landing_cache,
+                endpoint_cache,
+                force=False,
+            )
+
+    assert res.ok is False
+    mock_commit.assert_not_called()
+    mock_stamp.assert_not_called()
+
