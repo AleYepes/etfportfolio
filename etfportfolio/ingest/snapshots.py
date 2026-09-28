@@ -75,8 +75,8 @@ async def fetch_snapshot(
 ) -> None:
     """Fetches a single snapshot endpoint for a product and stores it.
 
-    404 is persisted as ``{}`` so ``fetched_at`` is written and the freshness
-    cache can skip the endpoint on the next run.
+    404 and empty responses are persisted as {} so fetched_at / last_checked_at
+    is updated and the freshness cache skips the endpoint on subsequent runs.
     """
     url_prefix, url_slug, full_url = ep.resolve(product_id=product_id, account_id=account_id)
     _, payload = await session.fetch_with_retry(client, full_url)

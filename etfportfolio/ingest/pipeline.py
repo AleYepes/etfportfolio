@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from datetime import datetime
 
 import httpx
 
@@ -14,21 +15,15 @@ logger = logging.getLogger(__name__)
 
 def _is_product_fully_fresh(
     product_id: int,
-    landing_cache: dict,
-    endpoint_cache: dict,
+    endpoint_cache: dict[tuple[int, str], datetime],
 ) -> bool:
-    """True if a product's landing and all ungated endpoints are fresh.
-
-    When landing is fresh, gated endpoints won't fire (they require a landing
-    change), so we only need to check ungated endpoints.
-    """
+    """True iff every endpoint in endpoints.ENDPOINTS is fresh for this product."""
     from etfportfolio.core import endpoints as ep_mod
     from etfportfolio.ingest.utils import is_fresh
 
-    if not is_fresh(landing_cache.get(product_id), settings.freshness_window_hours):
-        return False
-    for ep in ep_mod.UNGATED_ENDPOINTS:
-        if not is_fresh(endpoint_cache.get((product_id, ep.url_prefix)), settings.freshness_window_hours):
+    for ep in ep_mod.ENDPOINTS:
+        last_checked = endpoint_cache.get((product_id, ep.url_prefix))
+        if not is_fresh(last_checked, settings.freshness_window_hours):
             return False
     return True
 
@@ -42,14 +37,12 @@ async def _run_details_phase(
 ) -> None:
     """Runs the details phase across a resolved list of target products."""
     semaphore = asyncio.Semaphore(settings.details_concurrency)
-
-    landing_cache = await worker.submit(details.load_landing_freshness_cache)
     endpoint_cache = await worker.submit(details.load_endpoint_freshness_cache)
 
     if force:
         to_process = target_ids
     else:
-        to_process = [pid for pid in target_ids if not _is_product_fully_fresh(pid, landing_cache, endpoint_cache)]
+        to_process = [pid for pid in target_ids if not _is_product_fully_fresh(pid, endpoint_cache)]
 
     skipped_prods = len(target_ids) - len(to_process)
     if skipped_prods:
@@ -74,7 +67,6 @@ async def _run_details_phase(
                     product_id,
                     account_id,
                     semaphore,
-                    landing_cache,
                     endpoint_cache,
                     force=force,
                 )
@@ -107,7 +99,8 @@ async def _run_session() -> str:
 
 
 async def _run_themes(force: bool = False) -> tuple[int, int]:
-    client, account_id = await session.ensure_session()
+    rate_limiter = session.RateLimiter()
+    client, account_id = await session.ensure_session(rate_limiter=rate_limiter)
     try:
         return await themes.sync(client=client, force=force)
     finally:
@@ -119,8 +112,9 @@ async def _run_fx(force: bool = False) -> int:
 
 
 async def _run_details_only(force: bool = False) -> None:
+    rate_limiter = session.RateLimiter()
     async with AsyncDbWorker(settings.db_path) as worker:
-        client, account_id = await session.ensure_session()
+        client, account_id = await session.ensure_session(rate_limiter=rate_limiter)
         console.info(f"Session OK. Active account: {account_id}")
         try:
             target_products = await worker.submit(products.resolve_target_products)
@@ -131,9 +125,11 @@ async def _run_details_only(force: bool = False) -> None:
 
 
 async def _run_full(force: bool = False) -> None:
+    rate_limiter = session.RateLimiter()
+
     console.info("=== Phase 1: Product discovery ===")
     try:
-        count = await products.sync(force=force)
+        count = await products.sync(rate_limiter=rate_limiter, force=force)
         console.info(f"Product sync complete. Total products synced: {count}")
     except Exception as e:
         logger.error("Product sync failed (continuing with existing products in DB): %s", e)
@@ -163,7 +159,7 @@ async def _run_full(force: bool = False) -> None:
         raise
 
     console.info("=== Phase 5: Session validation ===")
-    client, account_id = await session.ensure_session()
+    client, account_id = await session.ensure_session(rate_limiter=rate_limiter)
     console.info(f"Session OK. Active account: {account_id}")
 
     try:

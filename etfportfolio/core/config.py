@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     freshness_window_hours: float = 24.0
     blocked_exchanges: list[str] = []
 
+    # HTTP Rate Limiting and Retries
+    rate_limit_initial_delay: float = 1.0
+    rate_limit_max_delay: float = 60.0
+    rate_limit_cooldown_seconds: float = 15.0
+    http_max_retries: int = 5
+
     # IB Gateway
     ib_gateway_host: str = "127.0.0.1"
     ib_gateway_port: int = 4001

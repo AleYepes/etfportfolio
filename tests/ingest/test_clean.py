@@ -95,28 +95,26 @@ def test_clean_cold_storage_purges_redundant_runs(db_conn):
 
 
 def test_clean_payload_blobs(db_conn):
-    # Insert referenced blob
+    # Insert snapshots-referenced blob
     db_conn.execute("INSERT INTO bronze.payload_blobs (hash, payload) VALUES (111, blob 'abc')")
     db_conn.execute(
-        "INSERT INTO bronze.snapshots (product_id, url_prefix, hash, created_at, last_checked_at) VALUES (1, 'landing', 111, now(), now())"
-    )
-
-    # Insert preview-referenced blob
-    db_conn.execute("INSERT INTO bronze.payload_blobs (hash, payload) VALUES (222, blob 'def')")
-    db_conn.execute(
-        "INSERT INTO bronze.snapshot_previews (product_id, hash, updated_at, last_checked_at) VALUES (1, 222, now(), now())"
+        "INSERT INTO bronze.snapshots (product_id, url_prefix, hash, created_at, last_checked_at) VALUES (1, '/tws.proxy/fundamentals/mf_holdings/', 111, now(), now())"
     )
 
     # Insert unreferenced orphan blob
     db_conn.execute("INSERT INTO bronze.payload_blobs (hash, payload) VALUES (333, blob 'xyz')")
 
-    assert db_conn.execute("SELECT COUNT(*) FROM bronze.payload_blobs").fetchone()[0] == 3
+    assert db_conn.execute("SELECT COUNT(*) FROM bronze.payload_blobs").fetchone()[0] == 2
 
     deleted = clean_payload_blobs(db_conn)
     assert deleted == 1
 
     remaining_hashes = [r[0] for r in db_conn.execute("SELECT hash FROM bronze.payload_blobs").fetchall()]
-    assert set(remaining_hashes) == {111, 222}
+    assert remaining_hashes == [111]
+
+    # Verify no query accesses bronze.snapshot_previews (it does not exist in schema)
+    with pytest.raises(duckdb.CatalogException):
+        db_conn.execute("SELECT * FROM bronze.snapshot_previews")
 
 
 def test_run_clean_end_to_end(monkeypatch, tmp_path):

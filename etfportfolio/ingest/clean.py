@@ -37,8 +37,6 @@ def clean_payload_blobs(conn: duckdb.DuckDBPyConnection) -> int:
         DELETE FROM bronze.payload_blobs
         WHERE hash NOT IN (
             SELECT hash FROM bronze.snapshots
-            UNION
-            SELECT hash FROM bronze.snapshot_previews
         )
         """
     ).fetchone()

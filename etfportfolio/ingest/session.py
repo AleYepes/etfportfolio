@@ -2,7 +2,9 @@ import asyncio
 import contextlib
 import json
 import logging
+import random
 import re
+import time
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +19,65 @@ logger = logging.getLogger(__name__)
 
 class SessionInvalidError(Exception):
     """Raised when IBKR returns the session-invalid signature."""
+
+
+class RateLimiter:
+    """Coordinates windowed 429 throttling and jittered backoff across coroutines."""
+
+    def __init__(
+        self,
+        initial_delay: float | None = None,
+        max_delay: float | None = None,
+        cooldown_window: float | None = None,
+    ) -> None:
+        self.initial_delay = initial_delay if initial_delay is not None else settings.rate_limit_initial_delay
+        self.max_delay = max_delay if max_delay is not None else settings.rate_limit_max_delay
+        self.cooldown_window = cooldown_window if cooldown_window is not None else settings.rate_limit_cooldown_seconds
+
+        self._current_delay: float = self.initial_delay
+        self._pause_until: float = 0.0
+        self._last_429_time: float = 0.0
+        self._lock = asyncio.Lock()
+
+    async def wait_if_paused(self) -> None:
+        """Suspends coroutine execution while a rate-limiting pause window is active."""
+        while True:
+            now = time.monotonic()
+            if now >= self._pause_until:
+                break
+            jitter = random.uniform(0.1, 0.5)
+            sleep_duration = (self._pause_until - now) + jitter
+            await asyncio.sleep(sleep_duration)
+
+    async def report_429(self, retry_after: float | None = None) -> None:
+        """Registers a 429 response, escalating backoff once per wave."""
+        async with self._lock:
+            now = time.monotonic()
+
+            # 1. Reset delay to baseline if cooldown period passed without 429s
+            if now - self._last_429_time > self.cooldown_window:
+                self._current_delay = self.initial_delay
+
+            # 2. Check if this is a new wave or continuation of an active wave
+            if now >= self._pause_until:
+                delay = self._current_delay
+                if retry_after is not None and retry_after > 0:
+                    delay = max(retry_after, delay)
+
+                self._pause_until = now + delay
+                self._current_delay = min(self._current_delay * 2.0, self.max_delay)
+                logger.warning(
+                    "HTTP 429 hit. Pausing outbound requests for %.2fs (next backoff: %.2fs)",
+                    delay,
+                    self._current_delay,
+                )
+            else:
+                # Extend deadline if explicit retry_after requires a longer wait
+                if retry_after is not None and retry_after > 0:
+                    self._pause_until = max(self._pause_until, now + retry_after)
+                logger.debug("HTTP 429 received within active wave. Awaiting existing deadline.")
+
+            self._last_429_time = now
 
 
 DEFAULT_ENV_PATH = Path(".env")
@@ -51,10 +112,14 @@ def is_session_invalid(response: httpx.Response) -> bool:
         return True
     try:
         data = response.json()
-        if isinstance(data, dict) and data.get("error") == "Invalid headers":
-            return True
+        if isinstance(data, dict):
+            if data.get("error") == "Invalid headers":
+                return True
+            if data.get("statusCode") == 400 and data.get("error") == "Invalid headers":
+                return True
     except Exception:
-        pass
+        if "Invalid headers" in response.text:
+            return True
     return False
 
 
@@ -202,26 +267,35 @@ def _load_cookies_from_storage_state(path: Path) -> dict[str, str]:
         return {}
 
 
-def build_async_client(timeout: float = 30.0, cookies: dict[str, str] | None = None) -> httpx.AsyncClient:
-    """Builds an httpx.AsyncClient preloaded with session cookies and standard headers."""
+def build_async_client(
+    timeout: float = 30.0,
+    cookies: dict[str, str] | None = None,
+    rate_limiter: RateLimiter | None = None,
+) -> httpx.AsyncClient:
+    """Builds an httpx.AsyncClient preloaded with session cookies, headers, and rate limiter."""
     if cookies is None:
         session_path = Path(settings.session_state_path)
         cookies = _load_cookies_from_storage_state(session_path)
 
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        ),
         "Accept": "application/json, text/plain, */*",
         "Referer": f"{settings.ibkr_base_url}/portal/",
         "X-Requested-With": "XMLHttpRequest",
     }
 
-    return httpx.AsyncClient(
+    client = httpx.AsyncClient(
         base_url=settings.ibkr_base_url.rstrip("/"),
         headers=headers,
         cookies=cookies,
         timeout=timeout,
         follow_redirects=True,
     )
+    client.rate_limiter = rate_limiter or RateLimiter()  # type: ignore[attr-defined]
+    return client
 
 
 def reconcile_account_id(account_id: str, env_path: Path | None = None) -> bool:
@@ -318,28 +392,56 @@ async def probe(client: httpx.AsyncClient) -> str:
     return account_id
 
 
+def _parse_retry_after(response: httpx.Response) -> float | None:
+    header = response.headers.get("Retry-After")
+    if not header:
+        return None
+    try:
+        return float(header)
+    except ValueError:
+        return None
+
+
 async def fetch_with_retry(
     client: httpx.AsyncClient,
     url: str,
-    max_retries: int = 3,
-    initial_backoff: float = 1.0,
+    method: str = "GET",
+    json: Any = None,
+    max_retries: int | None = None,
+    initial_backoff: float | None = None,
+    rate_limiter: RateLimiter | None = None,
 ) -> tuple[int, Any]:
-    """Fetches URL with retry on non-2xx responses.
+    """Sends HTTP request with rate-limiting backoff, sentinel handling, and retries.
 
-    404 is a normal, non-exceptional outcome: returned immediately as
-    ``(404, None)`` with no retry. Session-invalid signatures raise
-    ``SessionInvalidError`` without retry. Every other non-2xx retries
-    with exponential backoff.
+    - 200: Returns (200, parsed_json) or (200, {}) on empty/non-JSON body.
+    - 404: Returns immediately as (404, None).
+    - Session invalid errors (401, 403, 400 Invalid Headers): Raises SessionInvalidError immediately.
+    - 429: Notifies RateLimiter, pauses, and retries.
+    - 5XX and network errors: Retries with exponential backoff up to max_retries.
     """
-    attempt = 0
-    backoff = initial_backoff
+    retries_limit = max_retries if max_retries is not None else settings.http_max_retries
+    backoff = initial_backoff if initial_backoff is not None else settings.rate_limit_initial_delay
+    limiter = rate_limiter or getattr(client, "rate_limiter", None)
 
-    while attempt < max_retries:
+    attempt = 0
+    while attempt < retries_limit:
         attempt += 1
+        if limiter is not None:
+            await limiter.wait_if_paused()
+
         try:
-            resp = await client.get(url)
+            if method.upper() == "POST":
+                resp = await client.post(url, json=json)
+            else:
+                resp = await client.get(url)
+
             if resp.is_success:
-                return resp.status_code, resp.json()
+                try:
+                    data = resp.json()
+                    return resp.status_code, data if data is not None else {}
+                except Exception:
+                    # Permissive sentinel: treat empty or non-JSON 200 as empty payload {}
+                    return resp.status_code, {}
 
             if resp.status_code == 404:
                 return 404, None
@@ -348,35 +450,36 @@ async def fetch_with_retry(
                 logger.error("Session invalid signature hit on %s", url)
                 raise SessionInvalidError("Session is invalid ('Invalid headers').")
 
+            if resp.status_code == 429:
+                retry_after = _parse_retry_after(resp)
+                if limiter is not None:
+                    await limiter.report_429(retry_after)
+                else:
+                    delay = retry_after if (retry_after is not None and retry_after > 0) else backoff
+                    await asyncio.sleep(delay)
+                    backoff *= 2.0
+                continue
+
             logger.warning(
                 "Request to %s failed (status %d), attempt %d/%d",
                 url,
                 resp.status_code,
                 attempt,
-                max_retries,
+                retries_limit,
             )
         except (httpx.RequestError, httpx.TimeoutException) as e:
-            logger.warning("Network error on %s: %s (attempt %d/%d)", url, e, attempt, max_retries)
+            logger.warning("Network error on %s: %s (attempt %d/%d)", url, e, attempt, retries_limit)
 
-        if attempt < max_retries:
+        if attempt < retries_limit:
             await asyncio.sleep(backoff)
             backoff *= 2.0
 
-    raise RuntimeError(f"Request to {url} failed after {max_retries} attempts.")
+    raise RuntimeError(f"Request to {url} failed after {retries_limit} attempts.")
 
 
-async def ensure_session() -> tuple[httpx.AsyncClient, str]:
-    """Ensures a valid, authenticated client and resolves the active account_id.
-
-    Tries a lightweight probe against the stored session first; only falls
-    back to an interactive browser login if that probe fails. This is the
-    single entry point every command that needs a session goes through
-    (`ingest session` itself, plus `themes`, `details`, and the full run) —
-    each is a single CLI invocation, not a manual chain of two commands.
-
-    Returns a fresh client, owned by the caller (the caller must close it).
-    """
-    client = build_async_client()
+async def ensure_session(rate_limiter: RateLimiter | None = None) -> tuple[httpx.AsyncClient, str]:
+    """Ensures a valid, authenticated client and resolves the active account_id."""
+    client = build_async_client(rate_limiter=rate_limiter)
     try:
         account_id = await probe(client)
         return client, account_id
@@ -384,7 +487,7 @@ async def ensure_session() -> tuple[httpx.AsyncClient, str]:
         logger.warning("Session probe failed (%s). Launching interactive login...", e)
         await client.aclose()
         await login()
-        client = build_async_client()
+        client = build_async_client(rate_limiter=rate_limiter)
         try:
             account_id = await probe(client)
             return client, account_id

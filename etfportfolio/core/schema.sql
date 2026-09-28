@@ -86,13 +86,6 @@ CREATE TABLE IF NOT EXISTS bronze.contracts (
     updated_at              TIMESTAMP NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS bronze.snapshot_previews (
-    product_id      INTEGER PRIMARY KEY,
-    hash            UBIGINT NOT NULL,
-    updated_at      TIMESTAMP NOT NULL,
-    last_checked_at TIMESTAMP
-);
-
 CREATE SEQUENCE IF NOT EXISTS bronze.snapshots_id_seq;
 CREATE TABLE IF NOT EXISTS bronze.snapshots (
     snapshot_id     INTEGER PRIMARY KEY DEFAULT nextval('bronze.snapshots_id_seq'),

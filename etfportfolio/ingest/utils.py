@@ -75,29 +75,6 @@ def store_blob(conn: duckdb.DuckDBPyConnection, digest: int, compressed: bytes) 
     )
 
 
-def gc_preview_blob(conn: duckdb.DuckDBPyConnection, old_hash: int | None) -> bool:
-    """Garbage-collects an old preview blob if it is no longer referenced anywhere."""
-    if old_hash is None:
-        return False
-
-    row = conn.execute(
-        """
-        SELECT COUNT(*) FROM (
-            SELECT hash FROM bronze.snapshots WHERE hash = $1
-            UNION ALL
-            SELECT hash FROM bronze.snapshot_previews WHERE hash = $1
-        ) AS refs
-        """,
-        [old_hash],
-    ).fetchone()
-    referenced = row[0] if row else 0
-
-    if referenced == 0:
-        conn.execute("DELETE FROM bronze.payload_blobs WHERE hash = $1", [old_hash])
-        return True
-    return False
-
-
 def is_fresh(last_seen: datetime | None, hours: float) -> bool:
     """True iff `last_seen` is within `hours` of now.
 

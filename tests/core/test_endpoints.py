@@ -6,12 +6,10 @@ from etfportfolio.core.endpoints import (
     ASSET_CLASS_METRICS,
     CREDIT_RATING_METRICS,
     DEFAULT_ZERO_FAMILIES,
-    DETAILS_ENDPOINTS,
     ENDPOINTS,
     ENDPOINTS_BY_NAME,
     ESG_METRICS,
     FUND_PROFILE_REDEMPTION_METRICS,
-    GATED_ENDPOINTS,
     INDUSTRY_METRICS,
     MATURITY_METRICS,
     MSTAR_METRICS,
@@ -21,14 +19,16 @@ from etfportfolio.core.endpoints import (
     RATIOS_STANDARD_METRICS,
     SCALAR_FAMILIES,
     STYLE_CELLS,
-    UNGATED_ENDPOINTS,
 )
 
 
 def test_endpoints_registry():
-    expected_names = {"landing", "profile", "ratios", "holdings", "mstar", "esg", "lipper", "theme_weights"}
+    expected_names = {"profile", "ratios", "holdings", "mstar", "esg", "lipper", "theme_weights"}
     assert set(ENDPOINTS_BY_NAME.keys()) == expected_names
-    assert len(ENDPOINTS) == len(expected_names)
+    assert len(ENDPOINTS) == 7
+    assert "landing" not in ENDPOINTS_BY_NAME
+    for ep in ENDPOINTS:
+        assert not hasattr(ep, "gated")
 
 
 def test_endpoint_resolve():
@@ -42,15 +42,6 @@ def test_endpoint_resolve():
     esg_ep = ENDPOINTS_BY_NAME["esg"]
     prefix, slug, full_url = esg_ep.resolve(product_id=8335, account_id="U123456")
     assert "accounts=U123456" in slug
-
-
-def test_gated_and_ungated_partition():
-    assert "landing" not in [ep.name for ep in DETAILS_ENDPOINTS]
-    for ep in GATED_ENDPOINTS:
-        assert ep.gated is True
-    for ep in UNGATED_ENDPOINTS:
-        assert ep.gated is False
-    assert set(GATED_ENDPOINTS) | set(UNGATED_ENDPOINTS) == set(DETAILS_ENDPOINTS)
 
 
 def test_family_classifications():

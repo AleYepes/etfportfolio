@@ -1,9 +1,17 @@
+from unittest.mock import AsyncMock, patch
+
 import duckdb
+import httpx
 import pytest
 
 from etfportfolio.core.config import settings
 from etfportfolio.core.db import apply_schema
-from etfportfolio.ingest.products import resolve_target_products
+from etfportfolio.ingest.products import (
+    _build_unauthenticated_client,
+    resolve_target_products,
+    sync,
+)
+from etfportfolio.ingest.session import RateLimiter
 from etfportfolio.ingest.utils import ProductContract
 
 
@@ -68,3 +76,62 @@ def test_resolve_target_products_all_blocked(db_conn, monkeypatch, caplog):
 
     assert targets == []
     assert "All products were excluded by blocked_exchanges." in caplog.text
+
+
+@pytest.mark.anyio
+async def test_build_unauthenticated_client():
+    limiter = RateLimiter()
+    client = _build_unauthenticated_client(rate_limiter=limiter)
+    try:
+        assert isinstance(client, httpx.AsyncClient)
+        assert client.headers["X-Requested-With"] == "XMLHttpRequest"
+        assert "Mozilla" in client.headers["User-Agent"]
+        # Unauthenticated: no cookies configured
+        assert len(client.cookies) == 0
+        assert getattr(client, "rate_limiter", None) is limiter
+    finally:
+        await client.aclose()
+
+
+@pytest.mark.anyio
+async def test_sync_products_unauthenticated_and_routes_fetch_with_retry(tmp_path, monkeypatch):
+    db_file = str(tmp_path / "test_products.duckdb")
+    with duckdb.connect(db_file) as conn:
+        apply_schema(conn)
+
+    monkeypatch.setattr(settings, "db_path", db_file)
+    limiter = RateLimiter()
+
+    sample_products = [
+        {
+            "conid": 1001,
+            "type": "ETF",
+            "symbol": "SPY",
+            "exchangeId": "ARCA",
+            "localSymbol": "SPY",
+            "description": "SPDR S&P 500 ETF Trust",
+            "isin": "US78462F1030",
+            "currency": "USD",
+            "country": "US",
+        }
+    ]
+
+    with patch("etfportfolio.ingest.products.fetch_with_retry", new_callable=AsyncMock) as mock_fetch:
+        mock_fetch.return_value = (200, {"products": sample_products})
+
+        synced_count = await sync(rate_limiter=limiter, force=True)
+
+        assert synced_count == 1
+        assert mock_fetch.called
+        call_args = mock_fetch.call_args
+        # client passed should be unauthenticated with limiter
+        passed_client = call_args[0][0]
+        assert getattr(passed_client, "rate_limiter", None) is limiter
+        assert len(passed_client.cookies) == 0
+        assert call_args[0][1] == "/webrest/search/products-by-filters"
+        assert call_args[1]["method"] == "POST"
+        assert call_args[1]["rate_limiter"] is limiter
+
+    with duckdb.connect(db_file) as conn:
+        row = conn.execute("SELECT COUNT(*) FROM bronze.products WHERE product_id = 1001").fetchone()
+        assert row is not None and row[0] == 1

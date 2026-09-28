@@ -9,7 +9,7 @@ from etfportfolio.core.config import settings
 from etfportfolio.core.db import AsyncDbWorker
 from etfportfolio.core.logging import console
 from etfportfolio.core.progress import progress_bar
-from etfportfolio.ingest.session import build_async_client
+from etfportfolio.ingest.session import fetch_with_retry
 from etfportfolio.ingest.utils import ProductContract, is_fresh
 
 logger = logging.getLogger(__name__)
@@ -105,7 +105,32 @@ def upsert_products(conn: duckdb.DuckDBPyConnection, products: list[dict[str, An
     return count
 
 
-async def sync(client: httpx.AsyncClient | None = None, force: bool = False) -> int:
+def _build_unauthenticated_client(rate_limiter: Any | None = None) -> httpx.AsyncClient:
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        ),
+        "Accept": "application/json, text/plain, */*",
+        "X-Requested-With": "XMLHttpRequest",
+    }
+    client = httpx.AsyncClient(
+        base_url=settings.ibkr_base_url.rstrip("/"),
+        headers=headers,
+        timeout=30.0,
+        follow_redirects=True,
+    )
+    from etfportfolio.ingest.session import RateLimiter
+
+    client.rate_limiter = rate_limiter or RateLimiter()  # type: ignore[attr-defined]
+    return client
+
+
+async def sync(
+    client: httpx.AsyncClient | None = None,
+    rate_limiter: Any | None = None,
+    force: bool = False,
+) -> int:
     """Crawls webrest/search/products-by-filters endpoint and populates bronze.products."""
     page_number = 1
     total_synced = 0
@@ -113,7 +138,7 @@ async def sync(client: httpx.AsyncClient | None = None, force: bool = False) -> 
     clean_complete = False
 
     if client is None:
-        client = build_async_client()
+        client = _build_unauthenticated_client(rate_limiter=rate_limiter)
         close_client = True
     assert client is not None
 
@@ -149,17 +174,21 @@ async def sync(client: httpx.AsyncClient | None = None, force: bool = False) -> 
                         "sortDirection": "asc",
                         "sortField": "conid",
                     }
-                    resp = await client.post(url, json=payload)
-                    if not resp.is_success:
-                        logger.error(
-                            "Products crawl failed at page %d with status %d: %s",
-                            page_number,
-                            resp.status_code,
-                            resp.text,
+                    try:
+                        status_code, data = await fetch_with_retry(
+                            client,
+                            url,
+                            method="POST",
+                            json=payload,
+                            rate_limiter=rate_limiter,
                         )
+                        if status_code != 200 or not data:
+                            logger.error("Products crawl failed at page %d with status %d", page_number, status_code)
+                            break
+                    except Exception as e:
+                        logger.error("Products crawl error at page %d: %s", page_number, e)
                         break
 
-                    data = resp.json()
                     products_list = data.get("products", [])
                     logger.debug("Received %d products on page %d", len(products_list), page_number)
 

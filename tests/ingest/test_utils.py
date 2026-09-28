@@ -3,7 +3,6 @@ from datetime import UTC, datetime, timedelta
 from etfportfolio.ingest.utils import (
     canonical_bytes,
     content_address,
-    gc_preview_blob,
     is_fresh,
     store_blob,
 )
@@ -54,51 +53,11 @@ def test_content_addressing_determinism():
     assert decompressed == {"a": 1, "b": 2, "list": [1, 2, 3], "nested": {"y": 8, "z": 9}}
 
 
-def test_landing_stamp_rule():
-    # Rule: stamp last_checked_at <=> NOT (fetch_gated AND NOT gated_success)
-    def should_stamp(fetch_gated: bool, gated_success: bool) -> bool:
-        return not (fetch_gated and not gated_success)
-
-    # No gated fetch attempted -> stamp
-    assert should_stamp(fetch_gated=False, gated_success=True) is True
-    assert should_stamp(fetch_gated=False, gated_success=False) is True
-
-    # Gated fetch attempted and succeeded -> stamp
-    assert should_stamp(fetch_gated=True, gated_success=True) is True
-
-    # Gated fetch attempted and failed -> do NOT stamp
-    assert should_stamp(fetch_gated=True, gated_success=False) is False
-
-
-def test_store_blob_and_gc(db_conn):
-    # Insert test product into bronze.products
-    db_conn.execute(
-        """
-        INSERT INTO bronze.products (product_id, symbol, created_at, updated_at)
-        VALUES (1001, 'TEST', now(), now())
-        """
-    )
-
+def test_store_blob_idempotent(db_conn):
     digest, comp = content_address({"key": "value"})
     store_blob(db_conn, digest, comp)
     # Idempotent insert
     store_blob(db_conn, digest, comp)
 
-    # Initially not referenced in snapshots or snapshot_previews -> GC removes it
-    assert gc_preview_blob(db_conn, digest) is True
-    row = db_conn.execute("SELECT COUNT(*) FROM bronze.payload_blobs WHERE hash = $1", [digest]).fetchone()
-    assert row[0] == 0
-
-    # Re-store and reference in snapshot_previews
-    store_blob(db_conn, digest, comp)
-    db_conn.execute(
-        """
-        INSERT INTO bronze.snapshot_previews (product_id, hash, updated_at, last_checked_at)
-        VALUES (1001, $1, now(), now())
-        """,
-        [digest],
-    )
-    # GC should NOT delete it because it's referenced
-    assert gc_preview_blob(db_conn, digest) is False
     row = db_conn.execute("SELECT COUNT(*) FROM bronze.payload_blobs WHERE hash = $1", [digest]).fetchone()
     assert row[0] == 1

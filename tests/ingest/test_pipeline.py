@@ -1,8 +1,16 @@
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
+import httpx
 import pytest
 
-from etfportfolio.ingest.pipeline import Ingest
+from etfportfolio.core import endpoints
+from etfportfolio.core.db import AsyncDbWorker
+from etfportfolio.ingest.pipeline import (
+    Ingest,
+    _is_product_fully_fresh,
+    _run_details_phase,
+)
 
 
 def test_ingest_cli_dispatch():
@@ -58,3 +66,62 @@ def test_cli_signatures_reject_unused_flags():
 
     with pytest.raises(TypeError):
         ingest.fx(limit=3)  # type: ignore
+
+
+def test_is_product_fully_fresh():
+    now = datetime.now(UTC)
+    stale = now - timedelta(days=10)
+
+    # 1. All 7 endpoints fresh -> True
+    cache_all_fresh = {(1001, ep.url_prefix): now for ep in endpoints.ENDPOINTS}
+    assert _is_product_fully_fresh(1001, cache_all_fresh) is True
+
+    # 2. One endpoint stale -> False
+    cache_one_stale = dict(cache_all_fresh)
+    cache_one_stale[(1001, endpoints.ENDPOINTS[0].url_prefix)] = stale
+    assert _is_product_fully_fresh(1001, cache_one_stale) is False
+
+    # 3. One endpoint missing -> False
+    cache_one_missing = dict(cache_all_fresh)
+    del cache_one_missing[(1001, endpoints.ENDPOINTS[0].url_prefix)]
+    assert _is_product_fully_fresh(1001, cache_one_missing) is False
+
+
+@pytest.mark.anyio
+async def test_run_details_phase_pure_per_endpoint_freshness(tmp_path):
+    db_file = str(tmp_path / "test_pipeline_details.duckdb")
+    now = datetime.now(UTC)
+
+    # product 1: all 7 fresh
+    # product 2: missing/stale
+    endpoint_cache = {(1, ep.url_prefix): now for ep in endpoints.ENDPOINTS}
+
+    async with AsyncDbWorker(db_file) as worker, httpx.AsyncClient() as client:
+        with (
+            patch("etfportfolio.ingest.details.load_endpoint_freshness_cache", return_value=endpoint_cache),
+            patch("etfportfolio.ingest.details.process_product", new_callable=AsyncMock) as mock_process,
+        ):
+            from etfportfolio.ingest.details import ProductDetailsResult
+
+            mock_process.return_value = ProductDetailsResult(
+                ok=True,
+                product_skipped_fresh=False,
+                endpoints_skipped_fresh=0,
+            )
+
+            await _run_details_phase(
+                worker,
+                client,
+                "U123456",
+                target_ids=[1, 2],
+                force=False,
+            )
+
+            # Product 1 was fully fresh, so only product 2 should have been processed
+            assert mock_process.call_count == 1
+            call_args, call_kwargs = mock_process.call_args
+            # Positional arguments: client, worker, product_id, account_id, semaphore, endpoint_cache
+            assert call_args[2] == 2  # product_id
+            assert call_args[5] == endpoint_cache  # endpoint_cache
+            assert len(call_args) == 6
+            assert "landing_cache" not in call_kwargs

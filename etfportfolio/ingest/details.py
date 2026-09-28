@@ -9,7 +9,7 @@ import httpx
 from etfportfolio.core import endpoints
 from etfportfolio.core.config import settings
 from etfportfolio.core.db import AsyncDbWorker
-from etfportfolio.ingest import landing, session, snapshots
+from etfportfolio.ingest import session, snapshots
 from etfportfolio.ingest.utils import is_fresh
 
 logger = logging.getLogger(__name__)
@@ -20,14 +20,6 @@ class ProductDetailsResult:
     ok: bool
     product_skipped_fresh: bool
     endpoints_skipped_fresh: int
-
-
-def load_landing_freshness_cache(conn: duckdb.DuckDBPyConnection) -> dict[int, datetime]:
-    """Load product_id -> last_checked_at from bronze.snapshot_previews."""
-    rows = conn.execute(
-        "SELECT product_id, last_checked_at FROM bronze.snapshot_previews WHERE last_checked_at IS NOT NULL"
-    ).fetchall()
-    return {row[0]: row[1] for row in rows}
 
 
 def load_endpoint_freshness_cache(conn: duckdb.DuckDBPyConnection) -> dict[tuple[int, str], datetime]:
@@ -68,48 +60,25 @@ async def process_product(
     product_id: int,
     account_id: str,
     semaphore: asyncio.Semaphore,
-    landing_cache: dict[int, datetime],
     endpoint_cache: dict[tuple[int, str], datetime],
     force: bool = False,
 ) -> ProductDetailsResult:
-    """Runs the full 'details' snapshot phase for one product.
+    """Runs snapshot ingestion for one product across all endpoints.
 
-    Checks landing freshness and endpoint freshness caches. Gated endpoints are
-    only fetched if landing changed (or force=True). Skipped-fresh endpoints count
-    as satisfied. Commits preview or stamps last_checked_at per the §3.5.2 rule.
+    Evaluates freshness per endpoint. Fetches only stale endpoints concurrently.
+    Employs partial continuation on individual endpoint errors.
     """
-    landing_fresh = (not force) and is_fresh(landing_cache.get(product_id), settings.freshness_window_hours)
-
-    changed = False
-    digest = None
-    compressed = None
-    landing_fetched = False
-
-    if not landing_fresh:
-        try:
-            changed, digest, compressed = await landing.fetch_and_gate(client, product_id, worker)
-            landing_fetched = True
-        except session.SessionInvalidError:
-            raise
-        except Exception as e:
-            logger.error("Landing fetch failed for product %d: %s. Skipping product.", product_id, e)
-            return ProductDetailsResult(ok=False, product_skipped_fresh=False, endpoints_skipped_fresh=0)
-
-    fetch_gated = force or changed
-    base_plan = list(endpoints.UNGATED_ENDPOINTS)
-    if fetch_gated:
-        base_plan += endpoints.GATED_ENDPOINTS
-
     to_fetch: list[endpoints.Endpoint] = []
     skipped_fresh_eps = 0
 
-    for ep in base_plan:
-        if not force and is_fresh(endpoint_cache.get((product_id, ep.url_prefix)), settings.freshness_window_hours):
+    for ep in endpoints.ENDPOINTS:
+        last_checked = endpoint_cache.get((product_id, ep.url_prefix))
+        if not force and is_fresh(last_checked, settings.freshness_window_hours):
             skipped_fresh_eps += 1
         else:
             to_fetch.append(ep)
 
-    if landing_fresh and len(to_fetch) == 0:
+    if not to_fetch:
         return ProductDetailsResult(
             ok=True,
             product_skipped_fresh=True,
@@ -117,36 +86,14 @@ async def process_product(
         )
 
     tasks = [_fetch_one(client, worker, ep, product_id, account_id, semaphore) for ep in to_fetch]
-    results = await asyncio.gather(*tasks, return_exceptions=True) if tasks else []
+    results = await asyncio.gather(*tasks, return_exceptions=True)
 
     for r in results:
         if isinstance(r, session.SessionInvalidError):
             raise r
 
     fetch_success = {ep: (res is True) for ep, res in zip(to_fetch, results, strict=False)}
-
-    # A gated endpoint is satisfied when it was fresh in the pre-run cache
-    # (and we're not forcing a re-fetch) OR it was successfully fetched this run.
-    # This prevents stamping the preview when a gated endpoint is stale but was
-    # not attempted (fetch_gated=False because landing content was unchanged).
-    gated_all_satisfied = all(
-        (not force and is_fresh(endpoint_cache.get((product_id, ep.url_prefix)), settings.freshness_window_hours))
-        or fetch_success.get(ep, False)
-        for ep in endpoints.GATED_ENDPOINTS
-    )
-
-    if gated_all_satisfied:
-        if landing_fetched:
-            if changed and digest is not None and compressed is not None:
-                await landing.commit_preview(worker, product_id, digest, compressed)
-            else:
-                await landing.stamp_last_checked(worker, product_id)
-    else:
-        logger.warning("Product %d: gated endpoint(s) not satisfied. Preview not updated.", product_id)
-
     all_ok = all(fetch_success.values()) if fetch_success else True
-    if not gated_all_satisfied:
-        all_ok = False
 
     return ProductDetailsResult(
         ok=all_ok,
