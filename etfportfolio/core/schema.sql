@@ -97,6 +97,13 @@ CREATE TABLE IF NOT EXISTS bronze.snapshots (
     last_checked_at TIMESTAMP NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS bronze.snapshot_previews (
+    product_id      INTEGER PRIMARY KEY,
+    hash            UBIGINT NOT NULL,
+    updated_at      TIMESTAMP NOT NULL,
+    last_checked_at TIMESTAMP NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS bronze.prices (
     product_id   INTEGER NOT NULL,
     date         TIMESTAMP NOT NULL,

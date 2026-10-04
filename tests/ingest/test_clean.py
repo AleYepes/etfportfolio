@@ -112,9 +112,9 @@ def test_clean_payload_blobs(db_conn):
     remaining_hashes = [r[0] for r in db_conn.execute("SELECT hash FROM bronze.payload_blobs").fetchall()]
     assert remaining_hashes == [111]
 
-    # Verify no query accesses bronze.snapshot_previews (it does not exist in schema)
-    with pytest.raises(duckdb.CatalogException):
-        db_conn.execute("SELECT * FROM bronze.snapshot_previews")
+    # Verify bronze.snapshot_previews exists as hash-only metadata without payload blobs
+    previews = db_conn.execute("SELECT * FROM bronze.snapshot_previews").fetchall()
+    assert previews == []
 
 
 def test_run_clean_end_to_end(monkeypatch, tmp_path):

@@ -15,13 +15,20 @@ logger = logging.getLogger(__name__)
 
 def _is_product_fully_fresh(
     product_id: int,
+    landing_cache: dict[int, datetime],
     endpoint_cache: dict[tuple[int, str], datetime],
 ) -> bool:
-    """True iff every endpoint in endpoints.ENDPOINTS is fresh for this product."""
+    """True if a product's landing and all ungated endpoints are fresh.
+
+    When landing is fresh, gated endpoints won't fire (they require a landing
+    change), so we only need to check ungated endpoints.
+    """
     from etfportfolio.core import endpoints as ep_mod
     from etfportfolio.ingest.utils import is_fresh
 
-    for ep in ep_mod.ENDPOINTS:
+    if not is_fresh(landing_cache.get(product_id), settings.freshness_window_hours):
+        return False
+    for ep in ep_mod.UNGATED_ENDPOINTS:
         last_checked = endpoint_cache.get((product_id, ep.url_prefix))
         if not is_fresh(last_checked, settings.freshness_window_hours):
             return False
@@ -37,12 +44,13 @@ async def _run_details_phase(
 ) -> None:
     """Runs the details phase across a resolved list of target products."""
     semaphore = asyncio.Semaphore(settings.details_concurrency)
+    landing_cache = await worker.submit(details.load_landing_freshness_cache)
     endpoint_cache = await worker.submit(details.load_endpoint_freshness_cache)
 
     if force:
         to_process = target_ids
     else:
-        to_process = [pid for pid in target_ids if not _is_product_fully_fresh(pid, endpoint_cache)]
+        to_process = [pid for pid in target_ids if not _is_product_fully_fresh(pid, landing_cache, endpoint_cache)]
 
     skipped_prods = len(target_ids) - len(to_process)
     if skipped_prods:
@@ -67,6 +75,7 @@ async def _run_details_phase(
                     product_id,
                     account_id,
                     semaphore,
+                    landing_cache,
                     endpoint_cache,
                     force=force,
                 )

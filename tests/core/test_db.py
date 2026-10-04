@@ -19,7 +19,7 @@ def test_apply_schema_creates_schemas_and_tables(db_conn):
     assert "contracts" in tables
     assert "prices" in tables
     assert "snapshots" in tables
-    assert "snapshot_previews" not in tables
+    assert "snapshot_previews" in tables
     assert "observations" in tables
     assert "monthly_panel" in tables
     assert "product_metrics" not in tables

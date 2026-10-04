@@ -1,7 +1,6 @@
 import argparse
 import re
-import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
@@ -91,7 +90,11 @@ def parse_log(log_path: Path) -> dict:
                     counts["products"]["pagination_complete"] += 1
 
             # Contracts phase
-            elif "etfportfolio.ingest.contracts" in line_str or "etfportfolio.ingestion.contracts" in line_str or "ib_async.wrapper" in line_str:
+            elif (
+                "etfportfolio.ingest.contracts" in line_str
+                or "etfportfolio.ingestion.contracts" in line_str
+                or "ib_async.wrapper" in line_str
+            ):
                 if "Contract qualification:" in line_str:
                     counts["contracts"]["qualification_starts"] += 1
                     m = re_qual_target.search(line_str)
@@ -123,7 +126,10 @@ def parse_log(log_path: Path) -> dict:
                         bars = int(m.group(2))
                         incremental_bars += bars
                         bar_distribution[bars] += 1
-                elif "mismatch refetch archived and replaced" in line_str or "corporate action confirmed; archived" in line_str:
+                elif (
+                    "mismatch refetch archived and replaced" in line_str
+                    or "corporate action confirmed; archived" in line_str
+                ):
                     counts["prices"]["mismatch_replaced"] += 1
                     m = re_refetch.search(line_str)
                     if m:
@@ -193,7 +199,12 @@ def parse_log(log_path: Path) -> dict:
                 # Outbound request retries / failures
                 m_req = re_req_fail.search(line_str)
                 if m_req:
-                    url, status_code, attempt, max_retries = m_req.group(1), int(m_req.group(2)), int(m_req.group(3)), int(m_req.group(4))
+                    url, status_code, attempt, max_retries = (
+                        m_req.group(1),
+                        int(m_req.group(2)),
+                        int(m_req.group(3)),
+                        int(m_req.group(4)),
+                    )
                     ep_name = _normalize_endpoint(url)
                     if status_code == 429:
                         det["endpoints_429"][ep_name] += 1
@@ -270,7 +281,7 @@ def print_report(log_path: Path, data: dict) -> None:
     succeeded_products = products_count - failed_products_count
 
     print("\n[DETAILS INGESTION PHASE]")
-    print(f"  Time span: {start} -> {end} ({duration_s:.1f}s = {duration_s/60:.1f}m = {duration_s/3600:.2f}h)")
+    print(f"  Time span: {start} -> {end} ({duration_s:.1f}s = {duration_s / 60:.1f}m = {duration_s / 3600:.2f}h)")
     print(f"  Distinct products touched: {products_count}")
     print(f"  Products fully succeeded: {succeeded_products}")
     print(f"  Products with failures:    {failed_products_count}")
@@ -296,11 +307,11 @@ def print_report(log_path: Path, data: dict) -> None:
     print("\n  [Rate Limiting (HTTP 429) & Throttling]")
     print(f"    RateLimiter pause waves: {rl['pause_waves']}")
     print(f"    RateLimiter wave suppressions: {rl['in_wave_suppressed']}")
-    print(f"    Total pause duration:    {rl['total_pause_seconds']:.1f}s ({rl['total_pause_seconds']/60:.1f}m)")
+    print(f"    Total pause duration:    {rl['total_pause_seconds']:.1f}s ({rl['total_pause_seconds'] / 60:.1f}m)")
     print(f"    Max pause wave duration: {rl['max_pause_seconds']:.1f}s")
     if det["backoff_delays"]:
         print("    Backoff delay distribution:")
-        for delay, count in sorted(det["backoff_delays"].items(), key=lambda x: float(x[0].rstrip('s'))):
+        for delay, count in sorted(det["backoff_delays"].items(), key=lambda x: float(x[0].rstrip("s"))):
             print(f"      {delay}: {count} waves")
     if det["endpoints_429"]:
         print("    HTTP 429 retries by endpoint:")
@@ -327,24 +338,31 @@ def compare_all(logs_dir: Path) -> None:
             continue
         data = parse_log(lf)
         det = data["details"]
-        if det["distinct_products"] or det["landing_gate"]["checks"] or det["rate_limiter"]["pause_waves"] or det["endpoints_429"]:
+        if (
+            det["distinct_products"]
+            or det["landing_gate"]["checks"]
+            or det["rate_limiter"]["pause_waves"]
+            or det["endpoints_429"]
+        ):
             start = det["start_time"]
             end = det["end_time"]
             duration_m = ((end - start).total_seconds() / 60.0) if (start and end) else 0.0
             rl = det["rate_limiter"]
-            results.append({
-                "log": lf.name,
-                "duration_m": duration_m,
-                "products": len(det["distinct_products"]),
-                "failed_products": len(det["failed_products"]),
-                "landing_checks": det["landing_gate"]["checks"],
-                "ch_true": det["landing_gate"]["changed_true"],
-                "ch_false": det["landing_gate"]["changed_false"],
-                "pause_waves": rl["pause_waves"],
-                "pause_sec": rl["total_pause_seconds"],
-                "ep_429s": sum(det["endpoints_429"].values()),
-                "ep_fails": sum(det["endpoints_failed"].values()),
-            })
+            results.append(
+                {
+                    "log": lf.name,
+                    "duration_m": duration_m,
+                    "products": len(det["distinct_products"]),
+                    "failed_products": len(det["failed_products"]),
+                    "landing_checks": det["landing_gate"]["checks"],
+                    "ch_true": det["landing_gate"]["changed_true"],
+                    "ch_false": det["landing_gate"]["changed_false"],
+                    "pause_waves": rl["pause_waves"],
+                    "pause_sec": rl["total_pause_seconds"],
+                    "ep_429s": sum(det["endpoints_429"].values()),
+                    "ep_fails": sum(det["endpoints_failed"].values()),
+                }
+            )
 
     print("=" * 125)
     print("DETAILS INGESTION COMPARATIVE AUDIT ACROSS ALL LOGS")

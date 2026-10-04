@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     session_state_path: str = "data/session_state.json"
     log_dir: str = "data/logs"
     ibkr_base_url: str = "https://www.interactivebrokers.ie"
-    details_concurrency: int = 10
+    details_concurrency: int = 3
     freshness_window_hours: float = 24.0
     blocked_exchanges: list[str] = []
 

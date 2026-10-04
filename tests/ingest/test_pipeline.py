@@ -72,32 +72,37 @@ def test_is_product_fully_fresh():
     now = datetime.now(UTC)
     stale = now - timedelta(days=10)
 
-    # 1. All 7 endpoints fresh -> True
-    cache_all_fresh = {(1001, ep.url_prefix): now for ep in endpoints.ENDPOINTS}
-    assert _is_product_fully_fresh(1001, cache_all_fresh) is True
+    # 1. Landing and all ungated endpoints fresh -> True
+    landing_fresh = {1001: now}
+    endpoint_all_fresh = {(1001, ep.url_prefix): now for ep in endpoints.UNGATED_ENDPOINTS}
+    assert _is_product_fully_fresh(1001, landing_fresh, endpoint_all_fresh) is True
 
-    # 2. One endpoint stale -> False
-    cache_one_stale = dict(cache_all_fresh)
-    cache_one_stale[(1001, endpoints.ENDPOINTS[0].url_prefix)] = stale
-    assert _is_product_fully_fresh(1001, cache_one_stale) is False
+    # 2. Landing stale -> False
+    landing_stale = {1001: stale}
+    assert _is_product_fully_fresh(1001, landing_stale, endpoint_all_fresh) is False
 
-    # 3. One endpoint missing -> False
-    cache_one_missing = dict(cache_all_fresh)
-    del cache_one_missing[(1001, endpoints.ENDPOINTS[0].url_prefix)]
-    assert _is_product_fully_fresh(1001, cache_one_missing) is False
+    # 3. Landing missing -> False
+    assert _is_product_fully_fresh(1001, {}, endpoint_all_fresh) is False
+
+    # 4. One ungated endpoint stale -> False
+    endpoint_one_stale = dict(endpoint_all_fresh)
+    endpoint_one_stale[(1001, endpoints.UNGATED_ENDPOINTS[0].url_prefix)] = stale
+    assert _is_product_fully_fresh(1001, landing_fresh, endpoint_one_stale) is False
 
 
 @pytest.mark.anyio
-async def test_run_details_phase_pure_per_endpoint_freshness(tmp_path):
+async def test_run_details_phase_landing_and_ungated_freshness(tmp_path):
     db_file = str(tmp_path / "test_pipeline_details.duckdb")
     now = datetime.now(UTC)
 
-    # product 1: all 7 fresh
-    # product 2: missing/stale
-    endpoint_cache = {(1, ep.url_prefix): now for ep in endpoints.ENDPOINTS}
+    # product 1: landing and ungated fresh
+    # product 2: landing missing/stale
+    landing_cache = {1: now}
+    endpoint_cache = {(1, ep.url_prefix): now for ep in endpoints.UNGATED_ENDPOINTS}
 
     async with AsyncDbWorker(db_file) as worker, httpx.AsyncClient() as client:
         with (
+            patch("etfportfolio.ingest.details.load_landing_freshness_cache", return_value=landing_cache),
             patch("etfportfolio.ingest.details.load_endpoint_freshness_cache", return_value=endpoint_cache),
             patch("etfportfolio.ingest.details.process_product", new_callable=AsyncMock) as mock_process,
         ):
@@ -119,9 +124,8 @@ async def test_run_details_phase_pure_per_endpoint_freshness(tmp_path):
 
             # Product 1 was fully fresh, so only product 2 should have been processed
             assert mock_process.call_count == 1
-            call_args, call_kwargs = mock_process.call_args
-            # Positional arguments: client, worker, product_id, account_id, semaphore, endpoint_cache
+            call_args, _ = mock_process.call_args
+            # Positional arguments: client, worker, product_id, account_id, semaphore, landing_cache, endpoint_cache
             assert call_args[2] == 2  # product_id
-            assert call_args[5] == endpoint_cache  # endpoint_cache
-            assert len(call_args) == 6
-            assert "landing_cache" not in call_kwargs
+            assert call_args[5] == landing_cache
+            assert call_args[6] == endpoint_cache
