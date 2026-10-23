@@ -14,9 +14,9 @@ Requirements:
 import io
 import logging
 import os
-import re
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Set
+from typing import Any
 
 import country_converter as coco
 import duckdb
@@ -26,9 +26,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# -----------------------------------------------------------------------------
 # Configuration & Vetting Parameters
-# -----------------------------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -43,11 +41,11 @@ DB_PATH = "data/etf.duckdb"
 
 # Exact configuration from your vetting pipeline
 CFG = dict(
-    min_coverage=0.76,      # share of active countries with any value
-    min_recent_cov=0.70,    # share of active countries with a value in last `recent_years`
+    min_coverage=0.76,  # share of active countries with any value
+    min_recent_cov=0.70,  # share of active countries with a value in last `recent_years`
     recent_years=3.0,
-    min_recent_grid=0.50,   # share of active country x recent-year grid filled
-    min_grid=0.55,          # share of active country x year grid filled
+    min_recent_grid=0.50,  # share of active country x recent-year grid filled
+    min_grid=0.55,  # share of active country x year grid filled
     min_recent_obs=0,
     min_obs=0,
     min_distinct=1,
@@ -55,16 +53,61 @@ CFG = dict(
     max_zero_pct=1.0,
     dyn_structural=0.10,
     dyn_dynamic=0.30,
-    eval_start_year=2020,   # Matches your '2020:2026' World Bank query window
+    eval_start_year=2020,  # Matches your '2020:2026' World Bank query window
     eval_end_year=2026,
 )
 
 NON_COUNTRY_CODES = {
-    "WLD", "AFE", "AFW", "ARB", "CSS", "CEB", "EAR", "EAS", "EAP", "TEA",
-    "EMU", "ECS", "ECA", "TEC", "EUU", "FCV", "HPC", "IBD", "IBT", "IDB",
-    "IDX", "IDA", "LTE", "LCN", "LAC", "TLA", "LDC", "LMY", "MEA", "MNA",
-    "TMN", "MIC", "NAC", "OED", "OSS", "PSS", "PST", "PRE", "SST", "SAS",
-    "TSA", "SSF", "SSA", "TSS", "EUR", "AMR", "AFR", "SEAR", "WPR", "GLOBAL"
+    "WLD",
+    "AFE",
+    "AFW",
+    "ARB",
+    "CSS",
+    "CEB",
+    "EAR",
+    "EAS",
+    "EAP",
+    "TEA",
+    "EMU",
+    "ECS",
+    "ECA",
+    "TEC",
+    "EUU",
+    "FCV",
+    "HPC",
+    "IBD",
+    "IBT",
+    "IDB",
+    "IDX",
+    "IDA",
+    "LTE",
+    "LCN",
+    "LAC",
+    "TLA",
+    "LDC",
+    "LMY",
+    "MEA",
+    "MNA",
+    "TMN",
+    "MIC",
+    "NAC",
+    "OED",
+    "OSS",
+    "PSS",
+    "PST",
+    "PRE",
+    "SST",
+    "SAS",
+    "TSA",
+    "SSF",
+    "SSA",
+    "TSS",
+    "EUR",
+    "AMR",
+    "AFR",
+    "SEAR",
+    "WPR",
+    "GLOBAL",
 }
 
 
@@ -83,10 +126,8 @@ def get_http_session() -> requests.Session:
     return session
 
 
-# -----------------------------------------------------------------------------
 # 1. Target Universe Loader (Read-Only)
-# -----------------------------------------------------------------------------
-def load_target_universe(db_path: str = DB_PATH) -> tuple[Set[str], Callable[[Any], Optional[str]]]:
+def load_target_universe(db_path: str = DB_PATH) -> tuple[set[str], Callable[[Any], str | None]]:
     if not os.path.exists(db_path):
         raise FileNotFoundError(f"Database not found at: {db_path}")
 
@@ -107,14 +148,14 @@ def load_target_universe(db_path: str = DB_PATH) -> tuple[Set[str], Callable[[An
     cc = coco.CountryConverter()
     df_target["iso3"] = cc.pandas_convert(series=df_target["code"], to="ISO3")
 
-    target_iso3: Set[str] = set(df_target["iso3"].dropna().unique())
+    target_iso3: set[str] = set(df_target["iso3"].dropna().unique())
     logger.info(f"Loaded {len(target_iso3)} unique target countries (DB opened in read-only mode).")
 
     iso_map = dict(zip(cc.data["ISO2"].dropna(), cc.data["ISO3"].dropna()))
     iso_map.update({"EL": "GRC", "UK": "GBR", "EU": "EMU"})
-    memo: Dict[str, Optional[str]] = {}
+    memo: dict[str, str | None] = {}
 
-    def resolve_iso3(val: Any) -> Optional[str]:
+    def resolve_iso3(val: Any) -> str | None:
         if val is None or pd.isna(val):
             return None
         raw = str(val).strip()
@@ -147,9 +188,7 @@ def load_target_universe(db_path: str = DB_PATH) -> tuple[Set[str], Callable[[An
     return target_iso3, resolve_iso3
 
 
-# -----------------------------------------------------------------------------
 # 2. Targeted Fetchers
-# -----------------------------------------------------------------------------
 INDICATOR_LABELS = {
     "WHO.SUICIDE.RATE": "Suicide mortality rate (per 100,000 pop)",
     "WHO.UHC.INDEX": "UHC Service Coverage Index (0-100)",
@@ -191,13 +230,15 @@ def fetch_all_supplementary(session: requests.Session, resolve_iso3: Callable) -
                     year = row.get("TimeDim")
                     val = row.get("NumericValue")
                     if iso3 and year and val is not None:
-                        records.append({
-                            "code": code,
-                            "indicator_label": INDICATOR_LABELS[code],
-                            "iso3": iso3,
-                            "year": int(year),
-                            "value": float(val),
-                        })
+                        records.append(
+                            {
+                                "code": code,
+                                "indicator_label": INDICATOR_LABELS[code],
+                                "iso3": iso3,
+                                "year": int(year),
+                                "value": float(val),
+                            }
+                        )
         except Exception as e:
             logger.warning(f"Error fetching {code}: {e}")
 
@@ -232,13 +273,15 @@ def fetch_all_supplementary(session: requests.Session, resolve_iso3: Callable) -
                 if col in pwt_df.columns:
                     sub = pwt_df[["iso3", "year", col]].dropna()
                     for _, r in sub.iterrows():
-                        records.append({
-                            "code": code,
-                            "indicator_label": INDICATOR_LABELS[code],
-                            "iso3": r["iso3"],
-                            "year": int(r["year"]),
-                            "value": float(r[col]),
-                        })
+                        records.append(
+                            {
+                                "code": code,
+                                "indicator_label": INDICATOR_LABELS[code],
+                                "iso3": r["iso3"],
+                                "year": int(r["year"]),
+                                "value": float(r[col]),
+                            }
+                        )
         except Exception as e:
             logger.warning(f"Error parsing PWT: {e}")
 
@@ -266,13 +309,15 @@ def fetch_all_supplementary(session: requests.Session, resolve_iso3: Callable) -
                             continue
                         t_str = str(row[t_col])
                         if len(t_str) >= 4 and t_str[:4].isdigit():
-                            records.append({
-                                "code": code,
-                                "indicator_label": INDICATOR_LABELS[code],
-                                "iso3": iso3,
-                                "year": int(t_str[:4]),
-                                "value": float(row[v_col]),
-                            })
+                            records.append(
+                                {
+                                    "code": code,
+                                    "indicator_label": INDICATOR_LABELS[code],
+                                    "iso3": iso3,
+                                    "year": int(t_str[:4]),
+                                    "value": float(row[v_col]),
+                                }
+                            )
         except Exception as e:
             logger.warning(f"Error fetching {code}: {e}")
 
@@ -294,29 +339,37 @@ def fetch_all_supplementary(session: requests.Session, resolve_iso3: Callable) -
                     continue
                 year = int(row[yr_col])
                 if lad_col and pd.notna(row[lad_col[0]]):
-                    records.append({
-                        "code": "WHR.CANTRIL.LADDER",
-                        "indicator_label": INDICATOR_LABELS["WHR.CANTRIL.LADDER"],
-                        "iso3": iso3,
-                        "year": year,
-                        "value": float(row[lad_col[0]]),
-                    })
+                    records.append(
+                        {
+                            "code": "WHR.CANTRIL.LADDER",
+                            "indicator_label": INDICATOR_LABELS["WHR.CANTRIL.LADDER"],
+                            "iso3": iso3,
+                            "year": year,
+                            "value": float(row[lad_col[0]]),
+                        }
+                    )
                 if sup_col and pd.notna(row[sup_col[0]]):
-                    records.append({
-                        "code": "WHR.SOCIAL.SUPPORT",
-                        "indicator_label": INDICATOR_LABELS["WHR.SOCIAL.SUPPORT"],
-                        "iso3": iso3,
-                        "year": year,
-                        "value": float(row[sup_col[0]]),
-                    })
+                    records.append(
+                        {
+                            "code": "WHR.SOCIAL.SUPPORT",
+                            "indicator_label": INDICATOR_LABELS["WHR.SOCIAL.SUPPORT"],
+                            "iso3": iso3,
+                            "year": year,
+                            "value": float(row[sup_col[0]]),
+                        }
+                    )
     except Exception as e:
         logger.warning(f"Error fetching WHR: {e}")
 
     # --- E. World Bank API: Dropped Indicators ---
     logger.info("Fetching dropped indicators via World Bank API...")
     wb_codes = [
-        "VC.IHR.PSRC.P5", "EN.ATM.PM25.MC.M3", "GB.XPD.RSDV.GD.ZS",
-        "SP.POP.SCIE.RD.P6", "CM.MKT.LCAP.GD.ZS", "SH.STA.SUIC.P5",
+        "VC.IHR.PSRC.P5",
+        "EN.ATM.PM25.MC.M3",
+        "GB.XPD.RSDV.GD.ZS",
+        "SP.POP.SCIE.RD.P6",
+        "CM.MKT.LCAP.GD.ZS",
+        "SH.STA.SUIC.P5",
     ]
     base_url = "https://api.worldbank.org/v2/country/all/indicator/{ind}?format=json&per_page=1000&date=2000:2026"
 
@@ -342,13 +395,15 @@ def fetch_all_supplementary(session: requests.Session, resolve_iso3: Callable) -
                         continue
                     iso3 = resolve_iso3(cid)
                     if iso3:
-                        records.append({
-                            "code": full_code,
-                            "indicator_label": INDICATOR_LABELS.get(full_code, ind),
-                            "iso3": iso3,
-                            "year": int(yr),
-                            "value": float(val),
-                        })
+                        records.append(
+                            {
+                                "code": full_code,
+                                "indicator_label": INDICATOR_LABELS.get(full_code, ind),
+                                "iso3": iso3,
+                                "year": int(yr),
+                                "value": float(val),
+                            }
+                        )
                 page += 1
             except Exception as e:
                 logger.warning(f"Error on WB {ind} page {page}: {e}")
@@ -360,17 +415,12 @@ def fetch_all_supplementary(session: requests.Session, resolve_iso3: Callable) -
     return df
 
 
-# -----------------------------------------------------------------------------
 # 3. Exact Vetting Diagnostics Pipeline
-# -----------------------------------------------------------------------------
 def run_vetting_diagnostics(panel: pd.DataFrame, target_universe_size: int):
     logger.info(f"Evaluating panel against window {CFG['eval_start_year']}:{CFG['eval_end_year']}...")
 
     # Filter strictly to the evaluation window
-    eval_panel = panel[
-        (panel["year"] >= CFG["eval_start_year"]) &
-        (panel["year"] <= CFG["eval_end_year"])
-    ].copy()
+    eval_panel = panel[(panel["year"] >= CFG["eval_start_year"]) & (panel["year"] <= CFG["eval_end_year"])].copy()
     eval_panel["value"] = pd.to_numeric(eval_panel["value"], errors="coerce")
     eval_panel = eval_panel.dropna(subset=["value"])
 
@@ -404,44 +454,48 @@ def run_vetting_diagnostics(panel: pd.DataFrame, target_universe_size: int):
         # Also capture the actual max year with observations across all countries
         latest_reported_year = g["year"].max()
 
-        return pd.Series({
-            "latest_year": latest_reported_year,
-            "coverage": g["iso3"].nunique() / n_active,
-            "recent_cov": recent["iso3"].nunique() / n_active if n_recent_years > 0 else 0.0,
-            "grid_cov": len(g) / (n_active * n_years),
-            "recent_grid_cov": len(recent) / (n_active * n_recent_years) if n_recent_years > 0 else 0.0,
-            "obs_per_country": by.size().mean(),
-            "recent_obs_per_country": recent_obs,
-            "n_distinct": g["value"].nunique(),
-            "mode_share": g["value"].value_counts(normalize=True).iloc[0],
-            "zero_pct": (g["value"] == 0).mean(),
-            "logged": bool((g["t"] != g["value"]).any()),
-            "total_sd": total_sd,
-            "between_sd": between_sd,
-            "within_sd": within_sd,
-            "dynamism": within_sd / (between_sd + 1e-9) if pd.notna(within_sd) else np.nan,
-            "icc": between_var / denom if denom > 0 else np.nan,
-        })
+        return pd.Series(
+            {
+                "latest_year": latest_reported_year,
+                "coverage": g["iso3"].nunique() / n_active,
+                "recent_cov": recent["iso3"].nunique() / n_active if n_recent_years > 0 else 0.0,
+                "grid_cov": len(g) / (n_active * n_years),
+                "recent_grid_cov": len(recent) / (n_active * n_recent_years) if n_recent_years > 0 else 0.0,
+                "obs_per_country": by.size().mean(),
+                "recent_obs_per_country": recent_obs,
+                "n_distinct": g["value"].nunique(),
+                "mode_share": g["value"].value_counts(normalize=True).iloc[0],
+                "zero_pct": (g["value"] == 0).mean(),
+                "logged": bool((g["t"] != g["value"]).any()),
+                "total_sd": total_sd,
+                "between_sd": between_sd,
+                "within_sd": within_sd,
+                "dynamism": within_sd / (between_sd + 1e-9) if pd.notna(within_sd) else np.nan,
+                "icc": between_var / denom if denom > 0 else np.nan,
+            }
+        )
 
     diag = eval_panel.groupby("code").apply(diagnose, include_groups=False)
     diag.insert(0, "indicator", diag.index.map(INDICATOR_LABELS))
 
     # Apply your exact gating conditions
-    gates = pd.DataFrame({
-        "coverage":      diag["coverage"]   >= CFG["min_coverage"],
-        "recent":        diag["recent_cov"] >= CFG["min_recent_cov"],
-        "non_degenerate": (
-            (diag["n_distinct"]  >= CFG["min_distinct"]) &
-            (diag["mode_share"]  <= CFG["max_mode_share"]) &
-            (diag["zero_pct"]    <= CFG["max_zero_pct"]) &
-            (diag["total_sd"]    >  0)
-        ),
-        "recent_grid":   diag["recent_grid_cov"]        >= CFG["min_recent_grid"],
-        "recent_obs":    diag["recent_obs_per_country"] >= CFG["min_recent_obs"],
-        "grid":          diag["grid_cov"]               >= CFG["min_grid"],
-        "obs":           diag["obs_per_country"]        >= CFG["min_obs"],
-        "moves":         diag["within_sd"]              >  0,
-    })
+    gates = pd.DataFrame(
+        {
+            "coverage": diag["coverage"] >= CFG["min_coverage"],
+            "recent": diag["recent_cov"] >= CFG["min_recent_cov"],
+            "non_degenerate": (
+                (diag["n_distinct"] >= CFG["min_distinct"])
+                & (diag["mode_share"] <= CFG["max_mode_share"])
+                & (diag["zero_pct"] <= CFG["max_zero_pct"])
+                & (diag["total_sd"] > 0)
+            ),
+            "recent_grid": diag["recent_grid_cov"] >= CFG["min_recent_grid"],
+            "recent_obs": diag["recent_obs_per_country"] >= CFG["min_recent_obs"],
+            "grid": diag["grid_cov"] >= CFG["min_grid"],
+            "obs": diag["obs_per_country"] >= CFG["min_obs"],
+            "moves": diag["within_sd"] > 0,
+        }
+    )
 
     LEVEL_GATES = ["coverage", "recent", "non_degenerate"]
     CHANGE_GATES = LEVEL_GATES + ["recent_grid", "recent_obs", "grid", "obs", "moves"]
@@ -467,8 +521,16 @@ def run_vetting_diagnostics(panel: pd.DataFrame, target_universe_size: int):
 
     # Display Vetting Results to Terminal
     display_cols = [
-        "indicator", "latest_year", "coverage", "recent_cov",
-        "grid_cov", "recent_grid_cov", "dynamism", "role", "level_ok", "change_ok"
+        "indicator",
+        "latest_year",
+        "coverage",
+        "recent_cov",
+        "grid_cov",
+        "recent_grid_cov",
+        "dynamism",
+        "role",
+        "level_ok",
+        "change_ok",
     ]
     formatted = diag[display_cols].copy()
     for col in ["coverage", "recent_cov", "grid_cov", "recent_grid_cov"]:
@@ -476,8 +538,12 @@ def run_vetting_diagnostics(panel: pd.DataFrame, target_universe_size: int):
     formatted["dynamism"] = formatted["dynamism"].round(3)
 
     print("\n" + "=" * 115)
-    print(f"VETTING AUDIT: EVALUATION WINDOW {CFG['eval_start_year']}-{CFG['eval_end_year']} (Recent Cut: {recent_cut})")
-    print(f"Active Target Countries: {n_active} | min_coverage: {CFG['min_coverage']*100:.0f}% | min_recent_cov: {CFG['min_recent_cov']*100:.0f}%")
+    print(
+        f"VETTING AUDIT: EVALUATION WINDOW {CFG['eval_start_year']}-{CFG['eval_end_year']} (Recent Cut: {recent_cut})"
+    )
+    print(
+        f"Active Target Countries: {n_active} | min_coverage: {CFG['min_coverage'] * 100:.0f}% | min_recent_cov: {CFG['min_recent_cov'] * 100:.0f}%"
+    )
     print("=" * 115)
     print(formatted.to_string())
     print("=" * 115 + "\n")
@@ -487,14 +553,14 @@ def run_vetting_diagnostics(panel: pd.DataFrame, target_universe_size: int):
     print(f"Passed CHANGE_OK: {diag['change_ok'].sum()} (Can be used for annual changes / momentum)")
     failed_recent = diag[~gates["recent"]].index.tolist()
     if failed_recent:
-        print(f"\nDisqualified by recent_cov (< {CFG['min_recent_cov']*100:.0f}% in last {CFG['recent_years']} yrs):")
+        print(f"\nDisqualified by recent_cov (< {CFG['min_recent_cov'] * 100:.0f}% in last {CFG['recent_years']} yrs):")
         for code in failed_recent:
-            print(f"  ❌ {code:<25} -> Latest Year: {diag.loc[code, 'latest_year']} (Recent Cov: {diag.loc[code, 'recent_cov']*100:.1f}%)")
+            print(
+                f"  ❌ {code:<25} -> Latest Year: {diag.loc[code, 'latest_year']} (Recent Cov: {diag.loc[code, 'recent_cov'] * 100:.1f}%)"
+            )
 
 
-# -----------------------------------------------------------------------------
 # 4. Main Entry Point
-# -----------------------------------------------------------------------------
 def main():
     target_iso3, resolve_iso3 = load_target_universe(DB_PATH)
     session = get_http_session()
