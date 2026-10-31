@@ -157,29 +157,31 @@ Define maps in `etfportfolio/core/endpoints.py`. Residual maps are `dict[str, bo
 Also export:
 
 ```python
-DEFAULT_ZERO_FAMILIES = frozenset({
-    "asset_class",
-    "country",
-    "industry",
-    "credit_rating",
-    "maturity",
-    "theme",
-    "rank_adj_theme",
-    "style_box",  # panel name after hist merge; observations also have style_box_hist
-})
+DEFAULT_ZERO_FAMILIES = frozenset(
+    {
+        "asset_class",
+        "country",
+        "industry",
+        "credit_rating",
+        "maturity",
+        "theme",
+        "rank_adj_theme",
+        "style_box",  # panel name after hist merge; observations also have style_box_hist
+    }
+)
 
-SCALAR_FAMILIES = frozenset({
-    "ratios",
-    "esg",
-    "mstar",
-    "lipper",
-    "profile",
-})
+SCALAR_FAMILIES = frozenset(
+    {
+        "ratios",
+        "esg",
+        "mstar",
+        "lipper",
+        "profile",
+    }
+)
 
 STYLE_CELLS: tuple[str, ...] = tuple(
-    f"{size}_{style}"
-    for size in ("large", "multi", "mid", "small")
-    for style in ("value", "core", "growth")
+    f"{size}_{style}" for size in ("large", "multi", "mid", "small") for style in ("value", "core", "growth")
 )
 ```
 
@@ -236,10 +238,18 @@ Strip `"% Quality/"`, `"% Quality "`, `"% Quality-"` then snake-case.
 
 ```python
 CREDIT_RATING_METRICS = {
-    "aaa": False, "aa": False, "a": False, "bbb": False,
-    "bb": False, "b": False, "ccc": False, "cc": False,
-    "c": False, "d": False,
-    "not_rated": True, "not_available": True,
+    "aaa": False,
+    "aa": False,
+    "a": False,
+    "bbb": False,
+    "bb": False,
+    "b": False,
+    "ccc": False,
+    "cc": False,
+    "c": False,
+    "d": False,
+    "not_rated": True,
+    "not_available": True,
 }
 ```
 
@@ -275,31 +285,61 @@ Do not assert presence of `large_growth` / `large_value` / `mid_value` in extrac
 #### `ratios` (UNBOUNDED_FLOATS)
 
 ```python
-RATIOS_PERCENTAGE_METRICS = frozenset({
-    "eps_growth_1yr", "eps_growth_3yr", "eps_growth_5yr",
-    "sales_growth_1_year", "sales_growth_3_year", "sales_growth_5_yr",
-    "sales_per_share_growth_1_year", "sales_per_share_growth_3_year",
-    "operating_cash_flow_growth_rate_3yr",
-    "return_on_assets_1yr", "return_on_assets_3yr",
-    "return_on_equity_1yr", "return_on_equity_3yr",
-    "return_on_investment_1yr", "return_on_investment_3yr",
-    "return_on_capital", "return_on_capital_3yr",
-    "dividend_yield_weighted_average", "dividendpayoutratio5yr",
-    "dividend_per_share_1yr", "dividend_per_share_3yr",
-    "yield_to_maturity", "average_coupon", "relative_strength",
-})
-RATIOS_STANDARD_METRICS = frozenset({
-    "price_earnings", "price_book", "price_sales", "price_cash", "price_to_dividend",
-    "average_final_composite_zscore", "latest_composite_z_score",
-    "latest_dividend_yield_zscore", "latest_price_sales_zscore",
-    "latest_price_to_book_zscore", "latest_price_to_earnings_zscore",
-    "latest_return_on_equity_zscore", "latest_sps_growth_zscore",
-    "weighted_final_composite_zscore",
-    "average_quality", "effective_maturity", "nominal_maturity",
-    "total_assets_total_equity", "total_debt_total_capital",
-    "total_debt_total_equity", "lt_debt_shareholders_equity",
-    "ebit_to_interest", "sales_to_total_assets",
-})
+RATIOS_PERCENTAGE_METRICS = frozenset(
+    {
+        "eps_growth_1yr",
+        "eps_growth_3yr",
+        "eps_growth_5yr",
+        "sales_growth_1_year",
+        "sales_growth_3_year",
+        "sales_growth_5_yr",
+        "sales_per_share_growth_1_year",
+        "sales_per_share_growth_3_year",
+        "operating_cash_flow_growth_rate_3yr",
+        "return_on_assets_1yr",
+        "return_on_assets_3yr",
+        "return_on_equity_1yr",
+        "return_on_equity_3yr",
+        "return_on_investment_1yr",
+        "return_on_investment_3yr",
+        "return_on_capital",
+        "return_on_capital_3yr",
+        "dividend_yield_weighted_average",
+        "dividendpayoutratio5yr",
+        "dividend_per_share_1yr",
+        "dividend_per_share_3yr",
+        "yield_to_maturity",
+        "average_coupon",
+        "relative_strength",
+    }
+)
+RATIOS_STANDARD_METRICS = frozenset(
+    {
+        "price_earnings",
+        "price_book",
+        "price_sales",
+        "price_cash",
+        "price_to_dividend",
+        "average_final_composite_zscore",
+        "latest_composite_z_score",
+        "latest_dividend_yield_zscore",
+        "latest_price_sales_zscore",
+        "latest_price_to_book_zscore",
+        "latest_price_to_earnings_zscore",
+        "latest_return_on_equity_zscore",
+        "latest_sps_growth_zscore",
+        "weighted_final_composite_zscore",
+        "average_quality",
+        "effective_maturity",
+        "nominal_maturity",
+        "total_assets_total_equity",
+        "total_debt_total_capital",
+        "total_debt_total_equity",
+        "lt_debt_shareholders_equity",
+        "ebit_to_interest",
+        "sales_to_total_assets",
+    }
+)
 ALL_RATIOS_METRICS = RATIOS_PERCENTAGE_METRICS | RATIOS_STANDARD_METRICS
 ```
 
@@ -308,12 +348,26 @@ Unknown `name_tag` after snake-case → `ValueError`. Percentage metrics: `value
 #### `esg` (0–100 vendor scale; leave as-is)
 
 ```python
-ESG_METRICS = frozenset({
-    "tresgs", "tresgcs", "tresgccs", "tresgens", "tresgenrrs",
-    "tresgeners", "tresgenpis", "tresgsos", "tresgsowos", "tresgsohrs",
-    "tresgsocos", "tresgsoprs", "tresgcgs", "tresgcgbds", "tresgcgsrs",
-    "tresgcgvss",
-})
+ESG_METRICS = frozenset(
+    {
+        "tresgs",
+        "tresgcs",
+        "tresgccs",
+        "tresgens",
+        "tresgenrrs",
+        "tresgeners",
+        "tresgenpis",
+        "tresgsos",
+        "tresgsowos",
+        "tresgsohrs",
+        "tresgsocos",
+        "tresgsoprs",
+        "tresgcgs",
+        "tresgcgbds",
+        "tresgcgsrs",
+        "tresgcgvss",
+    }
+)
 ```
 
 Unknown pillar → `ValueError`. `coverage` is **not** an esg metric; it is `profile.esg_coverage`. Keep zero scores (`0` is a real score; it is not “missing”).
@@ -344,12 +398,21 @@ Select the universe with maximum peer count (max integer parsed from `rating.nam
 #### `profile`
 
 ```python
-PROFILE_METRICS = frozenset({
-    "total_expense_ratio", "total_net_assets_local", "is_passive",
-    "manager_tenure_years", "audited_net_expense_ratio",
-    "management_expense_ratio", "non_management_expense_ratio",
-    "top_10_weight", "theme_coverage", "esg_coverage", "mstar_coverage",
-})
+PROFILE_METRICS = frozenset(
+    {
+        "total_expense_ratio",
+        "total_net_assets_local",
+        "is_passive",
+        "manager_tenure_years",
+        "audited_net_expense_ratio",
+        "management_expense_ratio",
+        "non_management_expense_ratio",
+        "top_10_weight",
+        "theme_coverage",
+        "esg_coverage",
+        "mstar_coverage",
+    }
+)
 ```
 
 - expense allocation ratios: vendor fractions as given (0–1 typical; do not clip here)
@@ -394,9 +457,15 @@ class Observation:
 
     def to_row(self) -> tuple[int, str, str, str | None, date, int, datetime, float, str]:
         return (
-            self.product_id, self.family, self.metric, self.code,
-            self.effective_date, self.date_source_depth, self.fetched_at,
-            self.value, self.raw_value,
+            self.product_id,
+            self.family,
+            self.metric,
+            self.code,
+            self.effective_date,
+            self.date_source_depth,
+            self.fetched_at,
+            self.value,
+            self.raw_value,
         )
 ```
 
@@ -419,6 +488,7 @@ Lexical scope stack. No date leakage across JSON branches (a nephew date must no
 class DateScope:
     effective_date: date
     depth: int
+
 
 class DateContext:
     def __init__(self, snapshot_date: date):
@@ -477,8 +547,7 @@ def clean_simplex(
     code_extractor: Callable[[dict[str, Any]], str | None] | None = None,
     open_vocab: bool = False,
     residual_names: set[str] | None = None,
-) -> list[tuple[str, str | None, float, str]]:
-    ...
+) -> list[tuple[str, str | None, float, str]]: ...
 ```
 
 Algorithm:
@@ -506,6 +575,7 @@ SYMBOL_TO_CURRENCIES: dict[str, set[str]] = {
     "₩": {"KRW", "KPW"},
     "₹": {"INR"},
 }
+
 
 def disambiguate_aum_currency(
     raw_value: str,
@@ -657,9 +727,7 @@ Preload once per run:
 ```python
 known_currencies = {
     row[0]
-    for row in conn.execute(
-        "SELECT DISTINCT currency FROM bronze.contracts WHERE currency IS NOT NULL"
-    ).fetchall()
+    for row in conn.execute("SELECT DISTINCT currency FROM bronze.contracts WHERE currency IS NOT NULL").fetchall()
 }
 ```
 

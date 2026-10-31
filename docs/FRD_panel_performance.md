@@ -268,7 +268,9 @@ outlier_summary = conn.execute(
 
 n_total_outliers = sum(r[2] for r in outlier_summary)
 if n_total_outliers > 0:
-    logger.info("Outlier preprocessor flagged %d observations across %d metrics", n_total_outliers, len(outlier_summary))
+    logger.info(
+        "Outlier preprocessor flagged %d observations across %d metrics", n_total_outliers, len(outlier_summary)
+    )
     for fam, met, cnt, mn, mx in outlier_summary[:10]:
         logger.debug("Outlier drop: %s.%s (%d rows, range [%s, %s])", fam, met, cnt, mn, mx)
 ```

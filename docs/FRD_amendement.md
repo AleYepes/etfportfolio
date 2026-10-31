@@ -236,13 +236,14 @@ The production ingestion module [`etfportfolio/ingest/country_indicators.py`](..
 * **Extraction Pattern**:
   ```python
   import zipfile, io, pandas as pd
+
   # Stream into memory or write temporary file in scratch
   with zipfile.ZipFile(io.BytesIO(response.content)) as z:
       with z.open("V-Dem-CY-Core-v16.csv") as f:
           vdem_df = pd.read_csv(
               f,
               usecols=["country_text_id", "year", "v2excrptps", "v2cltrnslw", "v2clrspct", "v2x_rule"],
-              low_memory=False
+              low_memory=False,
           )
   # Filter year >= 2000, rename country_text_id -> country_code
   ```
@@ -265,6 +266,7 @@ The production ingestion module [`etfportfolio/ingest/country_indicators.py`](..
   Stream-read line by line to minimize RAM:
   ```python
   import json, zipfile
+
   with zipfile.ZipFile(zip_path).open("INTL.txt") as f:
       for line in f:
           record = json.loads(line)
@@ -314,6 +316,7 @@ Each newly fetched indicator table must satisfy four strict gates before inserti
 ```python
 class VettingGateError(Exception):
     """Raised when an external macroeconomic indicator fails production quality gates."""
+
     pass
 ```
 
@@ -343,15 +346,44 @@ GAUGE_CONFIGS = {
         "name": "Health Index",
         "description": "Bodily longevity, infant survival, nutrition, and sanitary environment.",
         "indicators": {
-            "SP.DYN.LE00.IN": {"name": "Life expectancy at birth (years)", "weight": 0.350, "polarity": +1, "transform": "identity"},
-            "SH.DYN.MORT":    {"name": "Mortality rate, under-5 (per 1k births)", "weight": 0.200, "polarity": -1, "transform": "identity"},
-            "SN.ITK.DEFC.ZS": {"name": "Prevalence of undernourishment (% pop)", "weight": 0.200, "polarity": -1, "transform": "identity"},
-            "SH.STA.BASS.ZS": {"name": "Basic sanitation services (% pop)", "weight": 0.100, "polarity": +1, "transform": "identity"},
-            "SH.H2O.BASW.ZS": {"name": "Basic drinking water services (% pop)", "weight": 0.075, "polarity": +1, "transform": "identity"},
-            "EG.CFT.ACCS.ZS": {"name": "Clean cooking fuels (% pop) [Clean Air proxy]", "weight": 0.075, "polarity": +1, "transform": "identity"},
+            "SP.DYN.LE00.IN": {
+                "name": "Life expectancy at birth (years)",
+                "weight": 0.350,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "SH.DYN.MORT": {
+                "name": "Mortality rate, under-5 (per 1k births)",
+                "weight": 0.200,
+                "polarity": -1,
+                "transform": "identity",
+            },
+            "SN.ITK.DEFC.ZS": {
+                "name": "Prevalence of undernourishment (% pop)",
+                "weight": 0.200,
+                "polarity": -1,
+                "transform": "identity",
+            },
+            "SH.STA.BASS.ZS": {
+                "name": "Basic sanitation services (% pop)",
+                "weight": 0.100,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "SH.H2O.BASW.ZS": {
+                "name": "Basic drinking water services (% pop)",
+                "weight": 0.075,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "EG.CFT.ACCS.ZS": {
+                "name": "Clean cooking fuels (% pop) [Clean Air proxy]",
+                "weight": 0.075,
+                "polarity": +1,
+                "transform": "identity",
+            },
         },
     },
-
     # =========================================================================
     # 2. EMPIRE PILLARS: 8 HEADLINE PILLARS (Dalio Report pp. 12, 15, 132-135)
     # Output: Percent rank index [0.0 to 1.0] (World Share & Intensity)
@@ -360,92 +392,271 @@ GAUGE_CONFIGS = {
         "name": "Economic Output Pillar",
         "pillar_weight": 0.200,
         "indicators": {
-            "NY.GDP.MKTP.PP.KD": {"name": "GDP, PPP constant 2021 int$ [World Share]", "weight": 0.450, "polarity": +1, "transform": "world_share"},
-            "NY.GDP.MKTP.CD":    {"name": "GDP, current US$ [World Share]", "weight": 0.250, "polarity": +1, "transform": "world_share"},
-            "NY.GDP.PCAP.PP.KD": {"name": "GDP per capita, PPP constant [Log Scale]", "weight": 0.300, "polarity": +1, "transform": "log"},
+            "NY.GDP.MKTP.PP.KD": {
+                "name": "GDP, PPP constant 2021 int$ [World Share]",
+                "weight": 0.450,
+                "polarity": +1,
+                "transform": "world_share",
+            },
+            "NY.GDP.MKTP.CD": {
+                "name": "GDP, current US$ [World Share]",
+                "weight": 0.250,
+                "polarity": +1,
+                "transform": "world_share",
+            },
+            "NY.GDP.PCAP.PP.KD": {
+                "name": "GDP per capita, PPP constant [Log Scale]",
+                "weight": 0.300,
+                "polarity": +1,
+                "transform": "log",
+            },
         },
     },
     "trade_strength": {
         "name": "Trade Pillar",
         "pillar_weight": 0.150,
         "indicators": {
-            "BX.GSR.GNFS.CD":    {"name": "Exports of goods & services (USD) [World Share]", "weight": 0.450, "polarity": +1, "transform": "world_share"},
-            "TX.VAL.MRCH.CD.WT": {"name": "Merchandise exports (USD) [World Share]", "weight": 0.250, "polarity": +1, "transform": "world_share"},
-            "TX.MNF.TECH.ZS.UN": {"name": "Medium/high-tech exports (% mfg)", "weight": 0.150, "polarity": +1, "transform": "identity"},
-            "NE.TRD.GNFS.ZS":    {"name": "Trade (% of GDP) [Openness]", "weight": 0.150, "polarity": +1, "transform": "identity"},
+            "BX.GSR.GNFS.CD": {
+                "name": "Exports of goods & services (USD) [World Share]",
+                "weight": 0.450,
+                "polarity": +1,
+                "transform": "world_share",
+            },
+            "TX.VAL.MRCH.CD.WT": {
+                "name": "Merchandise exports (USD) [World Share]",
+                "weight": 0.250,
+                "polarity": +1,
+                "transform": "world_share",
+            },
+            "TX.MNF.TECH.ZS.UN": {
+                "name": "Medium/high-tech exports (% mfg)",
+                "weight": 0.150,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "NE.TRD.GNFS.ZS": {
+                "name": "Trade (% of GDP) [Openness]",
+                "weight": 0.150,
+                "polarity": +1,
+                "transform": "identity",
+            },
         },
     },
     "innovation_technology": {
         "name": "Innovation & Technology Pillar",
         "pillar_weight": 0.150,
         "indicators": {
-            "IP.PAT.RESD":       {"name": "Patent applications, residents [World Share]", "weight": 0.350, "polarity": +1, "transform": "world_share"},
-            "BX.GSR.ROYL.CD":    {"name": "IP royalty receipts (current USD) [World Share]", "weight": 0.250, "polarity": +1, "transform": "world_share"},
-            "IP.TMK.RSCT":       {"name": "Trademark applications, resident [World Share]", "weight": 0.150, "polarity": +1, "transform": "world_share"},
-            "NV.MNF.TECH.ZS.UN": {"name": "Medium/high-tech mfg value added (% MVA)", "weight": 0.150, "polarity": +1, "transform": "identity"},
-            "IT.NET.SECR.P6":    {"name": "Secure Internet servers (per 1M pop)", "weight": 0.100, "polarity": +1, "transform": "log"},
+            "IP.PAT.RESD": {
+                "name": "Patent applications, residents [World Share]",
+                "weight": 0.350,
+                "polarity": +1,
+                "transform": "world_share",
+            },
+            "BX.GSR.ROYL.CD": {
+                "name": "IP royalty receipts (current USD) [World Share]",
+                "weight": 0.250,
+                "polarity": +1,
+                "transform": "world_share",
+            },
+            "IP.TMK.RSCT": {
+                "name": "Trademark applications, resident [World Share]",
+                "weight": 0.150,
+                "polarity": +1,
+                "transform": "world_share",
+            },
+            "NV.MNF.TECH.ZS.UN": {
+                "name": "Medium/high-tech mfg value added (% MVA)",
+                "weight": 0.150,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "IT.NET.SECR.P6": {
+                "name": "Secure Internet servers (per 1M pop)",
+                "weight": 0.100,
+                "polarity": +1,
+                "transform": "log",
+            },
         },
     },
     "military_strength": {
         "name": "Military Strength Pillar",
         "pillar_weight": 0.125,
         "indicators": {
-            "MS.MIL.XPND.CD":    {"name": "Military expenditure (current USD) [World Share]", "weight": 0.550, "polarity": +1, "transform": "world_share"},
-            "MS.MIL.XPND.GD.ZS": {"name": "Military expenditure (% of GDP)", "weight": 0.250, "polarity": +1, "transform": "identity"},
-            "MS.MIL.XPND.ZS":    {"name": "Military exp (% general gov exp)", "weight": 0.100, "polarity": +1, "transform": "identity"},
-            "MS.MIL.MPRT.KD":    {"name": "Arms imports (SIPRI TIV values) [World Share]", "weight": 0.100, "polarity": +1, "transform": "world_share"},
+            "MS.MIL.XPND.CD": {
+                "name": "Military expenditure (current USD) [World Share]",
+                "weight": 0.550,
+                "polarity": +1,
+                "transform": "world_share",
+            },
+            "MS.MIL.XPND.GD.ZS": {
+                "name": "Military expenditure (% of GDP)",
+                "weight": 0.250,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "MS.MIL.XPND.ZS": {
+                "name": "Military exp (% general gov exp)",
+                "weight": 0.100,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "MS.MIL.MPRT.KD": {
+                "name": "Arms imports (SIPRI TIV values) [World Share]",
+                "weight": 0.100,
+                "polarity": +1,
+                "transform": "world_share",
+            },
         },
     },
     "financial_center": {
         "name": "Financial Center & Capital Markets Pillar",
         "pillar_weight": 0.125,
         "indicators": {
-            "FS.AST.PRVT.GD.ZS": {"name": "Domestic credit to private sector (% GDP)", "weight": 0.350, "polarity": +1, "transform": "identity"},
-            "FB.BNK.CAPA.ZS":    {"name": "Bank capital to assets ratio (%)", "weight": 0.250, "polarity": +1, "transform": "identity"},
-            "FB.AST.NPER.ZS":    {"name": "Bank nonperforming loans ratio (%)", "weight": 0.150, "polarity": -1, "transform": "identity"},
-            "BX.PEF.TOTL.CD.WD": {"name": "Portfolio equity net inflows (USD) [World Share]", "weight": 0.150, "polarity": +1, "transform": "world_share"},
-            "FB.CBK.BRCH.P5":    {"name": "Commercial bank branches (per 100k)", "weight": 0.100, "polarity": +1, "transform": "identity"},
+            "FS.AST.PRVT.GD.ZS": {
+                "name": "Domestic credit to private sector (% GDP)",
+                "weight": 0.350,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "FB.BNK.CAPA.ZS": {
+                "name": "Bank capital to assets ratio (%)",
+                "weight": 0.250,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "FB.AST.NPER.ZS": {
+                "name": "Bank nonperforming loans ratio (%)",
+                "weight": 0.150,
+                "polarity": -1,
+                "transform": "identity",
+            },
+            "BX.PEF.TOTL.CD.WD": {
+                "name": "Portfolio equity net inflows (USD) [World Share]",
+                "weight": 0.150,
+                "polarity": +1,
+                "transform": "world_share",
+            },
+            "FB.CBK.BRCH.P5": {
+                "name": "Commercial bank branches (per 100k)",
+                "weight": 0.100,
+                "polarity": +1,
+                "transform": "identity",
+            },
         },
     },
     "education_strength": {
         "name": "Education Pillar",
         "pillar_weight": 0.100,
         "indicators": {
-            "SE.SEC.ENRL": {"name": "Secondary education pupils [World Share]", "weight": 0.400, "polarity": +1, "transform": "world_share"},
-            "SE.PRM.ENRL": {"name": "Primary education pupils [World Share]", "weight": 0.300, "polarity": +1, "transform": "world_share"},
-            "SE.COM.DURS": {"name": "Compulsory education duration (years)", "weight": 0.300, "polarity": +1, "transform": "identity"},
+            "SE.SEC.ENRL": {
+                "name": "Secondary education pupils [World Share]",
+                "weight": 0.400,
+                "polarity": +1,
+                "transform": "world_share",
+            },
+            "SE.PRM.ENRL": {
+                "name": "Primary education pupils [World Share]",
+                "weight": 0.300,
+                "polarity": +1,
+                "transform": "world_share",
+            },
+            "SE.COM.DURS": {
+                "name": "Compulsory education duration (years)",
+                "weight": 0.300,
+                "polarity": +1,
+                "transform": "identity",
+            },
         },
     },
     "infrastructure_investment": {
         "name": "Infrastructure & Investment Pillar",
         "pillar_weight": 0.100,
         "indicators": {
-            "NE.GDI.FTOT.CD": {"name": "Gross fixed capital formation (USD) [World Share]", "weight": 0.350, "polarity": +1, "transform": "world_share"},
-            "NE.GDI.FTOT.ZS": {"name": "Gross fixed capital formation (% GDP)", "weight": 0.250, "polarity": +1, "transform": "identity"},
-            "NY.GNS.ICTR.ZS": {"name": "Gross savings (% of GDP)", "weight": 0.200, "polarity": +1, "transform": "identity"},
-            "EG.ELC.ACCS.ZS": {"name": "Access to electricity (% pop)", "weight": 0.100, "polarity": +1, "transform": "identity"},
-            "IT.NET.BBND":    {"name": "Fixed broadband subscriptions [World Share]", "weight": 0.100, "polarity": +1, "transform": "world_share"},
+            "NE.GDI.FTOT.CD": {
+                "name": "Gross fixed capital formation (USD) [World Share]",
+                "weight": 0.350,
+                "polarity": +1,
+                "transform": "world_share",
+            },
+            "NE.GDI.FTOT.ZS": {
+                "name": "Gross fixed capital formation (% GDP)",
+                "weight": 0.250,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "NY.GNS.ICTR.ZS": {
+                "name": "Gross savings (% of GDP)",
+                "weight": 0.200,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "EG.ELC.ACCS.ZS": {
+                "name": "Access to electricity (% pop)",
+                "weight": 0.100,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "IT.NET.BBND": {
+                "name": "Fixed broadband subscriptions [World Share]",
+                "weight": 0.100,
+                "polarity": +1,
+                "transform": "world_share",
+            },
         },
     },
     "geology_energy": {
         "name": "Geology & Energy Endowment Pillar",
         "pillar_weight": 0.050,
         "indicators": {
-            "EIA.ENERGY.SELF_SUFF": {"name": "Net Energy Self-Sufficiency [(Prod-Cons)/Cons]", "weight": 0.400, "polarity": +1, "transform": "identity"},
-            "EIA.ENERGY.PROD":      {"name": "Primary Energy Production (Quad BTU) [World Share]", "weight": 0.350, "polarity": +1, "transform": "world_share"},
-            "AG.LND.TOTL.K2":       {"name": "Land area (sq. km) [World Share]", "weight": 0.150, "polarity": +1, "transform": "world_share"},
-            "ER.H2O.INTR.K3":       {"name": "Renewable internal freshwater [World Share]", "weight": 0.100, "polarity": +1, "transform": "world_share"},
+            "EIA.ENERGY.SELF_SUFF": {
+                "name": "Net Energy Self-Sufficiency [(Prod-Cons)/Cons]",
+                "weight": 0.400,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "EIA.ENERGY.PROD": {
+                "name": "Primary Energy Production (Quad BTU) [World Share]",
+                "weight": 0.350,
+                "polarity": +1,
+                "transform": "world_share",
+            },
+            "AG.LND.TOTL.K2": {
+                "name": "Land area (sq. km) [World Share]",
+                "weight": 0.150,
+                "polarity": +1,
+                "transform": "world_share",
+            },
+            "ER.H2O.INTR.K3": {
+                "name": "Renewable internal freshwater [World Share]",
+                "weight": 0.100,
+                "polarity": +1,
+                "transform": "world_share",
+            },
         },
     },
     "acts_of_nature": {
         "name": "Acts of Nature & Climate Resilience Gauge",
         "indicators": {
-            "NDGAIN.INDEX":         {"name": "ND-GAIN Country Index [Overall Resilience]", "weight": 0.400, "polarity": +1, "transform": "identity"},
-            "NDGAIN.READINESS":     {"name": "Climate Readiness Score (Economic/Gov/Social)", "weight": 0.300, "polarity": +1, "transform": "identity"},
-            "NDGAIN.VULNERABILITY": {"name": "Climate Vulnerability Score [Inverse Risk]", "weight": 0.300, "polarity": -1, "transform": "identity"},
+            "NDGAIN.INDEX": {
+                "name": "ND-GAIN Country Index [Overall Resilience]",
+                "weight": 0.400,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "NDGAIN.READINESS": {
+                "name": "Climate Readiness Score (Economic/Gov/Social)",
+                "weight": 0.300,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "NDGAIN.VULNERABILITY": {
+                "name": "Climate Vulnerability Score [Inverse Risk]",
+                "weight": 0.300,
+                "polarity": -1,
+                "transform": "identity",
+            },
         },
     },
-
     # =========================================================================
     # 3. 10-YEAR FORWARD REAL GDP GROWTH FORECASTING ENGINE (Dalio pp. 23-38)
     # Output: Annualized 10-Year Real Growth % = Pop Growth + Output/Worker Growth
@@ -453,45 +664,160 @@ GAUGE_CONFIGS = {
     "working_age_population_growth": {
         "name": "Demographic Engine (Working Age Pop Growth)",
         "indicators": {
-            "SP.POP.0014.TO": {"name": "Youth cohort inflow (0-14)", "weight": 0.500, "polarity": +1, "transform": "ratio_to_working_pop"},
-            "SP.POP.DPND.OL": {"name": "Old age dependency ratio (% working pop)", "weight": 0.300, "polarity": -1, "transform": "identity"},
-            "SP.POP.GROW":    {"name": "Total population growth (annual %)", "weight": 0.200, "polarity": +1, "transform": "identity"},
+            "SP.POP.0014.TO": {
+                "name": "Youth cohort inflow (0-14)",
+                "weight": 0.500,
+                "polarity": +1,
+                "transform": "ratio_to_working_pop",
+            },
+            "SP.POP.DPND.OL": {
+                "name": "Old age dependency ratio (% working pop)",
+                "weight": 0.300,
+                "polarity": -1,
+                "transform": "identity",
+            },
+            "SP.POP.GROW": {
+                "name": "Total population growth (annual %)",
+                "weight": 0.200,
+                "polarity": +1,
+                "transform": "identity",
+            },
         },
     },
     "what_you_pay_vs_what_you_get": {
         "name": "Cost Competitiveness (70% of Productivity)",
         "indicators": {
-            "NY.GDP.PCAP.CD":    {"name": "Nominal GDP per capita [Inverse Cost Arbitrage]", "weight": 0.250, "polarity": -1, "transform": "log"},
-            "SL.GDP.PCAP.EM.KD": {"name": "GDP per person employed (2021 PPP) [Productivity]", "weight": 0.250, "polarity": +1, "transform": "log"},
-            "NE.GDI.FTOT.ZS":    {"name": "Gross fixed capital formation (% GDP)", "weight": 0.125, "polarity": +1, "transform": "identity"},
-            "NY.GNS.ICTR.ZS":    {"name": "Gross savings (% GDP)", "weight": 0.125, "polarity": +1, "transform": "identity"},
-            "SL.TLF.CACT.ZS":    {"name": "Labor force participation rate (15+) [Working Hard]", "weight": 0.125, "polarity": +1, "transform": "identity"},
-            "SP.POP.DPND":       {"name": "Age dependency ratio (% working pop)", "weight": 0.125, "polarity": -1, "transform": "identity"},
+            "NY.GDP.PCAP.CD": {
+                "name": "Nominal GDP per capita [Inverse Cost Arbitrage]",
+                "weight": 0.250,
+                "polarity": -1,
+                "transform": "log",
+            },
+            "SL.GDP.PCAP.EM.KD": {
+                "name": "GDP per person employed (2021 PPP) [Productivity]",
+                "weight": 0.250,
+                "polarity": +1,
+                "transform": "log",
+            },
+            "NE.GDI.FTOT.ZS": {
+                "name": "Gross fixed capital formation (% GDP)",
+                "weight": 0.125,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "NY.GNS.ICTR.ZS": {
+                "name": "Gross savings (% GDP)",
+                "weight": 0.125,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "SL.TLF.CACT.ZS": {
+                "name": "Labor force participation rate (15+) [Working Hard]",
+                "weight": 0.125,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "SP.POP.DPND": {
+                "name": "Age dependency ratio (% working pop)",
+                "weight": 0.125,
+                "polarity": -1,
+                "transform": "identity",
+            },
         },
     },
     "culture_and_governance": {
         "name": "Culture & Governance (30% of Productivity)",
         "indicators": {
-            "GOV_WGI_RL_EST":   {"name": "Rule of Law (WGI)", "weight": 0.175, "polarity": +1, "transform": "identity"},
-            "VDEM.v2cltrnslw":  {"name": "Transparent Laws & Enforcement (V-Dem)", "weight": 0.125, "polarity": +1, "transform": "identity"},
-            "GOV_WGI_CC_EST":   {"name": "Control of Corruption (WGI)", "weight": 0.175, "polarity": +1, "transform": "identity"},
-            "VDEM.v2excrptps":  {"name": "Public Sector Corruption (V-Dem)", "weight": 0.125, "polarity": -1, "transform": "identity"},
-            "VDEM.v2clrspct":   {"name": "Impartial Public Administration (V-Dem)", "weight": 0.100, "polarity": +1, "transform": "identity"},
-            "GOV_WGI_RQ_EST":   {"name": "Regulatory Quality (WGI)", "weight": 0.100, "polarity": +1, "transform": "identity"},
-            "GOV_WGI_GE_EST":   {"name": "Government Effectiveness (WGI)", "weight": 0.050, "polarity": +1, "transform": "identity"},
-            "NE.CON.GOVT.ZS":   {"name": "Govt consumption (% GDP) [Inverse Self-Reliance]", "weight": 0.150, "polarity": -1, "transform": "identity"},
+            "GOV_WGI_RL_EST": {"name": "Rule of Law (WGI)", "weight": 0.175, "polarity": +1, "transform": "identity"},
+            "VDEM.v2cltrnslw": {
+                "name": "Transparent Laws & Enforcement (V-Dem)",
+                "weight": 0.125,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "GOV_WGI_CC_EST": {
+                "name": "Control of Corruption (WGI)",
+                "weight": 0.175,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "VDEM.v2excrptps": {
+                "name": "Public Sector Corruption (V-Dem)",
+                "weight": 0.125,
+                "polarity": -1,
+                "transform": "identity",
+            },
+            "VDEM.v2clrspct": {
+                "name": "Impartial Public Administration (V-Dem)",
+                "weight": 0.100,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "GOV_WGI_RQ_EST": {
+                "name": "Regulatory Quality (WGI)",
+                "weight": 0.100,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "GOV_WGI_GE_EST": {
+                "name": "Government Effectiveness (WGI)",
+                "weight": 0.050,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "NE.CON.GOVT.ZS": {
+                "name": "Govt consumption (% GDP) [Inverse Self-Reliance]",
+                "weight": 0.150,
+                "polarity": -1,
+                "transform": "identity",
+            },
         },
     },
     "indebtedness_debt_cycles": {
         "name": "Indebtedness & Macro Solvency (35% of Growth per Worker)",
         "indicators": {
-            "IMF.GGXWDG_NGDP":  {"name": "General Gov Gross Debt (% GDP) [IMF WEO]", "weight": 0.200, "polarity": -1, "transform": "identity"},
-            "IMF.GGXCNL_NGDP":  {"name": "Gov Net Lending/Borrowing Deficit (% GDP) [IMF WEO]", "weight": 0.150, "polarity": +1, "transform": "identity"},
-            "FS.AST.PRVT.GD.ZS": {"name": "Domestic private credit (% GDP)", "weight": 0.200, "polarity": -1, "transform": "identity"},
-            "FS.AST.CGOV.GD.ZS": {"name": "Claims on central government (% GDP)", "weight": 0.150, "polarity": -1, "transform": "identity"},
-            "BN.CAB.XOKA.GD.ZS": {"name": "Current account balance (% GDP)", "weight": 0.130, "polarity": +1, "transform": "identity"},
-            "FI.RES.TOTL.MO":    {"name": "Total reserves in months of imports", "weight": 0.070, "polarity": +1, "transform": "identity"},
-            "FP.CPI.TOTL.ZG":    {"name": "Inflation, consumer prices (annual %)", "weight": 0.100, "polarity": -1, "transform": "identity"},
+            "IMF.GGXWDG_NGDP": {
+                "name": "General Gov Gross Debt (% GDP) [IMF WEO]",
+                "weight": 0.200,
+                "polarity": -1,
+                "transform": "identity",
+            },
+            "IMF.GGXCNL_NGDP": {
+                "name": "Gov Net Lending/Borrowing Deficit (% GDP) [IMF WEO]",
+                "weight": 0.150,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "FS.AST.PRVT.GD.ZS": {
+                "name": "Domestic private credit (% GDP)",
+                "weight": 0.200,
+                "polarity": -1,
+                "transform": "identity",
+            },
+            "FS.AST.CGOV.GD.ZS": {
+                "name": "Claims on central government (% GDP)",
+                "weight": 0.150,
+                "polarity": -1,
+                "transform": "identity",
+            },
+            "BN.CAB.XOKA.GD.ZS": {
+                "name": "Current account balance (% GDP)",
+                "weight": 0.130,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "FI.RES.TOTL.MO": {
+                "name": "Total reserves in months of imports",
+                "weight": 0.070,
+                "polarity": +1,
+                "transform": "identity",
+            },
+            "FP.CPI.TOTL.ZG": {
+                "name": "Inflation, consumer prices (annual %)",
+                "weight": 0.100,
+                "polarity": -1,
+                "transform": "identity",
+            },
         },
     },
 }

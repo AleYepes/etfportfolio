@@ -9,11 +9,10 @@ bars = await ib.reqHistoricalDataAsync(
     durationStr="2 Y",
     barSizeSetting="1 day",
     whatToShow="ADJUSTED_LAST",  # CRITICAL: Total return (dividends + splits)
-    useRTH=True,                  # CRITICAL: Official exchange close (4:00 PM ET)
+    useRTH=True,  # CRITICAL: Official exchange close (4:00 PM ET)
     formatDate=1,
     keepUpToDate=False,
 )
-
 ```
 
 #### Why `useRTH=True` is required
