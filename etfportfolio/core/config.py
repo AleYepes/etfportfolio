@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     rate_limit_initial_delay: float = 1.0
     rate_limit_max_delay: float = 60.0
     rate_limit_cooldown_seconds: float = 15.0
-    http_max_retries: int = 5
+    http_max_retries: int = 3
 
     # IB Gateway
     ib_gateway_host: str = "127.0.0.1"
