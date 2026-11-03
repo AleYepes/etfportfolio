@@ -11,7 +11,7 @@ wheels/
 # Dev testing
 .venv
 .env
-*.ipynb
+# *.ipynb
 data/
 
 dalio_external_data*
