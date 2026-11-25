@@ -1,514 +1,337 @@
 # Functional Requirements Document: Dalio Gauge Emulation MVP
 
-*Revision 2: raising the notebook’s fidelity to the Appendix*
+*Revision 4. Supersedes all prior FRDs. Self-contained specification for refactoring and validating the exploratory Jupyter notebook that emulates the country gauges in the Appendix of Ray Dalio's "The Great Powers Index: 2024" (pages 132–184).*
 
-## 1. Purpose, scope and how to use this document
+---
 
-**Purpose.** One Jupyter notebook ingests macro, governance, health and social indicators for every ISO3 country and groups them into “gauge trees” that emulate the gauges in the Appendix of The Great Powers Index 2024. This MVP exists to explore and define a bespoke gauge tree. It will later be re-implemented in a production pipeline that you cannot see, so keep it quick, lean and simple.
+## 1. Purpose, Scope, and Working Principles
 
-**Primary goal: three audit checks.**
+**Purpose.** A single Jupyter notebook ingests macroeconomic, governance, health, and social indicators for every ISO3 sovereign economy (`UNIVERSE`, ~250 economies) and aggregates them into declarative "gauge trees" that emulate the Appendix gauges of *The Great Powers Index: 2024*. The MVP exists to define, test, and document the gauge tree, data-quality screen, and scoring rules cleanly enough that a separate production pipeline (not visible here) can re-implement them for the evolving country cohort in `silver.observations` (currently ~109 countries).
 
-1. **Completeness.** Every source or indicator the Appendix cites is fetched programmatically, or appears in a ledger as an explicit GAP with a reason.
-2. **Correctness.** Gauge weights in the tree match the Appendix. Where the Appendix is silent, weights are kept as drafted and tagged as heuristics.
-3. **Traceability.** Every tree component states why it is there (stated in the Appendix, concept named only, or heuristic) with a page reference, and every gauge the Appendix names can be read from a named node of the tree.
+**Priorities (in strict order):**
+1. **Structural fidelity:** Every Appendix-cited source or indicator is either fetched programmatically or recorded in a derived ledger as a coded `GAP` or `DROPPED`; published Appendix weights match exactly; every component carries explicit provenance, page reference, and citations.
+2. **Ordinal & numeric validation:** Rank correlations and numeric sanity checks against the Appendix's published 2024 tables (printed as status lines/warnings, never hard failures).
+3. **Resilient cross-country coverage:** Indicators are screened across `UNIVERSE` using observation-weighted (`OBS_WEIGHTS`) coverage and recency rules so gauges remain stable as `silver.observations` evolves.
 
-**Secondary goal.** A minimal engine that turns the tree plus the data into annual gauge series, so the three checks can be verified end to end.
+**In scope:**
+- **Phase 1:** Tree structure, exclusions, all 15 Appendix weight locks, closed `GAP` reason codes, and derived source ledger (`W01`–`W20` + 64 A.7 sources + concept rows).
+- **Stage 2:** Fetch repairs (`F-2`), bounded replacement fetches and recurring open-data probes (`F-6`), and hygiene cleanup (`F-7`).
+- **Phase 1.5:** Raw coverage panel (`S-1`), dynamic outlier + rankable-recency screen (`S-2`), deterministic single-series resolve step (`S-3`), simplified non-stitching engine with internal linear interpolation (`S-4`), and updated diagnostic reports (`S-5`).
+- **Phase 2:** Print-only structural/data checks (`V-1`), Appendix D reference registry & Spearman comparisons (`V-2`), Empire Score & sensitivity tables (`V-3`), `Dalio-35` validation pass (`V-4`), and all 8 p.135 per-gauge comparisons (`V-5`).
 
-**Out of scope (the owner’s later sessions; do not start them).** Vetting individual sources; dropping stale or sparse series; finding replacement indicators; imputation or interpolation; recalibrating weights; income-adjusted or log transforms; the growth back-test and error adjustment; integration into the production pipeline; writing to any database; any step that needs a hand-downloaded file. Section 8 adds specifics.
+**Out of scope (parked for future work—do not implement):**
+- **Phase 3:** Income-adjusted scoring ("relative to similar income" peer adjustments or regressions) and historical 10-year growth back-testing/linear calibration.
+- Production database writes (`data/etf.duckdb` is read-only), manual file downloads, forward/backward extrapolation past observed endpoints, tuning weights to fit Appendix outputs, and bilateral (pairwise) modelling for External Conflict (`D11`).
 
-**Working principles.** (1) Correctness over coverage: never silently mix methodologies. (2) Flags over deletions: this phase labels stale, sparse or proxy data and never drops it. (3) Programmatic only. (4) MVP lean: one notebook, no tests, no db write-access.
+**Working principles:**
+1. **Correctness over coverage:** Never stitch incompatible indicators (`D20`). Each component resolves to at most one series.
+2. **Lean & non-blocking:** One notebook, plain dicts/namedtuples (no custom classes, `D26`), no `raise`, no `assert`, and no defensive try/except blocks masking logic bugs. Checks print a status line and continue (`D4`, `D31`).
+3. **Display, do not save reports:** Diagnostic tables are displayed DataFrames. Only raw caches (`data/dalitest/raw/<source>/data.parquet`) and the three engine outputs (`component_scores.parquet`, `node_scores.parquet`, `rank_support.parquet` under `data/dalitest/out/`) persist (`D5`).
+4. **Screen raw, interpolate internal gaps only:** Coverage reporting and screening inspect raw actual observations only; the engine applies internal linear interpolation (`limit_area="inside"`) per country with **zero extrapolation** (`D19a`).
+5. **Preserve secret handling:** Keep the existing `EIA_API_KEY` handling in Cell 0 untouched; never print or copy keys into outputs.
 
-**What this revision is for.** An audit of the notebook against the Appendix found that its structure is close (the Health, Happiness and Productivity weights already match) but that it is not yet auditable. 47 of its 189 leaf components have no data. 22 of the 64 sources the Appendix lists deliver nothing. 17 GAPs carry the reason ‘pending’ (never probed). The ledger omits about 20 indicators that appear in the Appendix’s weight tables. Six tree components have no counterpart in the Appendix. The Indebtedness gauge’s sub-weights are labelled ‘pdf’ although the Appendix calls them proprietary. This document specifies the changes that close those gaps. It does not ask you to improve data quality or make the gauges ‘better’. It asks you to make the notebook faithful and to make every deviation visible.
+---
 
-**How to use this document.** You have the notebook but not the Appendix PDF and not the conversation that produced this document. Appendix A reproduces every Appendix fact you need (weights, indicator lists, the source list, reference values) and is the ground truth for what the Appendix says. Appendix B lists starting points for probing GAPs. Appendix C lists ledger rows to add. Requirement IDs: C = completeness, K = correctness, T = traceability, G = gates and diagnostics. MUST means required for done. SHOULD means do it unless it costs more than it is worth, and say so in your report. Comments in the notebook that cite ‘FRD §…’, ‘D4’, ‘FD-01’ or ‘P-7’ refer to an earlier FRD you do not have; treat them as informational only.
+## 2. Settled Owner Decisions and Rationale
 
-## 2. Background you need
+| ID | Decision | Rationale |
+| --- | --- | --- |
+| **D1–D4** | Structural fidelity first; print-only checks (`no assert`, `no raise`); simplify engine/cell order freely while keeping `STD_COLS` and `cached()` semantics. | MVP defines a legible spec for production re-implementation; Dalio uses proprietary inputs so exact numerical replication is neither expected nor tuned for. |
+| **D5–D8** | Persist only raw parquets and 3 engine parquets. Ingest for `UNIVERSE` (~250 ISO3); report `cov` (share of eligible `UNIVERSE`) and `cov_obs` (weighted by `OBS_WEIGHTS` from `silver.observations`). Rank against `UNIVERSE` (`MIN_CROSS_SECTION = 30`). Add a validation-only `Dalio-35` pass (`min_cross_section = 20`, `write_outputs = False`). | Keeps scores invariant when `silver.observations` changes while letting Phase 2 compare like-with-like against the Appendix's 35-country validation cohort. |
+| **D9** | **Universal transform:** Signed annual cross-sectional percent rank `(rank - 1) / (n - 1) * 100` (`0–100`, higher is better) for every gauge. No z-scores. | Eliminates transform mismatches, handles extreme small-state outliers cleanly, and matches the p.135 Empire Score scale. |
+| **D10–D11** | One top-level tree per Appendix gauge (14 trees; drop legacy cycle wrappers). Descope **External Conflict** (gauge #19). | Appendix lists gauges flat; External Conflict is pairwise across country-pairs and out of scope for a single-country MVP. |
+| **D12** | **Cited-only rule:** Keep a component only if the Appendix cites its indicator, source, or concept; record omissions in `EXCLUDED_COMPONENTS`. | Preserves clear PDF-to-code lineage. |
+| **D13–D14** | **Size/intensity model:** Eight gauges (`education`, `innovation_and_technology`, `economic_output`, `trade`, `military`, `financial_center`, `infrastructure_and_investment`, `geology`) carry flat components tagged `kind` = `size` (raw totals: USD, counts, tonnes, kWh) or `intensity` (per-capita, % GDP, per-worker, index, test score). `size_share` = `0.75` for `economic_output`, `trade`, `military`; `0.50` for the other five. Node score = **Total**; post-hoc **Quality-only** uses `intensity` components only. | Captures Dalio's distinction between scale and capability without duplicating trees; matches Appendix prose ("about half" vs. "primarily/mostly absolute"). |
+| **D15** | **Empire Score determinant weights (`EMPIRE_RAW` / `0.94`):** `economic_output` `0.15`, `financial_center` `0.15`, `reserve_currency` `0.12`, `military` `0.12`, `innovation_and_technology` `0.12`, `trade` `0.10`, `education` `0.10`, `competitiveness` `0.08`. Sensitivity vs. equal `1/8` in `V-3`. | Appendix publishes no Empire Score weights; keeps owner heuristics transparent and testable. |
+| **D17–D18** | **Derived ledger & retention:** Compute ledger status from tree + resolved state + data (`no manual intended column`). Keep fetching flagged series (`df_full`) for auditability; filter `df_master` via `KEEP_CODES`; unconsumed A.7 sources (`NO_CONSUMER`) are not fetched. | Prevents ledger drift and keeps screen evidence visible until production pruning. |
+| **D19a** | **No extrapolation; internal linear interpolation only (amends prior no-fill rule):** Screen raw non-projected observations. In the engine (`S-4`), apply per-country internal linear interpolation (`limit_area="inside"`) between observed years on resolved series; never extrapolate forward or backward past observed endpoints. | Prevents multi-year ($\ge 3\text{y}$) extrapolation (the original motivation behind `STALE_BEFORE = 2023`) while cleanly bridging minor internal gaps in recurring series without fabricating coverage metrics. |
+| **D20–D21** | **Single series per component (no stitching):** Order candidates `exact` $\rightarrow$ `substitute_source` $\rightarrow$ `proxy_concept` (list order within tier) and select the first candidate passing `S-2`. | Stitching heterogeneous concepts (e.g., ILO vs. PWT weekly hours, $r \approx 0.0$) mixes methodologies silently. |
+| **D22–D23** | **Strict uniform screen + rankable recency:** Flag any candidate if: (1) `weighted_cov_% < fence_cov` (`median - 3 * IQR`), OR (2) `weighted_recent_% < fence_recent` (`median - 3 * IQR`), OR (3) it has **no rankable year (`n_reporting >= 30`) at or after `STALE_BEFORE` (`2023`)**. Dropped components are removed across **all years** (`DISCONTINUED` if latest actual `< STALE_BEFORE`, else `LOW_COVERAGE`). | Preserves dynamic outlier detection while preventing collapsed recent series (e.g., `ILO.STRIKES_*`, `FR.INR.LEND`) from passing a ~6.9% recency fence with zero or near-zero rankable coverage in 2023+. Survey-cycle series (`Doing Business`, `Barro-Lee`, `HCI`, `LPI`, `PISA` if stale) are dropped unless recurring `2023+` replacements land (`Q2`, `Q6`). |
+| **D24–D25** | Bounded programmatic replacement search (`F-6`) including recurring open-data targets (`WIPO GII`, `OECD` hours/retirement, `PISA 2022`/`UNESCO UIS`) before dropping flagged series. Closed 9-code `GAP_REASONS`: `PROPRIETARY`, `NO_PUBLIC_ROUTE`, `MANUAL_DOWNLOAD`, `PROBED_FAILED`, `HEAVY`, `OWNER_SKIP`, `NO_CONSUMER`, `DISCONTINUED`, `LOW_COVERAGE`. Remove `PROBE_NEXT`. | Gives recurring open alternatives a fair chance under strict recency while keeping heavy/manual pipelines out of scope (`Q7`), and standardizes every missing item with verifiable evidence. |
+| **D27–D29** | **Structural exclusions (`INELIGIBLE`) & panel rules:** Euro-area members (`EURO_AREA`) receive no reserve-currency rows and are excluded from the denominator of coverage/screen calculations for `IMF.COFER_SHARE`, `BIS.FX_TURNOVER_SHARE`, `BIS.INTL_DEBT_CCY_SHARE`. Landlocked economies are excluded for `UNCTAD` shipping if wired. `df_cov` has no thresholds and includes projections (`is_projection = True`); scored gauges use actuals only. | Appendix leaves Eurozone countries as dashes on p.135; prevents intentional structural exclusions from triggering coverage flags, while keeping projections visible in coverage diagnostics without mixing forecasts into scores. |
+| **D30–D33** | `V-2`–`V-5` validate world-relative Appendix D tables via Spearman at `ASOF_YEAR` (`2023`) as print-only checks. Direct inspection of Appendix p.135 confirms all 8 column pairs (`V-5` unblocked). Keep `competitiveness` mapped to `@productivity_gauge.what_you_pay_vs_what_you_get` in the tree, and test the `Competitiveness + Culture + Investment` composite as a `V-3` validation sensitivity. **Phase 3 is parked** (deferred). | Preserves p.132 prose fidelity while empirically testing p.135's `"Competitiveness, Culture, Investment"` header (`Q4`). Keeps the MVP lean, regression-free, and focused on extending weighted-sum `0–100` gauges to the `UNIVERSE` / `109+` country set (`Q12`, `Q13`). |
 
-### 2.1 The Appendix
+---
 
-The Appendix is pages 132–184 of The Great Powers Index: 2024 (Ray Dalio). It contains: one-paragraph descriptions of 21 gauges (A.2); an Empire Score table for 24 major countries (A.8); how the Health and Happiness indices are built, with weights (A.3); a growth formula in which 10-year growth per worker is 65% productivity plus 35% indebtedness (A.4); weight tables for the productivity sub-gauges and for Culture (A.4, A.5); and a list of 64 data sources (A.7). Three properties shape this work.
+## 3. Notebook Architecture & Mechanics
 
-1. **Weights are published for only some gauges:** Health, Happiness, Productivity (including Culture) and the 50/50 split inside Indebtedness. For every other gauge (the eight strength determinants, Infrastructure, Resource Allocation, Geology, Character, Governance, Acts of Nature, Internal Conflict, External Conflict, Gaps) the Appendix gives descriptions only. Weights there are the owner’s heuristics.
-2. **The source list is a selection.** The Appendix says it shares “a selection” of “a few hundred” indicators. An indicator missing from the Appendix may exist in the full report, so ‘not in the Appendix’ means exactly that and nothing stronger. The rest of the report (pages 1–131) is not available.
-3. **It contains small internal inconsistencies** (A.9). The resolution for each is specified there. Do not resolve them differently.
+The notebook runs top-to-bottom in a single file with master long schema `STD_COLS = ["country_code", "indicator_code", "year", "value", "source", "is_projection"]`.
 
-The Appendix uses its own three-letter country codes (BRZ is Brazil, CHI is Chile, TLD is Thailand). The notebook uses ISO3. The mapping is in A.10.
+- **Caching (`cached(source, fetch_fn, refresh)`):** Reads/writes `data/dalitest/raw/<source>/data.parquet`. If a fetch cell is modified, add its source key to `REFRESH` (or delete its cache folder) so new data is pulled. On network failure, `cached` retains the prior snapshot and prints a warning.
+- **Tree schema:** Plain nested dicts + `Alt(code, tier, direction, status, reason)` namedtuples built with `alt()` / `gap()`. Nodes hold `weight`, `provenance` (`"appendix"` or `"heuristic"`), and one of `children`, `components`, or `reference` (`"@tree.node"`). Tagged leaves also hold `size_share` (`0.50` or `0.75`).
+- **Component schema:** `{name, weight, alts, basis, page, cites, kind?, note?}`, where `basis` is `"appendix"`, `"appendix_concept"`, or `"appendix_source"`. Effective provenance of a component is `"appendix"` only when both its node `provenance == "appendix"` and its `basis == "appendix"`.
+- **Current defects to fix from the baseline notebook:**
+  1. Cell 4 references an undefined `df_probes` in `all_raw_frames` (crashes a clean run).
+  2. Cell 6b (`_engine_selftest`) uses `assert`s (`D4`).
+  3. Cell 0 retains `ALLOW_PROXY_FALLBACK` and Cell 5 retains `PROBE_NEXT`.
+  4. Cell 2a fails on 10 WDI codes; Cell 2b requests invalid `ENF.CONT.COEN.DB0415`; Cell 2i (`COVID.EXCESS_MORTALITY_PSCORE`) returns 0 rows silently; Cell 2l lacks `WHR.POSITIVE_AFFECT` & pre-2019 `WHR.SOCIAL_SUPPORT`.
+  5. Cell 6 stitches alternatives (`alt_used`) instead of using `S-1`–`S-4`; `Agreement between alternatives` ignores `direction` signs; `APPENDIX_WEIGHTS` checks only 3 of 15 paths; `APPENDIX_SOURCES` lacks `W01`–`W20`.
+  6. `GFP.POWERINDEX` currently carries `PROPRIETARY` instead of `OWNER_SKIP` (`D25`), `WAGE` stand-ins carry `exact` instead of `proxy_concept`, and `conflict_media_discontent` bundles 4 GAPs into one component.
 
-### 2.2 The notebook today
+---
 
-One file, 28 code cells, run top to bottom. All data sit in a long ‘master’ table with columns `country_code, indicator_code, year, value, source, is_projection` (`STD_COLS`).
+## 4. Detailed Requirements
 
-| Cell | Role |
-| --- | --- |
-| 0 | Constants (`YEAR_FLOOR` 1950, `STALE_BEFORE` 2023, `MIN_CROSS_SECTION` 30, `ALLOW_PROXY_FALLBACK` False, `PROJ_FROM` 2026, `REFRESH` empty set), `STD_COLS`, helpers `log_fetch`, `cached`, `http_get`, `to_iso3`, `tidy`. Leave secret handling (the EIA key) exactly as it is |
-| 1 | `UNIVERSE` (250 ISO3 codes from country\_converter). Coverage weights `OBS_WEIGHTS` and `TARGET_SET` come from a read-only DuckDB (`data/etf.duckdb`) and fall back to DALIO\_35 if the file is absent. Used for coverage reporting only |
-| 2a–2r | One fetch cell per source, each wrapped in `cached()`: wb\_wdi (103 WDI codes), wb\_other (WGI, Doing Business archive, UHC, HCI, population projections), wb\_edstats, imf\_weo, imf\_cofer, eia, vdem, ndgain, owid, ilostat, bis, whr, unhcr, pip, oecd, arwu, pwt, probes (an empty placeholder) |
-| 3 | `build_derived()`: 21 derived series (volatilities, per-capita values, net exports, dependency-ratio change, and so on) |
-| 4 | Master assembly. Sources are concatenated in list order; on a duplicate (country, indicator, year) the first source wins |
-| 5 | `RAY_DALIO_GAUGE_TREES`, the `Alt` tuple and `alt()` helper, `iter_leaves`, `check_tree_weights`, and the hours-worked weight assertion |
-| 5b | `LEDGER_DATA` (the 64 listed sources plus extra rows), `CARRIED_SERIES`, `DERIVED_INPUTS`, `PDF_LISTED_CODES`, `KEEP_CODES` and the retention filter that trims series with no consumer from `df_master` |
-| 6, 6b | `run_gauge_engine()` and its synthetic self-test |
-| 7a | QA reports written as CSV to `data/dalitest/out`: df\_health, pdf\_ledger, df\_registry, alt\_coverage, effective\_weights, direction\_map, switch\_report, agreement\_report, proxy\_candidates |
-| 7b | Structural asserts, Gates 1–4, and a printed Spearman diagnostic |
+### 4.1 Model and Tree (`M`)
 
-Mechanics you must understand before editing:
+- **M-1 Tree Shape (MUST):** Keep the exact 14 top-level trees: `health_index`, `happiness_index`, `productivity_gauge` (`what_you_pay_vs_what_you_get` [4 leaves] + `culture` [6 sub-gauges]), `indebtedness_gauge` (`debt_levels_and_flow` + `monetary_policy`), `future_growth` (`productivity_impact -> @productivity_gauge`, `indebtedness_impact -> @indebtedness_gauge`), `strength_determinants` (`economic_output`, `financial_center`, `reserve_currency`, `military`, `innovation_and_technology`, `trade`, `education`, `competitiveness -> @productivity_gauge.what_you_pay_vs_what_you_get`), `infrastructure_and_investment`, `resource_allocation_efficiency`, `geology`, `character_determination_civility`, `governance_rule_of_law`, `acts_of_nature`, `internal_conflict`, `wealth_values_gap`. Do not rename nodes.
+- **M-2 Component & Tier Refinements (MUST):**
+  - Re-tag the `WAGE` stand-in candidates (`IMF.NGDPDPC`, `NY.GDP.PCAP.CD` in `GDP_PC_COST()`) under `education_cost_quality_adj` and `labor_productivity_cost_adj` to `proxy_concept` (so `WAGE` reports `proxy` in the ledger and Productivity's nominal tier breakdown reflects the stand-in).
+  - Split `internal_conflict/conflict_media_discontent` (weight `1/6`) into four components at `1/24` each (keeping the other five `internal_conflict` components at `1/6` each): one each for Cline Center (`11`, `CLINE.CONFLICT_PER_CAPITA`), GDELT media discontent (`14`, `GDELT.DISCONTENT_TERMS`), GDELT govt disapproval (`23`, `GDELT.GOVT_DISAPPROVAL`), and GDELT protest intensity (`45`, `GDELT.PROTEST_INTENSITY`), so each source reports its own accurate `GAP` reason in the ledger.
+  - Add `DERIVED.PER_CAPITA.NE.EXP.GNFS.CD` as a `substitute_source` candidate under `strength_determinants/trade/exports_pc` (with `DERIVED.PER_CAPITA.BX.GSR.GNFS.CD` as primary `exact`).
+  - Set `GFP.POWERINDEX` `GAP` reason to `OWNER_SKIP` (`D25`).
+- **M-3 Exclusions & Cited-Only Check (MUST):** Confirm every component cites an Appendix indicator, A.7 source, or concept, and verify `EXCLUDED_COMPONENTS` documents all 8 removals: `external_order_cycle` (descoped pairwise gauge); legacy cycle wrappers (`economic_financial_cycle`, `internal_order_cycle`, `additional_measures`); `governance_rule_of_law` WGI `GE.EST`/`RQ.EST`; `internal_conflict` WGI `PV.EST`; `geology` OWID fossil fuel production; `economic_output` nominal GDP/GDP per capita; `financial_center` private credit; `capital_stock_growth` perpetual-inventory alternative.
+- **M-4 Size/Intensity & Quality-Only (`df_kinds`) (MUST):** Keep `size_share` (`0.75` for `economic_output`, `trade`, `military`; `0.50` for the other 5 tagged leaves), `kind` tags, and `df_kinds` display unchanged. Update Cell 6c (`quality_only_scores`) to read the simplified `df_comp_scores` schema (`code` column, no `alt_used`) and compute **Empire Score Quality-only** using renormalised `D15` weights across the 6 determinants that have `intensity` tags (`competitiveness` and `reserve_currency` have no Quality-only view and are excluded, stated explicitly in the output).
+- **M-5 / M-6 Weight Locks (MUST):** Populate `APPENDIX_WEIGHTS` in Cell 7b for all **15 Appendix paths** (compared against the **nominal** tree by component/child name within `0.005`, print-only):
+  1. `health_index` (p.136): `life_expectancy` `0.30`, `food_insecurity` `0.15`, `essential_health_services` `0.15`, `child_mortality` `0.10`, `homicide` `0.075`, `displaced_population` `0.075`, `air_pollution` `0.05`, `safely_managed_drinking_water` `0.05`, `basic_sanitation` `0.05`
+  2. `happiness_index` (p.136): `share_reported_happy` `0.225`, `share_reported_daily_enjoyment` `0.225`, `life_satisfaction` `0.225`, `good_social_support_network` `0.225`, `suicide_rate` `0.10`
+  3. `future_growth` (p.143): `productivity_impact` `0.65`, `indebtedness_impact` `0.35`
+  4. `productivity_gauge` (p.158/169): `what_you_pay_vs_what_you_get` `0.70`, `culture` `0.30`
+  5. `productivity_gauge/what_you_pay_vs_what_you_get` (p.158): `0.25` each (`education_cost_quality_adj`, `labor_productivity_cost_adj`, `working_hard`, `investing`)
+  6. `.../working_hard` (p.158): `avg_hours` `2/3`, `dependency_ratio_10y_fwd_change` `1/3`
+  7. `.../investing` (p.158): `[3.1, 3.1, 3.1, 3.1, 2.6, 2.6] / 17.6` (normalized via `norm()`, as the Appendix's printed components sum to `17.6` against a `17.5` header)
+  8. `productivity_gauge/culture` (p.169): `1/6` each (6 sub-gauges)
+  9. `.../culture/corruption` (p.171): `transparency_index` `0.5`, 3 survey items `1/6` each
+  10. `.../culture/bureaucracy` (p.173): `1/3` each (3 items)
+  11. `.../culture/rule_of_law` (p.175): `1/4` each (4 items)
+  12. `.../culture/savoring_life_vs_achieving` (p.177): `observed_outcomes` `0.5`, 7 WVS items `0.5/7` each
+  13. `.../culture/innovation` (p.179): 4 inputs `0.125` each, `outputs_patents` `0.125`, `outputs_royalties` `0.125`, 4 remaining outputs `0.0625` each
+  14. `.../culture/self_sufficiency` (p.181): `hard_work_hours` `0.25`, `hard_work_lfpr`/`retire_age`/`vacation` `1/12` each, `gov_support_transfers`/`outlays` `0.125` each, `rigidity_collective_bargaining`/`hiring_firing`/`min_wage` `1/12` each
+  15. `indebtedness_gauge` (p.143): `debt_levels_and_flow` `0.50`, `monetary_policy` `0.50`
+- **M-7 Gauge Map (MUST):** Keep `APPENDIX_GAUGE_MAP` (21 entries; `External Conflict -> None`). Print a notice if any mapped node has zero scores after resolution.
+- **M-8 Effective-Weights Export (MUST):** Update the tree export in Cell 7a to display `gauge`, `leaf_path`, `component`, `kind`, `basis`, `page`, `cites`, `nominal_weight`, `effective_weight`, `effective_provenance` (`"appendix"` iff node provenance and component basis are both `"appendix"`), `resolved_code`, `resolved_tier`, `state` (`live`/`gap`/`dead`/`dropped`), `drop_reason`, and `alts`, plus a per-gauge nominal-weight share summary by `state`, `tier`, `basis`, and `dropped` share.
+- **M-9 Directions (MUST):** Keep all existing `direction` signs unchanged. Retain the ambiguous-signs display table.
 
-- **Tree schema.** Each top-level key is a tree. A node has `weight`, `provenance` (`pdf` or `heuristic`) and exactly one of: `children` (dict of nodes), `components` (list) or `reference` (a string such as `@productivity_gauge.what_you_pay_vs_what_you_get` that reuses another node’s score). A component is `{name, weight, alts}`. `alts` is an ordered list of `alt(code, tier, direction, status, reason)`. `direction` is +1 (higher is better) or -1. Extra keys on a component are ignored by the engine, so new metadata fields are safe.
-- **Ten trees:** health\_index, happiness\_index, productivity\_gauge, indebtedness\_gauge, future\_growth (reference-only: 0.65 productivity, 0.35 indebtedness), strength\_determinants, additional\_measures, internal\_order\_cycle, economic\_financial\_cycle (reference-only) and external\_order\_cycle. Together they hold 189 leaf components: health 9, happiness 5, productivity 51, indebtedness 15, strength 45, additional 45, internal 14, external 5.
-- **Alternatives and tiers.** For each component the engine takes the first alt that has any data anywhere as the primary (any tier). Later alts fill only country-years the primary leaves empty, and only if their tier is `exact` or `substitute_source` (`proxy_concept` is excluded unless `ALLOW_PROXY_FALLBACK`). `status=GAP` on an alt is a QA label only: the engine ignores it and skips any alt whose code has no data.
-- **Scoring.** Within each year a series becomes a percent rank (0–100) across countries that have a value, provided at least 30 do; direction flips the ranking. Component scores are averaged with weights renormalised over the components present; node scores likewise. `weight_present` records the share of nominal weight actually present.
-- **Caching.** `cached(source, fetch_fn, refresh)` stores `data/dalitest/raw/<source>/data.parquet`. If the file exists it is returned and the fetch does not run; if a refetch returns nothing, the old snapshot is kept. After editing any fetch cell you MUST add its source name to `REFRESH` (or delete its folder), otherwise your change has no effect.
-- **Paired blocks in cell 7a.** The ledger, registry and effective-weights reports are each implemented twice (the second block is labelled ‘alternative?’). The later block overwrites the earlier one and writes the same CSV. Make your changes in the later block and delete the earlier one so they cannot diverge.
-- **Saved outputs are unreliable.** The notebook’s saved cell outputs come from different runs and contradict each other (for example the WDI log says 103 series landed while Gate 1 says four WDI codes returned nothing). Trust only a fresh top-to-bottom run.
+### 4.2 Data, Fetches, and Ledger (`F`)
 
-### 2.3 Baseline from the last saved run (re-measure first, see C-1)
+- **F-1 Re-baseline (MUST):** Run a clean top-to-bottom baseline after fixing `df_probes` (or read current caches if offline) and record baseline counts before Stage 2 edits.
+- **F-2 Fetch Repairs (MUST):** Diagnose, fix, add source to `REFRESH`, and verify rows (or mark `PROBED_FAILED` with URL/HTTP error):
+  - **F-2.1 (Cell 2a WDI):** Print per-code exceptions and add a paged World Bank v2 REST fallback (`https://api.worldbank.org/v2/country/all/indicator/{code}?format=json&per_page=20000&date=1950:2025`, mapping `countryiso3code` to `UNIVERSE`) for the 10 failing codes (`AG.LND.TOTL.K2`, `BX.GSR.GNFS.CD`, `EN.ATM.PM25.MC.M3`, `ER.H2O.INTR.K3`, `FM.LBL.BMNY.ZG`, `FP.CPI.TOTL.ZG`, `GC.DOD.TOTL.GD.ZS`, `SE.TER.CUAT.BA.ZS`, `SE.XPD.TOTL.GD.ZS`, `SH.STA.SUIC.P5`).
+  - **F-2.2 (Cell 2i OWID COVID):** Debug and repair date/column parsing for `excess-mortality-p-scores-average-baseline` (2020–2022 mean stamped `2022`), or mark `PROBED_FAILED`.
+  - **F-2.3 (Cell 2b WB-DB):** Fix or prune invalid archive code `ENF.CONT.COEN.DB0415`.
+  - **F-2.4 (Cell 2l WHR):** Probe the WHR Table 2.1 country-year panel on `worldhappiness.report` / `files.worldhappiness.report` for `WHR.POSITIVE_AFFECT` and pre-2019 `WHR.SOCIAL_SUPPORT`; verify every row uses its real year (never silently defaulting missing years to `2024`).
+  - **F-2.5 (Cell 3 Derived):** Verify `DERIVED.INFLATION_VOL10` and `DERIVED.PER_CAPITA.BX.GSR.GNFS.CD` build once F-2.1 lands, and build `DERIVED.PER_CAPITA.NE.EXP.GNFS.CD`.
+- **F-3 GAP Protocol (MUST):** Update `GAP_REASONS` to the closed 9-code set (`D25`), removing `PROBE_NEXT`. Every `GAP` candidate's `reason` attribute MUST be an exact code from `GAP_REASONS` (so Cell 7b's membership check validates cleanly), while supporting evidence (vendor name for `PROPRIETARY`, URL for `NO_PUBLIC_ROUTE`/`MANUAL_DOWNLOAD`, URL + HTTP error for `PROBED_FAILED`, route + size for `HEAVY`) is recorded in the component's `note` (or `SOURCE_REASON`/evidence field).
+- **F-4 Derived Ledger (MUST):**
+  - Append `W01`–`W20` (Appendix C) to `APPENDIX_SOURCES` and add them to consuming components' `cites`.
+  - Add `#49` (*Real growth rate*) to `productivity_gauge/.../investing/income_volatility`'s `cites`.
+  - Compute ledger status from `df_resolution` (`S-3`) + `df_master`: `live` / `substitute` / `proxy` (from resolved tier), `dropped` (data existed, all candidates failed `S-2`, carrying `DISCONTINUED` or `LOW_COVERAGE`), `gap` (all candidates declared `GAP`), `dead` (promised candidate has no data), `skipped` (unconsumed: `NO_CONSUMER` or `OWNER_SKIP`).
+- **F-5 Retention (MUST):** Keep all existing fetch cells and lists; keep `KEEP_CODES` retention on `df_master` while preserving `df_full`. Append all new `cached()` frames to Cell 4.
+- **F-6 Replacements & Bounded Recurring Probes (MUST):**
+  1. **UNDP HDR (`hdr`):** Fetch `https://hdr.undp.org/sites/default/files/2025_HDR/HDR25_Composite_indices_complete_time_series.csv` (`encoding="latin-1"`). Wire `HDR.MYS` (`substitute_source` after `BAR.SCHL.25UP`, cites `16`) and `HDR.EYS` (`proxy_concept`). Verify Spearman agreement with `BAR.SCHL.25UP` in `2000`, `2005`, `2010`.
+  2. **UNCTAD Shipping (`unctad`):** Probe and parse `https://unctadstat-api.unctad.org/bulkdownload/US.LSCI/US_LSCI`. If valid and `>= 2023`, wire `UNCTAD.LSCI` (`substitute_source` after `IS.SHP.GCNW.XQ` or `exact` if preferred for recency—keep `IS.SHP.GCNW.XQ` ahead only if `exact`, otherwise `S-3` skips discontinued `IS.SHP.GCNW.XQ` and picks `UNCTAD.LSCI`) and declare landlocked countries in `INELIGIBLE`.
+  3. **Indebtedness (`imf_fin` / `wb_debt`):** One bounded probe of IMF `MFS_IR` (lending/policy/real rates), IMF `IIP`, and WB databases `54` (JEDH), `22`/`23` (QEDS) for gross external debt `% GDP`. Wire passing series as `substitute_source` or `proxy_concept` (`lending_rate`, `real_interest_rate`, `foreign_ccy_debt`).
+  4. **Targeted Recurring Open-Data Probes:** One bounded HTTP check each for (a) `WIPO GII` annual spreadsheets/tables (`WIPO.GII_SCORE`, `WIPO.NEW_MAJOR_WEBSITES`), (b) `OECD` SDMX effective retirement age / annual hours worked, and (c) `PISA 2022` / `UNESCO UIS` (`api.uis.unesco.org`) education quality. Leave `WVS`, `GEM`, `GDELT`, and `USGS` as coded GAPs (`MANUAL_DOWNLOAD` / `HEAVY` / `NO_PUBLIC_ROUTE`).
+- **F-7 Hygiene (MUST):** Remove `df_probes` from Cell 4, delete Cell 6b, remove `ALLOW_PROXY_FALLBACK`, keep cache fallbacks on network errors, and document in a comment that `DALIO_24` holds 23 ISO3 codes (Eurozone excluded).
 
-- 189 leaf components; 47 have no data: 39 declared GAP and 8 dead (promised, fetch ran, nothing arrived).
-- Of the 64 listed sources, 42 deliver data (26 as named, 15 through a substitute provider, 1 proxy) and 22 do not: 7 never wired (#2, 7, 21, 22, 26, 37, 62); 10 placeholders never fetched (#4, 5, 6, 11, 14, 23, 34, 38, 45, 64); 5 fetched but empty (#1, 3, 10, 58, 59).
-- 23 further indicators the Appendix names are GAP placeholders (8 World Values Survey items, 2 GEM items, effective retirement age, vacation days, employment-protection rigidity, minimum-wage ratio, credit rating, foreign-held debt share, venture-capital funding, infrastructure quality, GFCI, WIPO GII score, wages by education cohort, BIS FX share, BIS debt-currency share). 3 more are promised but empty (WHR social support, WHR positive affect, COVID excess mortality).
-- 14 dead alternatives (listed in C-2).
-- Gates: G1 FAIL (7 regressions), G2 FAIL (14 dead alts), G3 PASS, G4(a) FAIL (Argentina deviates 30.3% against a 30% limit), G4(b) not evaluated (series never built), Spearman diagnostic −0.339.
+### 4.3 Coverage Panel, Screen, Resolve, and Engine (`S`)
 
-Already correct and not to be changed: Health (9 components), Happiness (5) and Productivity including Culture (51) match the Appendix weights. K-1 locks that in.
+Implement in order `S-1` $\rightarrow$ `S-2` $\rightarrow$ `S-3` $\rightarrow$ `S-4` $\rightarrow$ `S-5` (e.g., new Cell `5c` for `S-1`–`S-3`, Cell `6` for `S-4`, updated `6c`/`7a`).
 
-## 3. Vocabulary
+- **S-1 Coverage Panel `df_cov` (MUST):** Built from raw `df_master` (all years per indicator, including projections flagged `is_projection`). Columns: `indicator_code`, `year`, `n_eligible`, `n_reporting`, `cov` (`n_reporting / n_eligible`), `cov_obs` (sum of `OBS_WEIGHTS` over reporting eligible countries divided by sum over all eligible countries), `is_projection`. Use `INELIGIBLE = {"IMF.COFER_SHARE": EURO_AREA, "BIS.FX_TURNOVER_SHARE": EURO_AREA, "BIS.INTL_DEBT_CCY_SHARE": EURO_AREA, ...}`. Display an example aggregating `df_cov` across a year range and across a gauge's components.
+- **S-2 Coverage Screen (MUST):** Computed strictly on **actual (`~is_projection`), non-interpolated** data for every indicator in `df_master` (if a series has zero actuals, use all rows):
+  - `weighted_cov_%` = $100 \times (\sum \text{OBS\_WEIGHTS}_{\text{eligible ever reported}}) / (\sum \text{OBS\_WEIGHTS}_{\text{all eligible}})$
+  - `weighted_recent_%` = same over eligible countries with an actual observation in `year >= STALE_BEFORE`
+  - `rankable_recent` = `True` iff at least one year `>= STALE_BEFORE` has eligible `n_reporting >= MIN_CROSS_SECTION` (`30`).
+  - Compute `fence_cov` and `fence_recent` as `median - 3 * IQR` across all retained indicators in `df_master`; print both fences.
+  - Flag any series where `weighted_cov_% < fence_cov` OR `weighted_recent_% < fence_recent` OR `not rankable_recent`.
+  - Reason code: `DISCONTINUED` if `latest_actual_year < STALE_BEFORE`, else `LOW_COVERAGE`. Compare flagged set against Appendix E and print differences (informational).
+- **S-3 Resolve Step (MUST):** Run once on `UNIVERSE` before any engine call to build `trees_resolved` and displayed `df_resolution`:
+  - Sort each component's candidates by `(tier_rank, list_index)` where `tier_rank = {"exact": 0, "substitute_source": 1, "proxy_concept": 2}`. Skip `GAP` candidates and candidates with 0 rows in `df_master`.
+  - Pick the first remaining candidate not flagged by `S-2`.
+  - If none pass, drop the component: `state = "dropped"` if any candidate had data (reason = highest-tier flagged candidate's reason), `"gap"` if all candidates are `GAP`, else `"dead"`.
+  - In `trees_resolved`, keep `alts = [chosen_alt]`, preserve `nominal_weight`, and renormalise `weight` across surviving components within each leaf (and across surviving leaves/children within each parent). Update `@reference` targets to resolved nodes.
+  - `df_resolution` columns: `gauge`, `leaf_path`, `component`, `kind`, `nominal_weight`, `resolved_code`, `resolved_tier`, `state`, `reason`, `rejected`.
+  - Print summary counts (`resolved`, `dropped`, `gap`, `dead`), per-gauge share of nominal weight dropped, and post-drop effective `size_share` for each of the 8 tagged gauges.
+- **S-4 Engine `run_gauge_engine` (MUST):**
+  - Signature: `run_gauge_engine(df, trees, year_floor=1950, min_cross_section=30, universe=None, write_outputs=True)`.
+  - Consume `trees_resolved` (`alts[0]` only; remove `alt_used`, coalescing loop, and `allow_proxy_fallback`).
+  - Build consecutive integer `years = list(range(year_floor, last_actual_year + 1))` (or only years with any actuals if consecutive) from non-projected rows (`~is_projection`), pivot each resolved indicator into `years x countries`, and apply **internal linear interpolation per country** (`w.interpolate(method="linear", axis=0, limit_area="inside")`) *before* ranking—never extrapolate outside a country's `[first_actual_year, last_actual_year]`.
+  - Rank within each year over countries with values iff `n >= min_cross_section`: `(rk - 1) / (n - 1) * 100` (average ties, signed by `direction`).
+  - Aggregate bottom-up with weight renormalisation over present components/nodes, tracking `weight_present`.
+  - Persist `component_scores.parquet` (`country_code, year, leaf_path, component_name, code, score, observed`), `node_scores.parquet`, and `rank_support.parquet` (recording `n_ranked` post-interpolation) to `OUT_DIR` when `write_outputs=True`.
+- **S-5 Cell 7a Reports (MUST):** Display: (1) Series health (from `df_cov` + `S-2`), (2) Registry (`wired`/`stand_in`/`derived_input`/`carried`/`no_consumer`), (3) Candidate coverage & dead candidates, (4) Effective-weights tree export (`M-8`), (5) Direction map, (6) Agreement between alternatives computed on **direction-signed** values (`value * direction`), (7) Resolution table (`S-3`). Delete `Alternative switches` and `Proxy candidates`.
 
-| Term | Meaning |
-| --- | --- |
-| Tier | Per alternative. `exact` = the Appendix’s own series. `substitute_source` = same concept from a different provider. `proxy_concept` = related concept, excluded from fallback by default |
-| State | Computed per component from the data. `live` = the primary alt has data. `gap` = the first alt is a declared GAP that was never fetched. `dead` = promised, fetch ran, nothing arrived |
-| Basis | New field on every tree component (K-2). `appendix` = the component and its weight are stated in an Appendix table. `appendix_concept` = the Appendix names the concept in a gauge description or prose but gives no indicator or weight. `heuristic` = the owner’s construction, the Appendix is silent |
-| Provenance | Existing node field, `pdf` or `heuristic`. A component’s effective provenance is `pdf` only if its node is `pdf` and its basis is `appendix` |
-| Ledger status | `live`, `substitute`, `proxy`, `gap`, `skipped`. A regression is a ledger row that promised data and received none |
-| Appendix gauge | One of the 21 gauges listed in A.2 |
-| The Appendix / the report | The Appendix is pages 132–184 of the report. The remainder of the report is not available |
+### 4.4 Validation (`V`)
 
-## 4. Completeness requirements
+- **V-1 Cell 7b Print-Only Checks (MUST):** Print with one-word status (`OK`/`WARN`/`INFO`), never raising:
+  - Structure: `@reference` resolution, `GAP_REASONS` validity, `cites` resolution in `APPENDIX_SOURCES`, `basis`/`page` completeness, `APPENDIX_GAUGE_MAP` non-empty scores, zero overlap with `EXCLUDED_COMPONENTS`.
+  - Weights: all 15 `APPENDIX_WEIGHTS` locks (`max_abs_diff <= 0.005`), `65/35` and `70/30` splits, hours-worked effective weight (`15.45%` nominal in Appendix), `D15` normalized weights.
+  - Ledger: counts by status, list of `dropped` and `dead` items, `PROBE_NEXT` count (`== 0`).
+  - Data sanity: `IMF.NGDPDPC` (2024) vs `PDF_NGDPDPC_35` already embedded in Cell 7b (median rel dev; flag `> 30%`), `DERIVED.WORKING_AGE_GROWTH_FWD10` (2024) vs `PDF_WA_GROWTH_FWD10` already embedded in Cell 7b (share within `0.3 pp`).
+  - Empire Score (`ASOF_YEAR = 2023`): Spearman for Total (`strength_determinants`) and Quality-only vs Appendix p.135 across all 23 countries and filtered to `weight_present >= 0.6`.
+- **V-2 / V-5 Appendix D Reference Registry (MUST):** Embed `APPENDIX_REFERENCE` from Appendix D (mapping Appendix codes via A.4) and display a validation table of Spearman correlations at `ASOF_YEAR` (with `n`, `rho`, and label `strong >= 0.7`, `moderate >= 0.4`, `weak < 0.4`):
+  - **p.135 All 8 Determinants + Empire Score (`V-5`):** Compare `empT`/`empQ` (`strength_determinants`), `EduT`/`EduQ` (`education`), `InnT`/`InnQ` (`innovation_and_technology`), `CmpT` (`competitiveness` Total only), `MilT`/`MilQ` (`military`), `TrdT`/`TrdQ` (`trade`), `EcoT`/`EcoQ` (`economic_output`), `FinT`/`FinQ` (`financial_center`), and `ResT` (`reserve_currency` Total only; note `ResQ` has no Quality-only equivalent in the tree per `D13`/`M-4`).
+  - **pp.146–170 Impact & Growth Vectors:** Compare `productivity_gauge` vs p.150; `indebtedness_gauge` vs p.151 (note proprietary stats); `what_you_pay_vs_what_you_get` vs p.159; `culture` vs p.170; `future_growth` vs p.146/149 (informational); the two cost leaves vs p.164/165 (informational).
+  - **pp.172–182 World-Relative Orderings:** Compare the 6 `culture` sub-gauges against their World-relative ranked lists (position = rank, first = best).
+- **V-3 Empire Score Sensitivities (MUST):** Compare `D15` Total weights against equal `1/8` weights (and note `n` of 23 covered), plus test a validation-only composite for p.135's 4th determinant (`"Competitiveness, Culture, Investment"`—e.g., equal-weighted average of `what_you_pay_vs_what_you_get`, `culture`, and `infrastructure_and_investment`) against p.135's `CmpT` column.
+- **V-4 Dalio-35 Validation Pass (MUST):** Run `run_gauge_engine(df_master, trees_resolved, year_floor=YEAR_FLOOR, min_cross_section=20, universe=[c for c in DALIO_35 if c in UNIVERSE], write_outputs=False)` and display its `ASOF_YEAR` Empire Score & p.135 Spearman correlations side-by-side with the full-`UNIVERSE` run.
 
-**C-1 Re-baseline (MUST).** Restart the kernel and run all cells. Record the numbers in section 2.3 as the ‘before’ figures in your final report. If a number differs, believe the fresh run.
+---
 
-**C-2 Repair failing fetches (MUST).** For each row below: diagnose with a small probe, fix, add the source to `REFRESH`, and confirm rows arrive. If a row cannot be fixed, convert it to a GAP with a reason code (C-3) and record what you tried. Likely causes are hypotheses; verify them before relying on them.
+## Appendix A. Ground Truth from *The Great Powers Index: 2024* (pp.132–184)
 
-| ID | Cell | Symptom | Likely cause | Required outcome |
+### A.1 Gauge Descriptions (pp.132–134)
+1. **Education:** Basic & higher education split evenly; ~half absolute quantity, ~half quality (higher-ed rankings, test scores, avg years of schooling).
+2. **Innovation & Technology:** ~Half absolute share (patents, researchers, R&D spend, VC funding); ~half external rankings & per-capita innovation.
+3. **Cost Competitiveness:** Quality-adjusted and productivity-adjusted labor costs plus productivity measures. Only Total shown on p.135.
+4. **Infrastructure & Investment:** Share of global investment, overall infrastructure quality, investment & savings `% GDP`, logistics performance.
+5. **Economic Output:** Primarily PPP-adjusted GDP as share of world; some weight on PPP GDP per capita.
+6. **Productivity/Output Growth:** 10-year growth per worker = `65%` Productivity + `35%` Indebtedness (p.143 table overrides 2/3–1/3 prose).
+7. **Trade:** Absolute exports as share of world.
+8. **Military Strength:** Mostly absolute share of spending, personnel, nuclear weapons, external capability indices.
+9. **Financial Markets & Financial Center:** Absolute transaction shares & market caps + qualitative financial-center city indices.
+10. **Reserve Status:** Currency shares of FX transactions, international debts, and official reserves. Euro-area countries are not scored individually (`---` on p.135).
+11. **Indebtedness:** Debt levels vs assets/incomes, debt growth vs income growth, internal/external deficits, debt service `% GDP`, own- vs foreign-currency debt, domestic vs foreign holders, credit rating, monetary policy stance (easier policy = higher 10y growth). Underlying stats proprietary (p.157).
+12. **Internal Conflict:** Conflict events (protests/strikes), political partisanship, survey/media discontent.
+13. **Rule of Law/Governance:** Rule of law + corruption (business surveys + external indices).
+14. **Gaps in Wealth, Opportunity & Values:** Top 1%/10% wealth & income inequality + political/ideological legislative split.
+15. **Geology:** Land area, resource rents/value, production of energy/food/industrial metals, net exports (self-reliance), freshwater.
+16. **Character/Civility/Determination:** Hard-work/success surveys + self-sufficiency proxies (hours worked, LFPR, transfers, retirement age).
+17. **Resource Allocation Efficiency:** Chronic unemployment, debt growth vs income growth, labor rigidity, ease of getting loans.
+18. **Acts of Nature:** Climate-change GDP vulnerability, disaster readiness, COVID outcomes.
+19. **External Conflict:** Pairwise conflict (descoped per `D11`).
+20. **Health Index (p.136):** Life expectancy `30%`, food insecurity `15%`, essential health services `15%`, child mortality `10%`, homicide `7.5%`, displaced `7.5%`, air pollution `5%`, drinking water `5%`, basic sanitation `5%`.
+21. **Happiness Index (p.136):** Reported happy `22.5%`, daily enjoyment `22.5%`, life satisfaction `22.5%`, social support `22.5%`, suicide rate `10%`.
+
+### A.2 Productivity & Culture Breakdown (pp.143, 155, 158, 169–181)
+- **Productivity (`100%`):** `What You Pay vs. What You Get` (`70%`) + `Culture` (`30%`).
+- **What You Pay vs. What You Get (`17.5%` each of Productivity):**
+  - *Education:* Cost of quality-adjusted educated worker vs USA (wage cohort stand-in + PISA + attainment).
+  - *Labor Productivity:* Cost of productivity-adjusted educated worker (wage cohort stand-in + output/worker).
+  - *Working Hard:* Avg male weekly hours (`11.7/17.5 = 2/3`) + 10y forward dependency ratio change (`5.8/17.5 = 1/3`).
+  - *Investing:* Investment `%` (`3.1`), Savings rate (`3.1`), Capital productivity (`3.1`), Capital stock growth (`3.1`), Income volatility (`2.6`), Inflation volatility (`2.6`) (normalized over `17.6`).
+- **Culture (`16.7%` of Culture = `5%` of Productivity per sub-gauge):**
+  - *Corruption:* Transparency Index (`50%`) + 3 WEF surveys (diversion, bribes, favoritism at `1/6` each).
+  - *Bureaucracy:* Starting a business, construction permits, burden of govt regulation (`1/3` each).
+  - *Rule of Law:* Efficiency of legal framework, property rights, protecting investors, enforcing contracts (`1/4` each).
+  - *Savoring vs Achieving:* Avg hours worked (`50%`) + 7 WVS survey items (`0.5/7` each).
+  - *Innovation:* 4 Inputs at `0.125` each (R&D spend, researchers, fear of failure, entrepreneurship); Outputs: patents `0.125`, royalty **payments** `0.125`, new businesses `0.0625`, `%` creating businesses `0.0625`, new major websites `0.0625`, trademarks `0.0625`.
+  - *Self-Sufficiency:* Avg hours (`0.25`), LFPR (`1/12`), effective retirement age (`1/12`), vacation days (`1/12`), transfer payments (`0.125`), govt outlays (`0.125`), collective bargaining (`1/12`), hiring/firing (`1/12`), minimum wage (`1/12`).
+- *Check figure:* Hours worked appears in `Working Hard` (`11.67%`), `Savoring` (`2.5%`), and `Self-Sufficiency` (`1.25%`) = `15.42%` (Appendix states `15.45%` rounded).
+
+### A.3 The 64 Listed Data Sources (pp.183–184)
+`1` Access to essential health services (SPI); `2` Aerospace/defense returns (TR); `3` Ag/forestry/fishing value added (WDI); `4` AI companies/patents/citations (CSET); `5` Banking claims (BIS); `6` Bloomberg Innovation Index; `7` Book titles/cap (CLIO); `8` Child mortality (SPI); `9` Climate vulnerability & preparedness (ND-GAIN); `10` CO2 emissions (CLIO); `11` Conflict intensity/count per cap (Cline Center); `12` Construction permits (DB); `13` Days lost to labor disputes (CLIO); `14` Media discontent/populism (GDELT); `15` Education spending (WDI); `16` Educational attainment (Barro-Lee); `17` Electricity production (CHAT); `18` Energy production/consumption (EIA); `19` Enforcing contracts (DB); `20` GINI (WDI); `21` Google searches conflict; `22` Google searches discontent; `23` Govt disapproval in news (GDELT); `24` Gross R&D expenditure (WIPO GII); `25` Aviation passengers/cargo (CHAT); `26` Historical tech adoption (CHAT); `27` Homicide rate (SPI); `28` Hours worked/week (WID); `29` Human Capital Index (WB); `30` Income distributions (WB); `31` Internal armed conflict (CLIO); `32` Internet users (CHAT); `33` Male LFPR (WB); `34` Metals/ores production (CLIO); `35` Nuclear stockpile (FAS); `36` New patents (WIPO GII); `37` Numeracy (CLIO); `38` OTC FX turnover (BIS); `39` Particulate matter pollution (SPI); `40` Patent applications (WDI); `41` Displaced by conflict (WDI); `42` Safely managed drinking water (WB); `43` Prevalence of undernourishment (WB); `44` Protecting investors (DB); `45` Protest intensity (GDELT); `46` Public sector corruption & theft (V-Dem); `47` Rail lines/cargo (CHAT); `48` Real GDP per worker (PWT); `49` Real growth rate (WB); `50` Renewable freshwater (WDI); `51` Rigorous & impartial govt (V-Dem); `52` Royalty & license fees (WIPO GII); `53` Top 500 universities share (ARWU); `54` Shipping tonnage (CHAT); `55` Starting a business (DB); `56` Suicide mortality (WB); `57` Tariff rate (WB); `58` Top 1%/10% income shares (WID); `59` Top 1%/10% wealth shares (WID); `60` Total labor disputes (CLIO); `61` Transparent laws/enforcement (V-Dem); `62` Universities founded (CLIO); `63` New businesses & % creating businesses (WIPO GII); `64` New major websites (WIPO GII).
+
+### A.4 Appendix Country Code Mapping (A.10)
+`BRZ -> BRA`, `IDR -> IDN`, `SAR -> SAU`, `SAF -> ZAF`, `UAE -> ARE`, `PLD -> POL`, `TLD -> THA`, `CHI -> CHL`, `CZK -> CZE`, `EUR -> None (Eurozone)`. All other codes (`USA, CHN, DEU, JPN, KOR, IND, GBR, FRA, RUS, SGP, AUS, TUR, CAN, CHE, NLD, ITA, ESP, MEX, ARG, COL, SWE, HUN, PRT, BEL, NOR, GRC`) are standard ISO3.
+
+---
+
+## Appendix B. Verified Replacement Leads & Probe Guidance
+
+- **UNDP HDR (verified HTTP 200, ~2 MB):** `https://hdr.undp.org/sites/default/files/2025_HDR/HDR25_Composite_indices_complete_time_series.csv` (`encoding="latin-1"`). Columns: `iso3`, `mys_1990`..`mys_2023` (193 countries in 2023), `eys_1990`..`eys_2023` (195 countries in 2023).
+- **UNCTAD LSCI (verified HTTP 200, ~206 KB):** `https://unctadstat-api.unctad.org/bulkdownload/US.LSCI/US_LSCI` (`application/octet-stream`; inspect zip/gzip/csv). Exclude landlocked countries via `INELIGIBLE`.
+- **IMF SDMX 3.0 / Catalogue:** `https://api.imf.org/external/sdmx/2.1/dataflow/all` lists `MFS_IR` (Monetary & Financial Statistics, Interest Rate) and `IIP` / `IIPCC` (International Investment Position). Legacy `IFS` returns HTTP 403.
+- **World Bank Specialized DBs:** DB `54` (Joint External Debt Hub), `22`/`23` (QEDS SDDS/GDDS), `20` (Quarterly Public Sector Debt), `12` (EdStats—`LO.PISA.*` ends 2018; OECD SDMX catalogue has no PISA flow).
+- **WHR Panel (`F-2.4`):** WHR Figure 2.1 workbooks hold ladder scores and "Explained by" columns; probe the WHR "Data for Table 2.1" country-year panel spreadsheet on `worldhappiness.report` / `files.worldhappiness.report` for raw `Social support` and `Positive affect`.
+- **Survey-cycle / Non-public:** `LPI` only exists in survey years (2007–2023; WDI ends 2022). `WVS`, `GEM`, `WIPO GII` (check annual downloadable tables first), `GDELT` (BigQuery/`HEAVY`), `GFCI` (PDF/`NO_PUBLIC_ROUTE`), `Bloomberg` / `VentureSource` / `WEF` / `Credit Ratings` (`PROPRIETARY`).
+
+---
+
+## Appendix C. Weight-Table Rows (`W01`–`W20`) to Add to `APPENDIX_SOURCES`
+
+Add each `(id, indicator, source, page)` using the Appendix indicator name and the provider named in the Appendix (or substituted in the notebook), and cite `id` on its consuming tree component:
+
+| ID | Appendix Indicator | Source | Page | Consuming Component (Code) |
 | --- | --- | --- | --- | --- |
-| C-2.1 | 2b | `SH.UHC.SRVS.CV.XD` (database 58) fails with KeyError `['indicator_code']` | wbgapi omits the series column when a single code is requested, so `tidy()` has no `indicator_code`. The WDI cell already handles this case | Rows exist for `SH.UHC.SRVS.CV.XD`. Log row counts per block so a silent failure in another block becomes visible |
-| C-2.2 | 2a | Gate 1 reports no data for `NV.AGR.TOTL.ZS`, `NV.AGR.TOTL.CD`, `EN.GHG.CO2.MT.CE.AR5`, `EN.GHG.CO2.PC.CE.AR5` although the cell requests them | Unknown: invalid code, wrong World Bank database, or stale cache | Confirm in a fresh run. Land the data (from the right database if needed) or GAP. These serve ledger items #3 and #10 only and have no tree consumer |
-| C-2.3 | 2i | The OWID slugs for WID top-1% and top-10% income and wealth shares return HTTP 404 (`WID.TOP1_INCOME`, `WID.TOP10_INCOME`, `WID.TOP1_WEALTH`, `WID.TOP10_WEALTH`) | Slugs changed or never existed | A working programmatic route (current OWID slugs, or the World Inequality Database bulk download, see Appendix B) using one methodology only: pre-tax national income shares and net personal wealth shares. Feeds four Gaps-in-Wealth components |
-| C-2.4 | 2l | `WHR.POSITIVE_AFFECT` and `WHR.SOCIAL_SUPPORT` are empty; only `WHR.LIFE_LADDER` lands | The Figure 2.1 workbook holds the ladder score and ‘explained by’ columns (which the parser deliberately skips), not the raw affect and support series | Probe the WHR panel dataset that carries social support and positive affect (Appendix B). Also confirm every WHR row gets its real year: the parser silently assigns 2024 when a sheet has no year column |
-| C-2.5 | 2i | COVID excess mortality fails with KeyError `Year` | The chart is daily or weekly, or its slug changed, and the high-frequency branch assumes columns that are absent | One value per country (mean P-score 2020-01-01 to 2022-12-31, stamped year 2022, as designed) or GAP |
-| C-2.6 | 2i | `primary-energy-consumption` returns 404, so alt `OWID.PRIMARY_ENERGY_TWH` is dead | Slug changed | Fix the slug or mark the alt GAP |
-| C-2.7 | 2f | `EIA.ENERGY.SELF_SUFF` is never built. The fetch asks for `length=5000` per product without paging and without filtering by activity or unit. 8,305 rows for 218 countries and two series is consistent with truncation and with mixed activities | Truncation and unfiltered facets | First verify the API’s facet names and IDs with one small request. Then page through all results, filter each series to one activity and one unit, add total primary energy consumption, and derive `EIA.ENERGY.SELF_SUFF` = production ÷ consumption in a single unit. Never mix activities or units in one series |
-| C-2.8 | 2k, 3, 2b, 2j | Dead alts with no builder: `BIS.CBPOL.POLICY_RATE_AVG`, `DERIVED.CAPITAL_STOCK_GROWTH_PIM`, `ENF.CONT.COEN.DB0415` (an archive code that may be wrong), `ILO.UNEMP_LONGTERM_SHARE` (never fetched) | Never implemented | Build the first (annual mean of the policy-rate series already loaded in cell 2k). For the other three, build or fetch if trivial, otherwise mark the alt GAP with a reason code |
-| C-2.9 | 3 | `DERIVED.WORKING_AGE_GROWTH_FWD10` and `_YOY` are never built (cell 5b warns; Gate 4(b) sees an empty series) | `SP.POP.1564.TO` (WDI) or `PROJ.SP.POP.1564.TO` (database 40) is missing | Diagnose which input is empty and repair it. The 2024 value needs 2034 from the projection block |
-
-The 14 dead alternatives in the baseline are: `SH.UHC.SRVS.CV.XD` (health\_index/essential\_health\_services); `WHR.POSITIVE_AFFECT` and `WHR.SOCIAL_SUPPORT` (happiness\_index); `DERIVED.CAPITAL_STOCK_GROWTH_PIM` (investing/capital\_stock\_growth, second alt); `ENF.CONT.COEN.DB0415` (rule\_of\_law/enforcing\_contracts, second alt); `BIS.CBPOL.POLICY_RATE_AVG` (monetary\_policy/policy\_rate, second alt); `ILO.UNEMP_LONGTERM_SHARE` (resource\_allocation\_efficiency/longterm\_unemp\_share); `OWID.PRIMARY_ENERGY_TWH` (geology/energy\_production, second alt); `EIA.ENERGY.SELF_SUFF` (geology/energy\_self\_suff, first alt); `COVID.EXCESS_MORTALITY_PSCORE` (acts\_of\_nature); and the four WID codes (wealth\_values\_gap: top1\_income, top10\_income, top1\_wealth, top10\_wealth).
-
-**C-3 GAP protocol and reason codes (MUST).** Every ledger row and every tree alt that has no data must either land data or be an explicit GAP carrying one code from the closed list below. The reason text begins with the code and then gives the evidence. The word ‘pending’ is no longer an acceptable reason.
-
-| Code | Use when | Evidence required |
-| --- | --- | --- |
-| `PROPRIETARY` | Commercial or paywalled | Name the vendor |
-| `NO_PUBLIC_ROUTE` | Published only as a PDF or web page, or no API exists | URL |
-| `MANUAL_DOWNLOAD` | Needs registration, a form or a click-through | URL |
-| `PROBED_FAILED` | You tried and it failed | URL and HTTP status or error |
-| `HEAVY` | A route exists but needs more than one notebook (BigQuery billing, multi-GB bulk files) | Name the route and its size |
-| `OWNER_SKIP` | Skipped by the owner in an earlier phase: CSET (#4), Google Trends (#21, #22), Global Firepower | None (not probed) |
-| `NO_CONSUMER` | Cited only for historical analysis and feeds no 2024 gauge: #7, #26, #37, #62 | One line saying why |
-
-Probe rule: for every GAP that is not obviously `PROPRIETARY`, `OWNER_SKIP` or `NO_CONSUMER`, make one bounded attempt (a few HTTP calls, about 15 minutes of effort). Appendix B lists unverified starting points. Anything that lands becomes a normal fetch cell, a ledger row and an honest tier. Anything that does not gets a coded reason. After the work, each ledger row’s `intended` status must match reality (for example #1 becomes live once C-2.1 works).
-
-**C-4 Ledger rows for every Appendix-cited indicator (MUST).** The ledger holds the 64 listed sources plus extra rows, but it omits indicators that appear in the Appendix’s weight tables. Add one row for each entry W01–W20 in Appendix C, using the existing tuple `(item, concept, pdf_source, codes, tier, intended, reason)`. Rule going forward: every indicator in an Appendix weight table (A.3–A.5) or in the 64-source list has a ledger row. Indicators named only in the prose descriptions of gauges (A.2) are covered by tree components and basis tags (K-2) instead.
-
-## 5. Correctness requirements
-
-**K-1 Lock the weights that already match (MUST).** Add `APPENDIX_WEIGHTS` to cell 5: a dict mapping a tree path to the expected weights of that node’s children or components, as fractions normalised within the parent, populated from A.3–A.5. Extend Gate 3 to compare every entry with the tree within ±0.005 and to name the first mismatch. Use the component names as they appear in the tree; where a name differs from the concept names below, map it explicitly in the dict. Entries:
-
-| Path | Expected weights (fraction of parent) |
-| --- | --- |
-| `health_index` | life expectancy 0.30; child mortality 0.10; air pollution 0.05; safe drinking water 0.05; basic sanitation 0.05; food insecurity 0.15; homicide 0.075; displaced by conflict 0.075; essential health services 0.15 |
-| `happiness_index` | reported happy 0.225; daily enjoyment 0.225; life satisfaction 0.225; social support 0.225; suicide 0.10 |
-| `future_growth` | productivity 0.65; indebtedness 0.35 |
-| `productivity_gauge` | what\_you\_pay\_vs\_what\_you\_get 0.70; culture 0.30 |
-| `what_you_pay_vs_what_you_get` | education leaf 0.25; labor-productivity leaf 0.25; working\_hard 0.25; investing 0.25 |
-| `working_hard` | average hours 2/3; change in dependency ratio 1/3 |
-| `investing` | investment % 3.1/17.5; savings rate 3.1/17.5; productivity of capital 3.1/17.5; capital-stock growth 3.1/17.5; income volatility 2.6/17.5; inflation volatility 2.6/17.5 |
-| `culture` | six sub-gauges at 1/6 each |
-| corruption | Transparency index 0.5; three survey items 1/6 each |
-| bureaucracy | three items 1/3 each |
-| rule\_of\_law | four items 1/4 each |
-| savoring\_life\_vs\_achieving | average hours 0.5; seven values items 0.5/7 each |
-| innovation | four input items 0.125 each; patents 0.125; royalty payments 0.125; four other output items 0.0625 each |
-| self\_sufficiency | average hours 0.25; labor-force participation, effective retirement age, vacation days 1/12 each; transfer payments 0.125; government outlays 0.125; collective bargaining, hiring/firing, minimum wage 1/12 each |
-| `indebtedness_gauge` | debt\_levels\_and\_flow 0.5; monetary\_policy 0.5 |
-
-Documented exceptions, to leave as they are because the engine renormalises: `investing` components sum to 1.0057 (the Appendix prints 17.6 against 17.5), and `strength_determinants` children sum to 0.94 (heuristic, asserted in the notebook). Not covered by K-1: the components inside the two wage-based leaves, everything under Indebtedness below the 50/50 split, and every tree other than those above. Expected result today: all entries pass. K-1 exists so later edits cannot drift.
-
-**K-2 Add a `basis` tag to every component and compute effective provenance from it (MUST).** Add to each component dict: `basis` (one of `appendix`, `appendix_concept`, `heuristic`), `page` (a string such as `p.158`; required when basis is `appendix`) and an optional `note`. Assign as follows.
-
-- **health\_index and happiness\_index (14 components):** `appendix`, page `p.136`.
-- **productivity\_gauge:** the `working_hard` and `investing` components are `appendix`, `p.158`. Culture components are `appendix` with the page of their table in A.5 (`p.171`, `p.173`, `p.175`, `p.177`, `p.179`, `p.181`). The components inside `education_cost_quality_adj` and `labor_productivity_cost_adj` are `heuristic`, with the note: stand-in for wage-by-education-cohort data, which the notebook cannot build; the Appendix (p.160) calls GDP per capita a simple measure of cost.
-- **indebtedness\_gauge:** the ten `debt_levels_and_flow` components are `appendix_concept`. Seven are named on p.133 (`debt_rel_assets`, `budget_balance`, `current_account`, `debt_service`, `foreign_ccy_debt`, `foreign_held_debt`, `credit_rating`) and three come from the prose on pp.141–143 (`gov_debt_gdp`, `private_debt_gdp`, `debt_growth_minus_income`). The five `monetary_policy` components are `heuristic`: the Appendix names the pillar and its 17.5% weight (p.143) but not its contents.
-- **strength\_determinants, additional\_measures, internal\_order\_cycle, external\_order\_cycle:** `appendix_concept` when the component matches a concept named in the A.2 description of its gauge or a source in the A.7 list; otherwise `heuristic`. These are definitely `heuristic`: the seven Infrastructure components `electricity_gen`, `air_passengers`, `air_freight`, `rail_lines`, `rail_freight`, `port_connectivity`, `internet_users` (their sources appear in A.7 as NBER CHAT series, but the Appendix assigns them to no gauge); `resource_allocation_efficiency/longterm_unemp_share`; and `external_order_cycle/un_voting_distance`.
-
-Effective provenance of a component is `pdf` only if its node is `pdf` and its basis is `appendix`; otherwise `heuristic`. Replace the node-only provenance logic in the effective-weights code (cell 7a) with this rule. After the change the by-provenance summary must show Indebtedness as essentially all heuristic and Productivity as about 65% `pdf` and 35% `heuristic`. Also set the top-level `weight` of `additional_measures` from 0.20 to 1.0 so that effective weights sum to 1 within each tree (cosmetic; nothing else reads that value).
-
-**K-3 Exclude components that have no Appendix counterpart (MUST).** Move the components below out of the scored tree into a new list `EXCLUDED_COMPONENTS` (dicts with `path`, `name`, `codes`, `reason`) in cell 5. Do not delete cached data or fetch code. Reset the remaining equal weights as shown.
-
-| Path | Excluded component | Codes | Why | Remaining weights |
-| --- | --- | --- | --- | --- |
-| additional\_measures/governance\_rule\_of\_law | gov\_effectiveness\_wgi | WGI GE.EST | The Appendix defines this gauge as rule of law plus corruption only | 4 components at 0.25 |
-| additional\_measures/governance\_rule\_of\_law | regulatory\_quality\_wgi | WGI RQ.EST | Same | (as above) |
-| additional\_measures/geology | oil\_production, gas\_production, coal\_production | OWID energy series | The Appendix asks for total energy production, which `energy_production` already covers; these three double count | 11 components at 1/11 after K-4 |
-| internal\_order\_cycle/internal\_conflict | political\_violence\_wgi | WGI PV.EST | No counterpart in the description (events, partisanship, survey discontent) | 6 components at 1/6 |
-
-The WGI codes `GE.EST` and `RQ.EST` stay fetched because other components use them as proxies. Retention may trim series that no longer have a consumer.
-
-**K-4 Wire net exports of industrial metals into Geology (MUST).** The Appendix asks for net exports in each category (energy, agriculture, industrial metals). The notebook builds `DERIVED.NET_EXPORTS_MMTL_PCT_GDP` but no tree component uses it. Add component `net_exports_metals` to `additional_measures/geology`, direction +1, tier `exact`, basis `appendix_concept`, page `p.134`. Weights follow K-3 (1/11 each).
-
-**K-5 Annotate conflicts between heuristic weights and Appendix prose (MUST, annotation only).** Do not change any weight. Add a `note` string to these nodes so the owner sees the conflict when recalibrating:
-
-- `strength_determinants/trade`: Appendix describes absolute exports as a share of world only; the tree splits total and per-capita 50/50.
-- `strength_determinants/military`: Appendix says the gauge is driven mostly by absolute share; tree is 50/50.
-- `strength_determinants/economic_output`: Appendix says primarily GDP levels with some weight on GDP per capita; tree is 50/50.
-- `strength_determinants`: children sum to 0.94 by design; Appendix gives no weights for these eight gauges.
-- `indebtedness_gauge`: Appendix publishes only the 50/50 split; all sub-weights are equal splits.
-
-**K-6 Housekeeping (SHOULD).** Delete the duplicated first blocks in cell 7a (see 2.2). Keep one implementation per report.
-
-## 6. Traceability requirements
-
-**T-1 Gauge map (MUST).** Add `APPENDIX_GAUGE_MAP` to cell 5: the 21 Appendix gauges mapped to node paths, so each can be read directly from `df_node_scores`.
-
-| # | Appendix gauge | Node path |
-| --- | --- | --- |
-| 1 | Education | strength\_determinants/education |
-| 2 | Innovation & Technology | strength\_determinants/innovation\_and\_technology |
-| 3 | Cost Competitiveness | strength\_determinants/competitiveness |
-| 4 | Infrastructure & Investment | additional\_measures/infrastructure\_and\_investment |
-| 5 | Economic Output | strength\_determinants/economic\_output |
-| 6 | Productivity/Output Growth | future\_growth |
-| 7 | Trade | strength\_determinants/trade |
-| 8 | Military Strength | strength\_determinants/military |
-| 9 | Financial Markets and Financial Center | strength\_determinants/financial\_center |
-| 10 | Reserve Status | strength\_determinants/reserve\_currency |
-| 11 | Indebtedness (Debt Cycles) | indebtedness\_gauge |
-| 12 | Internal Conflict | internal\_order\_cycle/internal\_conflict |
-| 13 | Rule of Law/Governance | additional\_measures/governance\_rule\_of\_law |
-| 14 | Gaps in Wealth, Opportunity & Values | internal\_order\_cycle/wealth\_values\_gap |
-| 15 | Geology | additional\_measures/geology |
-| 16 | Character/Civility/Determination | additional\_measures/character\_determination\_civility |
-| 17 | Resource Allocation Efficiency | additional\_measures/resource\_allocation\_efficiency |
-| 18 | Acts of Nature | additional\_measures/acts\_of\_nature |
-| 19 | External Conflict | external\_order\_cycle |
-| 20 | Health Index | health\_index |
-| 21 | Happiness Index | happiness\_index |
-
-If a node name in the tree differs from the path above, correct the map to the tree’s real name; do not rename tree nodes. The Productivity gauge of Part 1 of the growth formula is `productivity_gauge`.
-
-**T-2 Effective-weights output (MUST).** `effective_weights.csv` gains the columns `basis`, `page`, `state` and `provenance_effective`. The summary printed at the end of the notebook shows, per tree, the share of nominal weight by state (live, gap, dead) and by basis.
-
-## 7. Gates and diagnostics
-
-Cell 7b keeps its structural asserts and Gates 1–4, with the changes below, plus two additions.
-
-| Gate | Check | Required end state |
-| --- | --- | --- |
-| G-1 Ledger | Statuses valid; zero regressions; every gap or skipped row carries an allowed reason code (C-3); every Appendix-cited indicator has a row (C-4) | PASS |
-| G-2 Registry | No dead alt (a non-GAP alt with no data); no unconsumed series other than those flagged carried, derived-input or pdf-listed | PASS |
-| G-3 Weights | Existing checks plus the K-1 `APPENDIX_WEIGHTS` comparison | PASS |
-| G-4a | `IMF.NGDPDPC` 2024 against the Appendix p.161 values already embedded as `PDF_NGDPDPC_35`. Fail if the median relative deviation exceeds 10%. List any country above 30% as a WARNING, not a failure. Change from before: the 30% maximum was a hard fail, and Argentina alone breaches it at 30.3%, most likely because the Appendix figure uses a different exchange-rate vintage | PASS |
-| G-4b | `DERIVED.WORKING_AGE_GROWTH_FWD10` at 2024 against the p.148 values embedded as `PDF_WA_GROWTH_FWD10`: at least 90% of countries within 0.3 percentage points | PASS |
-| G-5 Traceability | Every component has a valid `basis` (and `page` when basis is `appendix`); every path in `APPENDIX_GAUGE_MAP` exists in the node scores (thin coverage is a warning only); no tree component matches an `EXCLUDED_COMPONENTS` entry | PASS |
-| G-6 Diagnostic | Spearman correlation between `strength_determinants` at year `ASOF_YEAR` and the Empire Score Total column (A.8), over the 23 countries present in both. Also print it restricted to countries with `weight_present` of at least 0.6 | No threshold |
-
-**G-6 details.** Add constant `ASOF_YEAR = 2023` to cell 0 (the report is dated July 2024; 2023 is the latest year with broad actuals). The current diagnostic uses the maximum year in the scores, where only a few indicators exist and per-capita measures dominate. That is a likely reason it prints −0.339. The Appendix ranks countries against the major economies; the engine ranks against every country with data, so scores are comparable only in rank order, which is why Spearman is used. If the correlation is zero or negative after the as-of-year change, investigate: check the direction sign of every component in the strength tree against its meaning, and check whether the balance of total and per-capita components explains it. Report your findings. Do not change the engine, directions or weights to push the number up.
-
-## 8. Out of scope and parked decisions
-
-In addition to the list in section 1, do not:
-
-- change the engine’s ranking, coalescing or renormalisation logic;
-- change any heuristic weight (K-5 is annotation only);
-- add indicators beyond Appendix C and the repairs in C-2;
-- remove fetches for series that merely lack a consumer: the nine unconsumed series (WDI `SP.POP.GROW`, `SL.TLF.TOTL.IN`, `NY.GDP.MKTP.KD`, `NY.GDP.DEFL.KD.ZG`, `NE.GDI.FTOT.KD`; EdStats `BAR.NOED.25UP.ZS`, `BAR.PRM.CMPT.25UP.ZS`, `BAR.SEC.CMPT.25UP.ZS`, `BAR.TER.CMPT.25UP.ZS`), the oil, gas and coal series and WGI `PV.EST`. The retention filter handles them.
-
-Parked for the owner (record in your final report; do not act):
-
-1. Whether the seven unassigned Infrastructure components should stay (K-2 tags them heuristic).
-2. Whether to replace the 50/50 total and per-capita splits for Trade, Military and Economic Output (K-5).
-3. The wage-by-education-cohort gap that forces the two stand-in leaves (35% of the Productivity gauge).
-4. The Barro-Lee completion series (`BAR.*CMPT*`) may fit the Education gauge’s ‘quantity of educated people’ half better than the enrolment series now used.
-5. The Appendix’s income-adjusted scores (‘relative to countries with similar income’, pp.163–182) are not implemented.
-6. Whether to rank against the 24 major economies as the Appendix appears to do.
-
-## 9. Delivery
-
-**Constraints.** Edit the notebook in place and keep it one notebook. Do not change `STD_COLS`, `cached()` semantics or the engine. No database writes (the DuckDB is read-only). No manual downloads. Network access is needed for C-2 and C-3. Keep the cell order; add new constants and dicts to the cell named in each requirement.
-
-**Suggested order.** (1) C-1 baseline. (2) Tree edits: K-1 to K-5, T-1 (offline, quick). (3) Fetch repairs C-2.1 to C-2.9. (4) GAP probing C-3 and ledger rows C-4. (5) Gate edits G-1 to G-6 and the T-2 outputs. (6) Restart, run all, and confirm every gate.
-
-**Definition of done.**
-
-1. The notebook runs top to bottom after a kernel restart, with no errors.
-2. G-1 to G-5 print PASS; G-6 prints its correlations.
-3. Zero regressions and zero dead alternatives. Every GAP carries a code from C-3.
-4. Every component carries `basis`; all 21 gauges resolve; the K-3 exclusions and the K-4 addition are in place.
-5. The ledger holds the 64 listed sources, the existing extra rows and W01–W20, and each row’s `intended` status matches the data.
-6. A final summary cell prints ledger status counts, components by state and by basis (share of nominal weight per tree) and every gate result.
-
-**Final report to the owner (in chat).** Before and after figures for section 2.3; which fetches landed and which became GAPs, with reason codes; every tree change; the G-6 findings; the parked decisions of section 8 that need an answer; and any place you deviated from this document, with the reason.
-
-## Appendix A. What the Appendix says (reference data)
-
-This appendix reproduces every Appendix fact the requirements rely on. Page numbers are the printed page numbers of the report. Unless stated, percentages are as printed.
-
-### A.1 Conventions
-
-Two percentage conventions appear. Tables on pp.158 and 169 give shares of the Productivity gauge (so What-you-pay-vs-what-you-get totals 70% and Culture totals 30%). Tables on pp.171, 177, 179 and 181 give shares of Culture (each of the six Culture sub-gauges totals 16.7%). The Appendix states that all of this was computer generated with the same factors for every country and period, and that the underlying statistics for Indebtedness are proprietary (p.157).
-
-### A.2 The 21 gauges (pp.132–134)
-
-| # | Gauge | What the Appendix says it measures |
-| --- | --- | --- |
-| 1 | Education | Quantity of educated people at different levels and quality of education. Basic and higher education split about evenly. About half the weight on absolute quantity of educated people, about half on quality (higher-education rankings, test scores, average years of education) |
-| 2 | Innovation & Technology | Inventiveness, technological advancement, entrepreneurship. About half the weight on absolute share of key innovation metrics (patents, researchers, R&D spending, venture-capital funding); half on external rankings and per-capita innovation measures |
-| 3 | Cost Competitiveness | What one gets for what one pays: quality-adjusted and productivity-adjusted labor costs plus other productivity measures. Only a Total score is shown (p.135) |
-| 4 | Infrastructure & Investment | Share of global investment; overall infrastructure quality; investment and savings as a share of GDP; logistics performance |
-| 5 | Economic Output | GDP as a share of world, adjusted for price differences, primarily; some weight on GDP per capita |
-| 6 | Productivity/Output Growth | Forward 10-year growth: two-thirds productivity metrics, one-third indebtedness metrics (prose). The weight table on p.143 prints 65% and 35%; use the table |
-| 7 | Trade | Absolute exports as a share of the world. China highest, then the Eurozone and the US |
-| 8 | Military Strength | Absolute share of military spending, personnel, nuclear weapons, external indices of military capability. Does not capture regional or technology-specific advantages or alliances |
-| 9 | Financial Markets and Financial Center | Absolute transaction shares and market capitalisations; external indices of financial-center cities |
-| 10 | Reserve Status | Share of transactions, debts and reserves denominated in the currency. Euro-area countries are not scored individually (dashes on p.135) |
-| 11 | Indebtedness (Debt Cycles) | The six groups in A.6. Built without reserve-currency status |
-| 12 | Internal Conflict | Actual conflict events (for example protests), political conflict (for example partisanship), general discontent (from surveys) |
-| 13 | Rule of Law/Governance | Rule of law (mainly business surveys) plus corruption (external indices and business surveys) |
-| 14 | Gaps in Wealth, Opportunity & Values | Wealth and income inequality (for example the top 1% against the rest) plus political conflict (for example the ideological split of the legislature) |
-| 15 | Geology | Land size; value of natural resources; total production of energy, agriculture and industrial metals; net exports in each category (self-reliance); freshwater supply |
-| 16 | Character/Civility/Determination | Surveys on attitudes to hard work and success; proxies for valuing self-sufficiency and work (size of government transfer payments, effective retirement age) |
-| 17 | Resource Allocation Efficiency | Chronically high unemployment; whether debt growth generates commensurate income growth; external indices and surveys on labor-market rigidity and ease of getting loans |
-| 18 | Acts of Nature | Expert assessments of future climate-change impact on GDP; external assessments of disaster preparedness; COVID outcomes. The author calls it so-so and low quality |
-| 19 | External Conflict | Economic, political/cultural and military conflict between pairs of major countries; structural indicators for a baseline and timely indicators for escalations. Economic: bilateral trade, tariff rates, news on sanctions and trade wars |
-| 20 | Health Index | A.3 |
-| 21 | Happiness Index | A.3 |
-
-### A.3 Health and Happiness (p.136)
-
-| Health Index component | Weight |
-| --- | --- |
-| Life expectancy at birth | 30.0% |
-| Child mortality (deaths per 1,000 live births) | 10.0% |
-| Air pollution exposure | 5.0% |
-| Share using safely managed drinking water | 5.0% |
-| Share with basic sanitation | 5.0% |
-| Share facing food insecurity | 15.0% |
-| Homicide rate per 100,000 | 7.5% |
-| Share displaced by conflict | 7.5% |
-| Share with access to essential health services | 15.0% |
-
-| Happiness Index component | Weight |
-| --- | --- |
-| Share reporting happy | 22.5% |
-| Share reporting daily enjoyment | 22.5% |
-| Reported life satisfaction (1–10) | 22.5% |
-| Share reporting a good social support network | 22.5% |
-| Suicide rate per 100,000 | 10.0% |
-
-### A.4 Growth formula and the Productivity gauge (pp.143, 154–168)
-
-Growth per worker over 10 years = Productivity 65.0% + Indebtedness 35.0%. Productivity splits into What-you-pay-vs-what-you-get 70% (45.5% of growth) and Culture 30% (19.5%). Indebtedness splits 50/50 into Debt levels and flow (17.5%) and Monetary policy (17.5%). The Appendix gives no components or weights below that split.
-
-| What-you-pay-vs-what-you-get (p.158), share of Productivity gauge | Share | Indicators (share) |
-| --- | --- | --- |
-| Education | 17.5% | Cost of quality-adjusted educated worker relative to USA (17.5) |
-| Labor productivity | 17.5% | Cost of productivity-adjusted educated worker (17.5) |
-| Working hard | 17.5% | Average hours worked (11.7); change in dependency ratio, 10 years forward (5.8) |
-| Investing | 17.5% | Investment % (3.1); savings rate (3.1); productivity of capital investments (3.1); growth in capital stock (3.1); income volatility (2.6); inflation volatility (2.6) |
-
-How the Appendix builds them. Education cost: hourly cost of educated workers by cohort (college, high school, none), adjusted for hours actually worked (vacation, holidays) and for education quality using international tests, weighted by each cohort’s share of the population. Labor productivity: the same cohorts adjusted for output per hour instead of test quality. Working hard: average weekly hours of actual work by men in the labor force, plus shifts in the share of the population that works (dependency). Investing: non-residential fixed investment rate and household savings rate, with the other items above. Cost measure (pp.160–161): nominal GDP per capita against the developed-world average in log terms, described as a naive baseline that is combined with what a country offers.
-
-Hours worked appears three times (11.7% here, 2.5% of the gauge through Savoring, 1.25% through Self-sufficiency), so its total effective weight is 15.45% of the Productivity gauge. The notebook asserts this.
-
-### A.5 Culture (pp.169–181)
-
-Culture is six equal sub-gauges (each 5.0% of the gauge, 16.7% of Culture). Shares below are of Culture.
-
-| Sub-gauge (page) | Indicators and shares |
-| --- | --- |
-| Corruption (p.171) | Transparency index 8.3 (Transparency International). Surveys of corruption 8.3, being three items at 2.8 each: diversion of public funds; irregular payments and bribes; favoritism in decisions of government officials (World Economic Forum sub-indices) |
-| Bureaucracy (p.173) | Starting a business (World Bank/IFC); construction permits (World Bank/IFC); burden of government regulation (WEF). One third each (5.6) |
-| Rule of law (p.175) | Efficiency of legal framework in settling disputes (WEF); property rights (WEF); protecting investors (World Bank/IFC); enforcing contracts (World Bank/IFC). One quarter each (4.2) |
-| Savoring life vs achieving (p.177) | Observed outcomes 8.3: average hours worked. Expressed values 8.3, being seven survey items at 1.2 each: children having responsibilities is important; growth is important for the future of a country; having a good time is important; importance of being successful; economic growth should be a priority over the environment; competition is not harmful to business; hard work leads to success |
-| Innovation (p.179) | Inputs 8.3: gross expenditure on R\&D; researchers; fear of business failure; entrepreneurship prevalence. Outputs 8.3: number of new patents 2.1; royalty and license fees, payments 2.1; number of new businesses 1.0; percent of people creating new businesses 1.0; number of new major websites 1.0; new trademark creation 1.0 |
-| Self-sufficiency (p.181) | Hard work 8.3: average hours worked 4.2; labor force participation 1.4; effective retirement age 1.4; actual vacation days 1.4. Government support 4.2: transfer payments to households 2.1; government outlays 2.1. Rigidity of labor market 4.2: collective bargaining as a percent of workforce 1.4; ease of hiring/firing index 1.4; minimum wage 1.4 |
-
-### A.6 Indebtedness gauge description (p.133)
-
-Six groups: (a) debt levels relative to asset levels; (b) the sizes of external and internal surpluses and deficits; (c) debt service costs relative to GDP; (d) debt in own currency against foreign currency; (e) debt held by citizens against foreigners; (f) credit rating. The growth-formula text (pp.141–143) adds: debt levels relative to incomes, debt growth relative to income growth, and monetary policy stance.
-
-### A.7 The 64-source list (pp.183–184)
-
-| # | Indicator | Source |
-| --- | --- | --- |
-| 1 | Access to essential health services | The Social Progress Imperative |
-| 2 | Aerospace and defense sector returns | Thomson Reuters |
-| 3 | Agriculture, forestry and fishing, value added | World Development Indicators (WDI) |
-| 4 | Artificial intelligence: new companies, patents, citations | Center for Security and Emerging Technology |
-| 5 | Banking claims in country (by currency and source country) | Bank for International Settlements (BIS) |
-| 6 | Bloomberg Innovation Index | Bloomberg |
-| 7 | Book titles per capita | CLIO Infra |
-| 8 | Child mortality rate | Social Progress Imperative |
-| 9 | Climate vulnerability and preparedness index and subcomponents | Notre Dame Global Adaptation Initiative |
-| 10 | CO2 emissions | CLIO Infra |
-| 11 | Conflict intensity and count per capita | Cline Center |
-| 12 | Construction permits score | World Bank Doing Business |
-| 13 | Days lost to labor disputes | CLIO Infra |
-| 14 | Discontent, populism and conflict terms in media | GDELT Project |
-| 15 | Education spending | WDI |
-| 16 | Educational attainment | Barro-Lee |
-| 17 | Electricity production | NBER CHAT |
-| 18 | Energy production and consumption | US Energy Information Administration |
-| 19 | Enforcing contracts score | Doing Business |
-| 20 | GINI coefficient | WDI |
-| 21 | Google searches for political conflict terms | Google Trends |
-| 22 | Google searches indicating economic, political, social or emotional discontent | Google Trends |
-| 23 | Government disapproval and verbal opposition in news and media | GDELT |
-| 24 | Gross expenditure on R&D | WIPO Global Innovation Index (GII) |
-| 25 | Historical aviation passengers and cargo | NBER CHAT |
-| 26 | Historical technology adoption (milking machine to internet) | NBER CHAT |
-| 27 | Homicide rate | Social Progress Imperative |
-| 28 | Hours worked per week | World Inequality Database (WID) |
-| 29 | Human capital index | World Bank |
-| 30 | Income distributions | World Bank |
-| 31 | Internal armed conflict | CLIO Infra |
-| 32 | Internet users | NBER CHAT |
-| 33 | Male labor force participation rate | World Bank |
-| 34 | Metals and ores production | CLIO Infra |
-| 35 | Nuclear weapon stockpile | Federation of American Scientists |
-| 36 | Number of new patents | WIPO GII |
-| 37 | Numeracy | CLIO Infra |
-| 38 | OTC FX turnover | BIS |
-| 39 | Particulate matter pollution | Social Progress Imperative |
-| 40 | Patent applications | WDI |
-| 41 | People displaced by conflict and violence | WDI |
-| 42 | People using safely managed drinking water services | World Bank |
-| 43 | Prevalence of undernourishment | World Bank |
-| 44 | Protecting investors value score | Doing Business |
-| 45 | Protest intensity index | GDELT |
-| 46 | Public sector corruption and theft score | V-Dem |
-| 47 | Rail lines opened and rail cargo | NBER CHAT |
-| 48 | Real GDP per worker | Penn World Tables |
-| 49 | Real growth rate | World Bank |
-| 50 | Renewable freshwater resources | WDI |
-| 51 | Rigorous and impartial government score | V-Dem |
-| 52 | Royalty and license fees | WIPO GII |
-| 53 | Share of universities in top 500 | Shanghai Ranking Consultancy |
-| 54 | Shipping tonnage by sail, steam, motor and in total | NBER CHAT |
-| 55 | Starting a business score | Doing Business |
-| 56 | Suicide mortality rate | World Bank |
-| 57 | Tariff rate | World Bank |
-| 58 | Top 1% and top 10% income shares | WID |
-| 59 | Top 1% and top 10% wealth shares | WID |
-| 60 | Total labor disputes | CLIO Infra |
-| 61 | Transparent laws with predictable enforcement score | V-Dem |
-| 62 | Universities founded | CLIO Infra |
-| 63 | Number of new businesses and number of people creating new businesses | WIPO GII |
-| 64 | Number of new major websites | WIPO GII |
-
-The notebook’s ledger uses these numbers as row IDs. The notebook already substitutes providers for some rows (for example ILOSTAT for #28 and #13, UNHCR for #41, OWID series for #17, #31 and others); substitute rows keep their tier `substitute_source` and are not errors.
-
-### A.8 Empire Score table (p.135), as of July 2024
-
-Total uses all underlying measures; Quality-only uses per-capita and quality measures. Scores are weighted-average percent ranks (0 = worst on every measure, 1 = best). The Appendix does not state the set of countries ranked against. EUR is the Eurozone and has no ISO3 code; the notebook’s check uses the 23 others.
-
-| Country | Total | Quality-only | Country | Total | Quality-only |
-| --- | --- | --- | --- | --- | --- |
-| USA | 0.89 | 0.71 | CAN | 0.21 | 0.50 |
-| CHN | 0.80 | 0.30 | CHE | 0.19 | 0.66 |
-| EUR | 0.56 | 0.43 | BRZ | 0.18 | 0.14 |
-| DEU | 0.38 | 0.54 | NLD | 0.17 | 0.55 |
-| JPN | 0.33 | 0.40 | IDR | 0.17 | 0.13 |
-| KOR | 0.32 | 0.54 | ITA | 0.17 | 0.31 |
-| IND | 0.30 | 0.07 | ESP | 0.17 | 0.34 |
-| GBR | 0.29 | 0.46 | SAR | 0.15 | 0.45 |
-| FRA | 0.27 | 0.45 | MEX | 0.14 | 0.15 |
-| RUS | 0.26 | 0.28 | SAF | 0.10 | 0.12 |
-| SGP | 0.24 | 0.89 | ARG | 0.07 | 0.14 |
-| AUS | 0.23 | 0.56 | TUR | 0.21 | 0.28 |
-
-### A.9 Appendix inconsistencies and how to resolve them
-
-1. **Growth split.** Prose on pp.132 and 153 says two-thirds and one-third; the table on p.143 says 65% and 35%. Use 0.65 and 0.35.
-2. **Investing weights** add to 17.6 against a stated 17.5. Keep the printed ratios; the engine renormalises.
-3. **Innovation inputs** are printed as four items at 1.0 each under an 8.3 subtotal (sum 4.0). Treat them as four equal items, 0.125 of Innovation each. Outputs add to 8.2 against 8.3 and are used as printed.
-4. **Duplicate rows on p.158.** ‘Education’ and ‘Cost of quality-adjusted educated worker relative to USA’ are one measure; so are ‘Labor productivity’ and ‘Cost of a productivity-adjusted educated worker’. One tree leaf each.
-5. **p.133 lettering** uses (d) twice; there are six groups (A.6).
-6. **p.157** mentions ranking among ‘the 20 countries shown’ while 35 are shown elsewhere. Ignore it.
-7. **Hours worked.** The source list (#28) names the World Inequality Database; p.166 describes average weekly hours of actual work by men in the labor force. The notebook uses ILO male weekly hours, a `substitute_source`.
-8. **Royalty and license fees** on p.179 are payments, not receipts. Payments are the `exact` series; receipts are a proxy.
-
-### A.10 Appendix country codes to ISO3
-
-| Appendix | ISO3 | Appendix | ISO3 | Appendix | ISO3 |
-| --- | --- | --- | --- | --- | --- |
-| BRZ | BRA | IDR | IDN | SAR | SAU |
-| SAF | ZAF | UAE | ARE | PLD | POL |
-| TLD | THA | CHI | CHL | CZK | CZE |
-| EUR | none (Eurozone) |  |  |  |  |
-
-All other codes in the Appendix (USA, CHN, DEU, JPN, KOR, IND, GBR, FRA, RUS, SGP, AUS, TUR, CAN, CHE, NLD, ITA, ESP, MEX, ARG, COL, SWE, HUN, PRT, BEL, NOR, GRC) are already ISO3.
-
-## Appendix B. Starting points for probing GAPs (unverified)
-
-These are leads from general knowledge, not tested routes. Dataset names and URLs change; confirm each on the provider’s own site before relying on it. A lead that fails is recorded with `PROBED_FAILED` and the URL tried. Nothing here is a requirement to land the data.
-
-| Item | Lead | Likely outcome |
-| --- | --- | --- |
-| #5 Banking claims by currency and source country | BIS bulk download host already used for credit and policy rates (`WS_TC`, `WS_CBPOL`). Look for the Locational Banking Statistics file (`WS_LBS_D_PUB`) on the BIS bulk download page | Likely lands |
-| #38 OTC FX turnover; BIS FX currency share | BIS triennial survey dataset in the same bulk list (look for `WS_DER_OTC_TOV` or similar). Currency shares sum to 200% because each trade has two legs | Likely lands |
-| BIS debt-currency share | International debt securities by currency, same bulk list (`WS_DEBT_SEC2_PUB`) | Likely lands |
-| #58, #59 WID income and wealth shares | Current OWID chart slugs (search OWID’s catalogue); or the WID bulk download. WID variables to look for: pre-tax national income share (`sptinc`) and net personal wealth share (`shweal`), percentiles p99p100 and p90p100 | Probably lands |
-| WHR social support and positive affect | The WHR panel dataset behind its Table 2.1 (country-year social support and positive affect), on the WHR data page | Probably lands |
-| #11 Cline Center | Societal Conflict Event Dataset download on the Cline Center or Illinois Data Bank page | Unknown |
-| #14, #23, #45 GDELT | The DOC 2.0 API only covers recent months. Full history needs BigQuery (billing) or large bulk event files | Likely `HEAVY` |
-| #34 USGS metals and ores | USGS mineral commodity data releases (ScienceBase) hold country production by commodity. Needs a decision on which commodities count as industrial metals | `HEAVY` or lands |
-| Effective retirement age; ease of hiring/firing (employment-protection rigidity) | OECD SDMX, the same API as cell 2o. Find the dataflows in the OECD dataflow catalogue. OECD-member coverage only | Probably lands, narrow coverage |
-| Minimum-wage ratio | ILOSTAT statutory minimum wage against mean earnings, or an OECD minimum-to-average-wage dataflow | Unknown |
-| ILO long-term unemployment share | ILOSTAT indicator catalogue (unemployment by duration) | Probably lands |
-| Vacation days | ILO working-conditions laws database or OECD | Likely `NO_PUBLIC_ROUTE` |
-| Foreign-held share of government debt | World Bank Quarterly Public Sector Debt; IMF investor-base data | Unknown |
-| WVS items (8) and GEM items (2) | Both distribute data behind registration or click-through | Likely `MANUAL_DOWNLOAD` |
-| WIPO GII score and #64 new major websites | GII data tables (spreadsheet) linked from the WIPO GII page; the file URL changes yearly | Unknown |
-| Infrastructure quality index | The WEF Global Competitiveness Index 4.0 was last published in 2019; data are spreadsheets or PDF | `NO_PUBLIC_ROUTE` or `MANUAL_DOWNLOAD` |
-| GFCI | Published as a PDF report | `NO_PUBLIC_ROUTE` |
-| #2 Thomson Reuters; #6 Bloomberg; venture-capital funding; sovereign credit rating | Commercial products | `PROPRIETARY` |
-| Wages by education cohort | No open cross-country source known. ILOSTAT wages by education and the OECD education-at-a-glance earnings tables cover part of it | `PROBED_FAILED` or partial; partial coverage is not a basis for rebuilding the two leaves in this phase |
-
-## Appendix C. Ledger rows to add (C-4)
-
-Add one ledger row for each entry using the existing tuple `(item, concept, pdf_source, codes, tier, intended, reason)`, with item IDs W01 to W20. Where the tree already holds a component for the indicator, take the codes from the tree; do not invent new codes. Where this table gives a code, check it against the tree first.
-
-| ID | Appendix indicator | Page | Tree component and codes | Expected status |
-| --- | --- | --- | --- | --- |
-| W01 | Life expectancy at birth | p.136 | health\_index life-expectancy component; `SP.DYN.LE00.IN` | live |
-| W02 | Basic sanitation access | p.136 | health\_index basic sanitation; `SH.STA.BASS.ZS`, fallback `SH.STA.SMSS.ZS` (proxy) | live |
-| W03 | Reported life satisfaction (1–10) | p.136 | happiness\_index life satisfaction; `WHR.LIFE_LADDER`, fallback `WHR.CANTRIL_LADDER` | live, substitute\_source (the Appendix names no survey provider) |
-| W04 | Change in dependency ratio, 10 years forward | p.158 | working\_hard dependency component; `DERIVED.DEPENDENCY_RATIO_CHG_FWD10` | live |
-| W05 | Investment % (non-residential fixed investment) | p.158 | investing investment component; as in tree (`NE.GDI.FTOT.ZS`) | live |
-| W06 | Income volatility | p.158 | investing; derived series built in cell 3 | live |
-| W07 | Inflation volatility | p.158 | investing; derived series built in cell 3 | live |
-| W08 | Productivity of capital investments | p.158 | investing; derived series built in cell 3 | live |
-| W09 | Growth in capital stock | p.158 | investing; `PWT.RKNA_GROWTH` (second alt per C-2.8) | live |
-| W10 | Transparency index | p.171 | corruption; `TI.CPI` | live |
-| W11 | WEF: diversion of public funds | p.171 | corruption survey item; `VDEM.v2exthftps` | substitute\_source (V-Dem is the source named in list item #46) |
-| W12 | WEF: irregular payments and bribes | p.171 | corruption survey item; `VDEM.v2excrptps` | substitute\_source (#46) |
-| W13 | WEF: favoritism in decisions of government officials | p.171 | corruption survey item; `VDEM.v2clrspct` | substitute\_source (#51) |
-| W14 | WEF: burden of government regulation | p.173 | bureaucracy; WGI `RQ.EST` | proxy |
-| W15 | WEF: efficiency of legal framework in settling disputes | p.175 | rule\_of\_law; `VDEM.v2cltrnslw` | substitute\_source (#61) |
-| W16 | WEF: property rights | p.175 | rule\_of\_law; `VDEM.v2xcl_prpty`, fallback WGI `RL.EST` | proxy |
-| W17 | Researchers | p.179 | innovation inputs; as in tree (`SP.POP.SCIE.RD.P6`) | live |
-| W18 | New trademark creation | p.179 | innovation outputs; as in tree (`IP.TMK.RSCT`) | live |
-| W19 | Transfer payments to households | p.181 | self\_sufficiency government support; as in tree | live |
-| W20 | Government outlays | p.181 | self\_sufficiency government support; as in tree | live |
-
-Status words follow the ledger’s own vocabulary. If a row’s data turn out to be missing after the repairs in C-2, change its `intended` status to `gap` with an allowed reason code rather than leaving it as live.
+| `W01` | Life expectancy at birth | World Bank | 136 | `health_index/life_expectancy` (`SP.DYN.LE00.IN`) |
+| `W02` | Basic sanitation access | World Bank | 136 | `health_index/basic_sanitation` (`SH.STA.BASS.ZS`) |
+| `W03` | Reported life satisfaction (1–10) | World Happiness Report | 136 | `happiness_index/life_satisfaction` (`WHR.LIFE_LADDER`) |
+| `W04` | Change in dependency ratio, 10y fwd | World Bank | 158 | `working_hard/dependency_ratio_10y_fwd_change` (`DERIVED.DEPENDENCY_RATIO_CHG_FWD10`) |
+| `W05` | Investment % (non-residential fixed) | World Bank | 158 | `investing/investment_pct_gdp` (`NE.GDI.FTOT.ZS`) |
+| `W06` | Income volatility | World Bank | 158 | `investing/income_volatility` (`DERIVED.GDP_GROWTH_VOL10`) |
+| `W07` | Inflation volatility | World Bank | 158 | `investing/inflation_volatility` (`DERIVED.INFLATION_VOL10`) |
+| `W08` | Productivity of capital investments | World Bank | 158 | `investing/capital_productivity` (`DERIVED.CAPITAL_PRODUCTIVITY`) |
+| `W09` | Growth in capital stock | Penn World Table | 158 | `investing/capital_stock_growth` (`PWT.RKNA_GROWTH`) |
+| `W10` | Transparency index | Transparency International | 171 | `corruption/transparency_index` (`TI.CPI`) |
+| `W11` | WEF: diversion of public funds | V-Dem | 171 | `corruption/surveys_diversion_funds` (`VDEM.v2exthftps`) |
+| `W12` | WEF: irregular payments and bribes | V-Dem | 171 | `corruption/surveys_irregular_payments` (`VDEM.v2excrptps`) |
+| `W13` | WEF: favoritism in govt decisions | V-Dem | 171 | `corruption/surveys_favoritism` (`VDEM.v2clrspct`) |
+| `W14` | WEF: burden of govt regulation | World Bank WGI | 173 | `bureaucracy/regulation_burden` (`RQ.EST`) |
+| `W15` | WEF: legal framework efficiency | V-Dem | 175 | `rule_of_law/legal_frameworks_efficiency` (`VDEM.v2cltrnslw`) |
+| `W16` | WEF: property rights | V-Dem | 175 | `rule_of_law/property_rights` (`VDEM.v2xcl_prpty`) |
+| `W17` | Researchers | WDI | 179 | `innovation/inputs_researchers` (`SP.POP.SCIE.RD.P6`) |
+| `W18` | New trademark creation | WDI | 179 | `innovation/outputs_trademarks` (`IP.TMK.RSCT`) |
+| `W19` | Transfer payments to households | WDI | 181 | `self_sufficiency/gov_support_transfers` (`GC.XPN.TRFT.ZS`) |
+| `W20` | Government outlays | WDI | 181 | `self_sufficiency/gov_support_outlays` (`GC.XPN.TOTL.GD.ZS`) |
+
+---
+
+## Appendix D. Published Country Tables (`Appendix.pdf`) for Validation (`V-2`–`V-5`)
+
+*(Note: `PDF_NGDPDPC_35`, `PDF_WA_GROWTH_FWD10`, and `PDF_EMPIRE_SCORES` are already embedded in Cell 7b of the notebook.)*
+
+### D.1 Headline Empire Scores Across Major Countries (p.135, as of July 2024)
+Columns confirmed from p.135 layout: `(Total, Quality-only)` pairs except `Competitiveness, Culture, Investment` (Total only). Reserve Currency displays `---` for Euro-area states.
+
+```
+code  empT empQ | EduT EduQ | InnT InnQ | CmpT | MilT MilQ | TrdT TrdQ | EcoT EcoQ | FinT FinQ | ResT ResQ
+USA   0.89 0.71 | 87%  96%  | 68%  70%  | 52%  | 86%  84%  | 73%  32%  | 49%  61%  | 99%  100% | 100% 83%
+CHN   0.80 0.30 | 72%  56%  | 64%  54%  | 86%  | 63%  6%   | 100% 8%   | 45%  16%  | 44%  39%  | 5%   1%
+EUR   0.56 0.43 | 59%  80%  | 36%  43%  | 46%  | 38%  25%  | 79%  37%  | 38%  45%  | 40%  34%  | 36%  33%
+DEU   0.38 0.54 | 45%  82%  | 35%  60%  | 39%  | 20%  21%  | 51%  100% | 18%  52%  | 25%  36%  | ---  ---
+JPN   0.33 0.40 | 48%  82%  | 34%  55%  | 43%  | 27%  11%  | 13%  29%  | 19%  40%  | 29%  49%  | 10%  23%
+KOR   0.32 0.54 | 50%  89%  | 38%  70%  | 54%  | 33%  56%  | 7%   59%  | 6%   42%  | 15%  29%  | 0%   1%
+IND   0.30 0.07 | 36%  5%   | 10%  16%  | 42%  | 51%  1%   | 6%   0%   | 20%  6%   | 6%   5%   | 0%   0%
+GBR   0.29 0.46 | 48%  89%  | 26%  43%  | 32%  | 34%  26%  | 15%  58%  | 11%  44%  | 25%  39%  | 10%  41%
+FRA   0.27 0.45 | 41%  81%  | 25%  47%  | 33%  | 33%  34%  | 14%  59%  | 11%  43%  | 25%  45%  | ---  ---
+RUS   0.26 0.28 | 38%  61%  | 15%  24%  | 27%  | 53%  41%  | 0%   14%  | 14%  26%  | 0%   1%   | 0%   0%
+SGP   0.24 0.89 | 35%  71%  | 26%  59%  | 61%  | 14%  92%  | 11%  100% | 1%   100% | 19%  39%  | 0%   7%
+AUS   0.23 0.56 | 44%  89%  | 24%  51%  | 31%  | 22%  37%  | 0%   31%  | 3%   48%  | 17%  47%  | 3%   37%
+TUR   0.21 0.28 | 20%  37%  | 17%  37%  | 49%  | 28%  16%  | 0%   12%  | 10%  29%  | 0%   0%   | 0%   0%
+CAN   0.21 0.50 | 45%  89%  | 22%  45%  | 27%  | 16%  21%  | 4%   68%  | 4%   47%  | 18%  52%  | 4%   28%
+CHE   0.19 0.66 | 40%  83%  | 32%  69%  | 45%  | 0%   18%  | 2%   100% | 1%   68%  | 18%  84%  | 0%   9%
+BRZ   0.18 0.14 | 17%  25%  | 11%  25%  | 22%  | 27%  6%   | 0%   4%   | 10%  13%  | 1%   2%   | 0%   0%
+NLD   0.17 0.55 | 37%  76%  | 29%  65%  | 39%  | 0%   25%  | 12%  100% | 2%   55%  | 19%  50%  | ---  ---
+IDR   0.17 0.13 | 13%  13%  | 8%   20%  | 34%  | 25%  0%   | 0%   2%   | 8%   11%  | 0%   0%   | 0%   0%
+ITA   0.17 0.31 | 32%  63%  | 15%  31%  | 26%  | 27%  28%  | 6%   48%  | 8%   40%  | 14%  28%  | ---  ---
+ESP   0.17 0.34 | 33%  65%  | 11%  23%  | 39%  | 18%  19%  | 0%   46%  | 5%   38%  | 19%  31%  | ---  ---
+SAR   0.15 0.45 | 19%  45%  | 11%  26%  | 33%  | 25%  100% | 0%   38%  | 4%   45%  | 0%   5%   | 0%   1%
+MEX   0.14 0.15 | 24%  38%  | 5%   11%  | 28%  | 14%  2%   | 2%   17%  | 9%   19%  | 0%   1%   | 0%   0%
+SAF   0.10 0.12 | 12%  30%  | 7%   17%  | 23%  | 11%  0%   | 0%   6%   | 3%   12%  | 0%   1%   | 0%   0%
+ARG   0.07 0.14 | 12%  24%  | 6%   16%  | 1%   | 15%  2%   | 0%   6%   | 3%   20%  | 0%   0%   | 0%   0%
+```
+
+### D.2 Growth and Impact Vectors (`%/yr`, 35 Countries)
+*(Pairs give `error_adjusted unadjusted` where two numbers appear.)*
+- **p.146 Real GDP growth (10y):** `IND 6.3 8.1; UAE 5.5 5.7; IDR 5.5 6.8; SAR 4.6 5.4; TUR 4.0 4.0; CHN 4.0 3.7; PLD 2.9 2.5; SAF 2.9 4.5; RUS 2.9 3.3; COL 2.8 4.3; SGP 2.6 2.8; MEX 2.5 3.9; CHI 2.4 2.8; SWE 2.3 1.8; AUS 2.1 2.1; ARG 2.0 2.9; TLD 1.9 2.8; HUN 1.9 1.7; CZK 1.9 1.9; KOR 1.8 1.3; BRZ 1.7 2.6; USA 1.4 1.5; GBR 1.3 1.1; NLD 1.2 0.9; JPN 1.2 1.1; CAN 1.2 1.3; PRT 1.1 0.9; BEL 0.9 0.2; FRA 0.9 0.3; NOR 0.8 -0.2; ESP 0.3 -0.2; CHE 0.2 0.2; GRC 0.0 -0.1; DEU -0.5 -0.7; ITA -0.5 -1.1`
+- **p.149 Growth per worker (10y):** `IND 5.3 7.1; IDR 4.8 6.1; UAE 4.8 5.0; CHN 4.3 4.0; TUR 3.6 3.7; PLD 3.5 3.1; RUS 3.1 3.6; SAR 3.0 3.8; KOR 3.0 2.5; SGP 2.8 3.1; TLD 2.7 3.5; HUN 2.4 2.2; COL 2.3 3.8; CHI 2.2 2.6; JPN 1.9 1.9; SWE 1.9 1.5; SAF 1.9 3.5; PRT 1.9 1.7; CZK 1.8 1.9; MEX 1.7 3.1; BRZ 1.6 2.5; AUS 1.5 1.5; NLD 1.4 1.0; USA 1.2 1.3; ARG 1.2 2.1; BEL 1.1 0.3; FRA 1.0 0.4; ESP 1.0 0.6; GBR 0.9 0.7; GRC 0.9 0.8; CAN 0.9 1.0; NOR 0.6 -0.4; ITA 0.6 -0.0; DEU 0.6 0.4; CHE 0.5 0.5`
+- **p.150 Productivity impact:** `IND 6.1; IDR 5.0; CHN 5.0; TUR 4.5; UAE 4.2; SGP 3.7; KOR 3.6; SAR 3.3; RUS 3.2; TLD 3.0; COL 2.7; PLD 2.7; JPN 2.6; CHI 2.5; HUN 2.4; SWE 2.3; SAF 2.2; ARG 2.1; MEX 1.9; BRZ 1.6; USA 1.6; GBR 1.6; NLD 1.5; PRT 1.5; CZK 1.2; FRA 1.1; DEU 1.1; AUS 1.0; GRC 0.9; BEL 0.9; ESP 0.9; CAN 0.8; CHE 0.4; ITA 0.3; NOR 0.2`
+- **p.151 Indebtedness impact:** `UAE 5.2 5.7; IDR 4.4 5.0; PLD 4.3 4.1; IND 3.8 4.0; CHN 3.1 1.4; RUS 2.7 3.2; PRT 2.6 2.6; AUS 2.5 2.4; CZK 2.1 2.7; TLD 2.0 2.0; TUR 2.0 2.1; HUN 1.9 1.5; SAR 1.8 3.7; KOR 1.8 0.9; CHI 1.6 1.7; COL 1.5 3.1; BEL 1.5 1.2; NOR 1.4 1.2; MEX 1.4 2.9; ESP 1.3 1.4; NLD 1.3 1.2; SWE 1.3 1.0; SGP 1.2 1.2; BRZ 1.1 2.2; ITA 1.1 1.3; SAF 1.0 3.1; CAN 1.0 1.3; CHE 1.0 1.0; FRA 0.9 1.0; JPN 0.7 0.5; GRC 0.7 1.0; USA 0.4 0.5; DEU -0.3 0.0; GBR -0.4 -0.3; ARG -0.6 1.0`
+- **p.159 What-you-pay-vs-what-you-get impact:** `IND 7.2; IDR 5.6; TUR 4.5; COL 4.4; CHN 4.3; RUS 4.0; SAF 4.0; TLD 3.7; BRZ 3.7; MEX 3.7; ARG 3.4; SAR 3.2; HUN 3.1; UAE 3.1; PLD 3.1; CHI 3.0; SGP 2.3; KOR 2.3; CZK 2.3; JPN 2.2; GRC 2.0; PRT 1.9; SWE 1.3; USA 1.2; AUS 1.2; ESP 1.2; CAN 1.1; GBR 1.1; ITA 1.0; FRA 0.8; BEL 0.7; NLD 0.5; DEU 0.5; CHE -0.4; NOR -0.9`
+- **p.170 Culture impact:** `SGP 1.7; IND 1.6; UAE 1.5; CHN 1.1; IDR 1.0; KOR 1.0; TLD 0.6; SAR 0.6; CHE 0.5; USA 0.5; JPN 0.4; NLD 0.4; SWE 0.4; GBR 0.2; CHI 0.1; TUR 0.1; DEU 0.0; AUS -0.2; RUS -0.2; CAN -0.2; SAF -0.3; COL -0.3; NOR -0.3; MEX -0.4; PLD -0.5; HUN -0.5; FRA -0.6; PRT -0.7; ARG -0.8; BEL -0.8; CZK -0.9; BRZ -1.0; ESP -1.1; GRC -1.3; ITA -1.7`
+
+### D.3 Educated Worker Cost vs USA (`%`, `USA = 0`; lower cost = higher competitiveness)
+- **p.164 left (Quality-adjusted, 34 countries):** `IND -92; IDR -85; CHN -83; COL -83; RUS -82; MEX -75; BRZ -73; ARG -71; CHI -70; TLD -69; TUR -67; PLD -66; KOR -65; HUN -63; UAE -58; SGP -53; JPN -52; SAR -45; CZK -42; GRC -37; CAN -17; PRT -13; GBR -12; ESP -6; USA 0; AUS 4; ITA 4; SWE 13; DEU 33; BEL 38; FRA 59; NLD 64; CHE 92; NOR 106`
+- **p.164 right (Non-adjusted, 35 countries):** `IND -95; IDR -89; COL -87; SAF -85; RUS -83; CHN -82; MEX -81; BRZ -79; TLD -75; CHI -71; ARG -71; TUR -69; PLD -65; UAE -65; HUN -63; KOR -61; SAR -59; GRC -45; JPN -43; SGP -43; CZK -39; PRT -15; CAN -13; GBR -9; ESP -8; USA 0; ITA 1; AUS 8; SWE 13; DEU 31; BEL 39; FRA 55; NLD 60; CHE 94; NOR 106`
+- **p.165 (Productivity-adjusted, 35 countries):** `TUR -97; IND -95; IDR -90; COL -89; RUS -87; SAF -87; HUN -87; BRZ -84; SAR -82; PLD -81; MEX -80; ARG -80; UAE -79; TLD -78; CHI -78; CHN -78; SGP -66; KOR -65; CZK -61; GRC -60; JPN -52; PRT -41; ESP -38; ITA -26; CAN -22; SWE -21; DEU -18; GBR -17; BEL -5; FRA -1; USA 0; AUS 0; NLD 2; NOR 20; CHE 81`
+
+### D.4 World-Relative Culture Sub-Gauge Orderings (pp.172–182, highest score first)
+- **p.172 Corruption:** `SGP CHE NLD NOR SWE UAE DEU AUS GBR JPN CAN BEL USA FRA CHI SAR PRT KOR CHN ESP PLD IND CZK ITA GRC IDR TUR TLD HUN SAF RUS ARG COL BRZ MEX`
+- **p.174 Bureaucracy:** `SGP UAE SAR GBR USA CHN CHE NLD NOR DEU JPN CAN AUS SWE TLD KOR IND FRA TUR RUS CHI IDR BEL PRT PLD GRC ESP HUN MEX SAF COL ITA CZK ARG BRZ`
+- **p.176 Rule of Law:** `SGP UAE NOR SAR GBR USA AUS JPN CHE SWE KOR CAN NLD FRA DEU CHN BEL TLD ESP CHI SAF TUR IDR PRT IND CZK RUS HUN PLD MEX BRZ ITA COL ARG GRC`
+- **p.178 Savoring vs Achieving:** `UAE IND SAR SGP IDR CHN MEX KOR USA RUS PLD TLD TUR JPN SAF COL ARG HUN AUS SWE CAN CHI CZK DEU ESP BRZ GBR NOR NLD PRT CHE ITA GRC FRA BEL`
+- **p.180 Innovation:** `KOR CHE SWE NLD USA SGP JPN DEU GBR FRA BEL NOR AUS CAN HUN CZK UAE PRT TUR GRC ITA CHI ESP CHN TLD BRZ PLD ARG IDR SAR RUS COL IND SAF MEX`
+- **p.182 Self-Sufficiency:** `UAE SGP IDR SAR MEX IND CHN TLD KOR USA RUS ARG CHE COL CHI TUR JPN HUN CAN CZK SAF PLD AUS GBR NLD BRZ NOR PRT SWE DEU GRC ESP BEL FRA ITA`
+
+---
+
+## Appendix E. Screen Baseline & Expected Diagnostics
+
+At baseline (`190` retained series): median `weighted_cov_% = 95.1` (fence `~78.6`) and median `weighted_recent_% = 94.6` (fence `~6.925`).
+- **Expected `DISCONTINUED` drops (`latest < 2023`):** Doing Business (`IC.*`, `PROT.*`, `ENF.*`), `BAR.SCHL.25UP` (replaced by `HDR.MYS` if wired), `HD.HCI.*`, `LO.PISA.*` / `DERIVED.PISA_MEAN`, `LP.LPI.OVRL.XQ`, `IS.SHP.GCNW.XQ` (replaced by `UNCTAD.LSCI` if wired), `IS.RRS.*`, `MS.MIL.TOTL.P1` & per-capita twin, `NY.GDP.TOTL.RT.ZS`, `ILO.COLLECTIVE_BARGAINING_COVERAGE`.
+- **Expected `LOW_COVERAGE` drops (below `fence_cov` or lacking a rankable year `>= 2023`):** `DT.DOD.DECT.GN.ZS`, `DT.TDS.DECT.EX.ZS`, `FR.INR.LEND`, `FR.INR.RINR` (19.2% recent, <30 reporters in 2023+), `ILO.HOURS_WEEKLY_*` (falls back to `DERIVED.PWT_HOURS_WEEKLY`), `ILO.STRIKES_*` (never hits 30 reporters in any year), `OECD.HH_SAVINGS_RATE` (falls back to `IMF.NGSD_NGDP`), `OECD.MIN_WAGE_RATIO`.
+- **Expected Keeps via `INELIGIBLE`:** `IMF.COFER_SHARE`, `BIS.FX_TURNOVER_SHARE`, `BIS.INTL_DEBT_CCY_SHARE` (69.4% raw coverage, passes once `EURO_AREA` is excluded).
+- **Watch items for `rankable_recent` (`n_reporting >= 30` in `2023+`):** Verify actual `rankable_recent` outcomes for `BIS.CBPOL.POLICY_RATE_*` (48 countries ever, 57.9% recent), `BIS.LBS.CROSSBORDER_CLAIMS` (48 countries), and `BIS.FX_TURNOVER_VALUE` (56 countries), and report any differences vs. this baseline.
+
+---
+
+## Definition of Done
+
+1. Clean kernel restart & top-to-bottom run succeeds with zero uncaught errors (`df_probes` and Cell `6b` removed; `ALLOW_PROXY_FALLBACK` and `PROBE_NEXT` removed).
+2. All `F-2` repairs and `F-6` bounded probes are executed and logged; every missing component carries an exact `GAP_REASONS` code (with evidence in `note`) or a `DISCONTINUED`/`LOW_COVERAGE` drop reason.
+3. `APPENDIX_SOURCES` includes 64 A.7 items + concept rows + `W01`–`W20`, and all 15 `APPENDIX_WEIGHTS` locks pass print-only checks in Cell `7b`.
+4. `df_cov`, `S-2` screen output (with Appendix E diff), and `df_resolution` (with dropped nominal weights & effective `size_share`) are displayed; the simplified engine applies internal linear interpolation (`limit_area="inside"`), writes the 3 parquet files, and displays updated `6c` and `7a` tables.
+5. Cell `7b` and Phase 2 validation (`V-2`–`V-5`, including `Dalio-35` pass and `Competitiveness + Culture + Investment` sensitivity) print all comparisons cleanly without raising.
+6. Final summary report lists before/after counts, fetch outcomes, screen fences & diffs, dropped share per gauge, and all Phase 2 Spearman correlations.
